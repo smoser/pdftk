@@ -1,0 +1,20 @@
+# Makefile.Debian
+# Copyright 2004 Sid Steward
+# This is part of pdftk: www.pdftk.com
+
+# Brief Instructions
+#
+#   Compile:             make -f Makefile.Debian
+#   Install (as root):   make -f Makefile.Debian install
+#   Uninstall:           make -f Makefile.Debian uninstall
+#   Clean:               make -f Makefile.Debian clean
+# 	 								
+
+# tools
+CXX= g++
+
+# compiler options specific to Debian (Sarge dist.)
+CC_OPTS= -lgcj -O3
+
+#
+include Makefile.Base

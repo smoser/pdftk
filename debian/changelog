@@ -1,0 +1,24 @@
+pdftk (0.94-1) unstable; urgency=low
+
+  * New upstream version.
+
+ -- Aurelien Jarno <aurel32@debian.org>  Thu, 25 Mar 2004 08:58:03 +0100
+
+pdftk (0.93-1) unstable; urgency=low
+
+  * New upstream release.
+  * Updated debian/copyright.
+
+ -- Aurelien Jarno <aurel32@debian.org>  Wed, 10 Mar 2004 07:37:12 +0100
+
+pdftk (0.92-2) unstable; urgency=low
+
+  * Fixed a typo in the description (closes: bug#234675).
+
+ -- Aurelien Jarno <aurel32@debian.org>  Wed, 25 Feb 2004 20:21:12 +0100
+
+pdftk (0.92-1) unstable; urgency=low
+
+  * Initial Release (closes: bug#232863).
+
+ -- Aurelien Jarno <aurel32@debian.org>  Sun, 15 Feb 2004 23:54:35 +0100

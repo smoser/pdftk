@@ -1,0 +1,20 @@
+# Makefile.Generic
+# Copyright 2004 Sid Steward
+# This is part of pdftk: www.pdftk.com
+
+# Brief Instructions
+#
+#   Compile:             make -f Makefile.Generic
+#   Install (as root):   make -f Makefile.Generic install
+#   Uninstall:           make -f Makefile.Generic uninstall
+#   Clean:               make -f Makefile.Generic clean
+# 	 								
+
+# tools
+CXX= g++
+
+# general-purpose options
+CC_OPTS= -lgcj -O2
+
+#
+include Makefile.Base

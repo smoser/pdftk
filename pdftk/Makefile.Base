@@ -1,0 +1,51 @@
+# Makefile.Base
+# Copyright 2003, 2004 Sid Steward, Updated by Andre Gompel
+# This is part of pdftk: www.pdftk.com
+#
+# Don't call this makefile directly; it is included by other,
+# platform-specific makefiles, e.g.: Makefile.Debian
+#
+ 
+export itext_root= ../itext-1.1
+
+# repeat pdf.a because there are circular dependencies between
+# pdf.a and text.a
+#
+itext_libs= \
+$(itext_root)/com/lowagie/text/pdf/pdf.a \
+$(itext_root)/com/lowagie/text/text.a \
+$(itext_root)/com/lowagie/text/pdf/pdf.a \
+$(itext_root)/com/lowagie/text/pdf/codec/codec.a \
+$(itext_root)/com/lowagie/text/pdf/wmf/wmf.a \
+$(itext_root)/com/lowagie/text/markup/markup.a
+
+# older versions of libgcj might not have the MD5 algorithm,
+# so I added it here; these *_local java files were grabbed from
+# libgcj CVS on March 7, 2004
+#
+libgcj_local_libs = \
+$(itext_root)/java_local/security/security.a \
+$(itext_root)/gnu_local/java/security/provider/provider.a \
+$(itext_root)/gnu_local/java/security/security.a
+
+# this must already be set according to your platform;
+# we're just appending to it, here
+#
+CC_OPTS += -DPDFTK_VER=0.94
+
+all : itext pdftk
+
+itext :
+	$(MAKE) -C $(itext_root)
+
+pdftk : pdftk.cc $(itext_libs) $(libgcj_local_libs)
+	$(CXX) pdftk.cc $(itext_libs) $(libgcj_local_libs) -I$(itext_root) $(CC_OPTS) -o pdftk
+
+install:
+	/usr/bin/install pdftk /usr/local/bin 
+
+uninstall:
+	rm -fv /usr/local/bin/pdftk
+
+clean:
+	$(MAKE) -C $(itext_root) clean

@@ -1,0 +1,25 @@
+# Makefile.Windows
+# Copyright 2004 Sid Steward
+# This is part of pdftk; visit: www.pdftk.com
+
+# Brief Instructions
+#
+#   Compile:             make -f Makefile.Windows
+#   Install (as root):   make -f Makefile.Windows install
+#   Uninstall:           make -f Makefile.Windows uninstall
+#   Clean:               make -f Makefile.Windows clean
+# 	 								
+
+# tools
+CXX= g++
+
+# options specific to MinGW 3.3.1
+CC_OPTS= -lgcj -lws2_32 -O3
+
+#
+include Makefile.Base
+
+# If you remove the optimizing "-O" flag, then linking might
+# fail in MinGW 3.3.1 on Windows.  The inclusion of <java/lang/String.h> by
+# pdftk.cc causes the inline function length() to be defined a second time.
+# Optimization flags -O1, -O2 and -O3 fix this problem.

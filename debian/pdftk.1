@@ -1,0 +1,259 @@
+.\"                                      Hey, EMACS: -*- nroff -*-
+.\" First parameter, NAME, should be all caps
+.\" Second parameter, SECTION, should be 1-8, maybe w/ subsection
+.\" other parameters are allowed: see man(7), man(1)
+.TH PDFTK 1 "February 15, 2004"
+.\" Please adjust this date whenever revising the manpage.
+.\"
+.\" Some roff macros, for reference:
+.\" .nh        disable hyphenation
+.\" .hy        enable hyphenation
+.\" .ad l      left justify
+.\" .ad b      justify to both left and right margins
+.\" .nf        disable filling
+.\" .fi        enable filling
+.\" .br        insert line break
+.\" .sp <n>    insert n+1 empty lines
+.\" for manpage-specific macros, see man(7)
+.SH NAME
+pdftk \- A handy tool for manipulating PDF
+.SH SYNOPSIS
+.BI pdftk " <input PDF files>"
+.br
+.I "     " [input_pw <input PDF owner passwords>]
+.br
+.I "     " [<operation> <operation arguments>]
+.br
+.I "     " [output <output filename>]
+.br
+.I "     " [encrypt_40bit | encrypt_128bit] [allow <permissions>]
+.br
+.I "     " [owner_pw <owner password>] [user_pw <user password>]
+.br
+.I "     " [compress | uncompress]
+.br
+.I "     " [verbose]
+.SH DESCRIPTION
+If PDF is electronic paper, then pdftk is an electronic staple-remover, hole-punch, binder, secret-decoder-ring, and X-Ray-glasses.  Pdftk is a simple tool for doing everyday things with PDF documents.  Use it to:
+.sp
+.br
+* Merge PDF Documents
+.br
+* Split PDF Pages into a New Document
+.br
+* Decrypt Input as Necessary (Password Required)
+.br
+* Encrypt Output as Desired
+.br
+* Burst a PDF Document into Single Pages
+.br
+* Report on PDF Metrics, including Metadata and Bookmarks
+.br
+* Uncompress and Re-Compress Page Streams
+.br
+* Repair Corrupted PDF (Where Possible)
+.SH OPTIONS
+A summary of options is included below.
+.TP
+.B \-\-help, \-h
+Show summary of options.
+.TP
+.B "<input PDF files>"
+A list of the input PDF files. If you plan to combine these PDFs (without
+using handles) then list files in the order you want them combined.
+Input files can be associated with handles, where a
+handle is a single, upper-case letter:
+
+.B "<input PDF handle>=<input PDF filename>"
+
+Handles are often omitted.  They are useful when specifying PDF passwords or page ranges, later.
+
+For example: A=input1.pdf B=input2.pdf
+.TP
+.B "[input_pw <input PDF owner passwords>]"
+Input PDF owner passwords, if necessary, are associated with files
+by using their handles:
+
+.B "<input PDF handle>=<input PDF file owner password>"
+
+If handles are not given, then passwords are associated with input
+files by order.
+
+Most pdftk features require that encrypted 
+input PDF are accompanied by the ~owner~ password. If the input PDF
+has no owner password, then the user password must be given, instead.
+If the input PDF has no passwords, then no password should be given.
+.TP
+.B "[<operation> <operation arguments>]"
+If this optional argument is omitted, then pdftk runs in 'filter' mode.
+Filter mode takes only one PDF input and creates a new PDF after
+applying all of the output arguments, like encryption and compression.
+
+Available operations are: \fBcat\fR, \fBburst\fR, and \fBdump_data\fR. Only cat 
+takes additional arguments in the form of page ranges, described below.
+.RS
+.TP
+.B cat
+Catenates pages from input PDFs to create a new PDF.
+Page order in the new PDF is specified by the order of the given page ranges.
+Page ranges are described like this:
+
+.B <input PDF handle>[<begin page number>[-<end page number>[<qualifier>]]]
+
+Where the handle identifies one of the input PDF files, and
+the beginning and ending page numbers are one-based references
+to pages in the PDF file, and
+the \fBqualifier\fR can be \fBeven\fR or \fBodd\fR.
+
+If the handle is omitted, then the pages are taken from the first input PDF.
+
+If no arguments are passed to cat, then pdftk combines all input PDFs in the
+order they were given to create the output.
+
+.RS
+.PD 0
+.B NOTES:
+.TP
+* The \fBend page number\fR may be less than \fBbegin page number\fR.
+.TP
+* The keyword \fBend\fR may be used to reference the final page of a document instead of a page number.
+.TP
+* Reference a single page by omitting the ending page number.
+.TP
+* The handle may be used alone to represent the entire PDF document, i.e., \fBB1-end\fR is the same as \fBB\fR.
+.PD 1
+.TP
+.B Page range examples:
+.PD 0
+.P
+A1-21
+.P
+Bend-1odd
+.P
+A72
+.P
+A1-21 Beven A72
+.PD 1
+.RE
+.TP
+.B burst
+Splits a single, input PDF document into individual pages.
+Do not provide an \fBoutput\fR section. Encryption can be applied by
+appending output arguments, like encrypt_128bit, e.g.:
+
+pdftk in.pdf burst owner_pw foopass encrypt_128bit
+.TP
+.B dump_data
+Reads a single, input PDF file and reports various statistics, 
+metadata, and bookmarks (outlines) to the given output
+filename or to stdout.  Does not create a new PDF.
+.RE
+.TP
+.B [output <output filename>]
+The output PDF filename may not be set to the name of an input filename.
+.TP
+.B [encrypt_40bit | encrypt_128bit]
+If an output PDF user or owner password is given, output PDF encryption
+strength defaults to 128 bits.  This can be overridden by specifying
+encrypt_40bit.
+.TP
+.B [allow <permissions>]
+Permissions are applied to the output PDF only if an encryption strength
+is specified or an owner or user password is given.  If permissions are
+not specified, they default to 'none,' which means all of the following
+features are disabled.
+
+The \fBpermissions\fR section may include one or more of the following 
+features:
+.RS
+.TP 
+.B Printing
+Top Quality Printing
+.TP
+.B DegradedPrinting
+Lower Quality Printing
+.TP 
+.B ModifyContents
+.TP 
+.B Assembly
+.TP
+.B CopyContents
+.TP
+.B ScreenReaders
+.TP
+.B ModifyAnnotations
+.TP
+.B FillIn
+.TP
+.B AllFeatures
+Allows the user to perform all of the above.
+.RE
+.TP
+.B [owner_pw <owner password>] [user_pw <user password>]
+If an encryption strength is given but no passwords are supplied, then
+the owner and user passwords remain empty, which means that the resulting
+PDF may be opened and its security parameters altered by anybody.
+.TP
+.B [compress | uncompress]
+These are only useful when you want to edit PDF code in a text editor like vim or emacs.
+Remove PDF page stream compression by
+applying the \fBuncompress\fR filter. Use the \fBcompress\fR filter to restore compression.
+.TP
+.B [verbose]
+By default, pdftk runs quietly. Append \fBverbose\fR to the end and it 
+will speak up.
+.SH EXAMPLES
+.TP
+.B Decrypt a PDF
+pdftk secured.pdf input_pw foopass output unsecured.pdf
+.TP
+.B Encrypt a PDF using 128-bit strength (the default), withhold all permissions (the default)
+pdftk 1.pdf output 1.128.pdf owner_pw foopass
+.TP
+.B Same as above, except password 'baz' must also be used to open output PDF
+pdftk 1.pdf output 1.128.pdf owner_pw foo user_pw baz
+.TP
+.B Same as above, except printing is allowed (once the PDF is open)
+pdftk 1.pdf output 1.128.pdf owner_pw foo user_pw baz allow printing
+.TP
+.B Join in1.pdf and in2.pdf into a new PDF, out1.pdf
+pdftk in1.pdf in2.pdf cat output out1.pdf
+.br
+or (using handles):
+.br
+pdftk A=in1.pdf B=in2.pdf cat A B output out1.pdf
+.br
+or (using wildcards):
+.br
+pdftk *.pdf cat output combined.pdf
+.TP
+.B Remove 'page 13' from in1.pdf to create out1.pdf
+pdftk in.pdf cat 1-12 14-end output out1.pdf
+.br
+or:
+.br
+pdftk A=in1.pdf cat A1-12 A14-end output out1.pdf
+.TP
+.B Apply 40-bit encryption to output, revoking all permissions (the default).  Set the owner PW to 'foopass'.
+pdftk 1.pdf 2.pdf cat output 3.pdf encrypt_40bit owner_pw foopass
+.TP
+.B Join two files, one of which requires the password 'foopass'. The output is not encrypted.
+pdftk A=secured.pdf 2.pdf input_pw A=foopass cat output 3.pdf
+.TP
+.B Uncompress PDF page streams for editing the PDF in a text editor (e.g., vim, emacs)
+pdftk doc.pdf output doc.unc.pdf uncompress
+.TP
+.B Repair a PDF's corrupted XREF table and stream lengths, if possible
+pdftk broken.pdf output fixed.pdf
+.TP
+.B Burst a single PDF document into pages and dump its data to doc_data.txt
+pdftk mydoc.pdf burst
+.TP
+.B Burst a single PDF document into encrypted pages. Allow low-quality printing
+pdftk mydoc.pdf burst owner_pw foopass allow DegradedPrinting
+.TP
+.B Write a report on PDF document metadata and bookmarks to report.txt
+pdftk mydoc.pdf dump_data output report.txt
+.SH AUTHOR
+.B pdftk
+was written by Sid Steward <ssteward@accespdf.com>.

@@ -1,0 +1,20 @@
+# Makefile.Mandrake
+# Copyright 2004 Sid Steward
+# This is part of pdftk: www.pdftk.com
+
+# Brief Instructions
+#
+#   Compile:             make -f Makefile.Mandrake
+#   Install (as root):   make -f Makefile.Mandrake install
+#   Uninstall:           make -f Makefile.Mandrake uninstall
+#   Clean:               make -f Makefile.Mandrake clean
+# 	 								
+
+# tools
+CXX= g++
+
+# options specific to Mandrake
+CC_OPTS= -I/usr/include/libgcj-3.3.1 -lgcj -O3
+
+#
+include Makefile.Base

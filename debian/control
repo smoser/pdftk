@@ -1,0 +1,26 @@
+Source: pdftk
+Maintainer: Aurelien Jarno <aurel32@debian.org>
+Section: text
+Priority: optional
+Build-Depends: debhelper (>= 4.0.0), gcj (>= 3.3.0), libgcj4-dev (>= 3.3.0)
+Standards-Version: 3.6.1
+
+Package: pdftk
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: A useful tool for manipulating PDF documents
+ If PDF is electronic paper, then pdftk is an electronic stapler-remover,
+ hole-punch, binder, secret-decoder-ring, and X-Ray-glasses. Pdftk is a
+ simple tool for doing everyday things with PDF documents. Keep one in the
+ top drawer of your desktop and use it to:
+  - Merge PDF documents
+  - Split PDF pages into a new document
+  - Decrypt input as necessary (password required)
+  - Encrypt output as desired
+  - Burst a PDF document into single pages
+  - Report PDF on metrics, including metadata and bookmarks
+  - Uncompress and re-compress page streams
+  - Repair corrupted PDF (where possible)
+ .
+  Author: Sid Steward <ssteward@accesspdf.com>
+  Homepage: http://www.accesspdf.com/pdftk

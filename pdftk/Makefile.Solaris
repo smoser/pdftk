@@ -1,0 +1,20 @@
+# Makefile.Solaris
+# Contributed by aps.org
+# This is part of pdftk; visit: www.pdftk.com
+
+# Brief Instructions
+#
+#   Compile:             make -f Makefile.Solaris
+#   Install (as root):   make -f Makefile.Solaris install
+#   Uninstall:           make -f Makefile.Solaris uninstall
+#   Clean:               make -f Makefile.Solaris clean
+# 	 								
+
+# tools
+CXX= g++
+
+# options specific to Solaris
+CC_OPTS= -lgcj -lsocket -L/usr/local/lib -liconv -O3
+
+#
+include Makefile.Base
