@@ -11,15 +11,35 @@
 # 	 								
 
 # tools
-CXX= g++
-
-# options specific to MinGW 3.3.1
-CC_OPTS= -lgcj -lws2_32 -O3
-
 #
-include Makefile.Base
+CXX= g++
+export GCJ= gcj
+export GCJH= gcjh
+export AR= ar
+export RM= rm
 
-# If you remove the optimizing "-O" flag, then linking might
+
+# CXX flags specific to MinGW 3.3.1
+# If you remove the optimizing "-O" flag from CXXFLAGS, then linking might
 # fail in MinGW 3.3.1 on Windows.  The inclusion of <java/lang/String.h> by
 # pdftk.cc causes the inline function length() to be defined a second time.
 # Optimization flags -O1, -O2 and -O3 fix this problem.
+#
+# pdftk compiler flags; 0x2f is a forward slash; 0x5c is a backslash
+# if you want pdftk to ask before overwriting a file, set
+# ASK_ABOUT_WARNINGS to true; otherwise: false; override this default
+# with the dont_ask or do_ask command-line options
+CPPFLAGS= -O3 -DPATH_DELIM=0x5c -DASK_ABOUT_WARNINGS=true
+CXXFLAGS= -lgcj -lws2_32
+
+# gcj flags; these are relevant only to the ../java_libs/Makefile, yet it's
+# handy to configure them here
+#
+export GCJFLAGS=
+
+#
+export ARFLAGS= rs
+export RMFLAGS= -vf
+
+#
+include Makefile.Base

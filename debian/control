@@ -2,7 +2,7 @@ Source: pdftk
 Maintainer: Aurelien Jarno <aurel32@debian.org>
 Section: text
 Priority: optional
-Build-Depends: debhelper (>= 4.0.0), gcj (>= 3.3.0), libgcj4-dev (>= 3.3.0)
+Build-Depends: debhelper (>= 4.0.0), libgcj4-dev (>= 3.3.0)
 Standards-Version: 3.6.1
 
 Package: pdftk
@@ -17,8 +17,13 @@ Description: A useful tool for manipulating PDF documents
   - Split PDF pages into a new document
   - Decrypt input as necessary (password required)
   - Encrypt output as desired
-  - Burst a PDF document into single pages
+  - Fill PDF Forms with FDF Data and/or Flatten Forms
+  - Apply a Background Watermark
   - Report PDF on metrics, including metadata and bookmarks
+  - Update PDF Metadata
+  - Attach Files to PDF Pages or the PDF Document
+  - Unpack PDF Attachments
+  - Burst a PDF document into single pages
   - Uncompress and re-compress page streams
   - Repair corrupted PDF (where possible)
  .

@@ -43,10 +43,11 @@
 #include <java/io/FileOutputStream.h>
 #include <java/util/Vector.h>
 #include <java/util/ArrayList.h>
-#include <java/util/Set.h>
 #include <java/util/Iterator.h>
+#include <java/util/HashMap.h>
 
 #include "com/lowagie/text/Document.h"
+#include "com/lowagie/text/Rectangle.h"
 #include "com/lowagie/text/pdf/PdfName.h"
 #include "com/lowagie/text/pdf/PdfString.h"
 #include "com/lowagie/text/pdf/PdfNumber.h"
@@ -56,9 +57,16 @@
 #include "com/lowagie/text/pdf/PdfCopy.h"
 #include "com/lowagie/text/pdf/PdfReader.h"
 #include "com/lowagie/text/pdf/PdfImportedPage.h"
-#include "com/lowagie/text/pdf/PdfStamper.h"
+#include "com/lowagie/text/pdf/PdfWriter.h"
 #include "com/lowagie/text/pdf/PdfStamperImp.h"
 #include "com/lowagie/text/pdf/PdfEncryptor.h"
+#include "com/lowagie/text/pdf/PdfNameTree.h"
+#include "com/lowagie/text/pdf/FdfReader.h"
+#include "com/lowagie/text/pdf/AcroFields.h"
+#include "com/lowagie/text/pdf/PdfIndirectReference.h"
+#include "com/lowagie/text/pdf/PdfIndirectObject.h"
+#include "com/lowagie/text/pdf/PdfFileSpecification.h"
+#include "com/lowagie/text/pdf/PdfBoolean.h"
 
 using namespace std;
 
@@ -73,142 +81,68 @@ namespace itext {
 	using namespace com::lowagie::text::pdf;
 }
 
+#include "pdftk.h"
+#include "attachments.h"
+#include "report.h"
+
 // store java::PdfReader* here to 
 // prevent unwanted garbage collection
 //
-java::Vector* g_dont_collect_p= 0;
+static java::Vector* g_dont_collect_p= 0;
 
 
 static void
 describe_header();
 
 static void
-describe_usage();
+describe_synopsis();
 
+static void
+describe_full();
 
-class TK_Session {
-	
-	bool m_valid_b;
-	bool m_authorized_b;
-	bool m_input_pdf_readers_opened_b; // have m_input_pdf readers been opened?
-	bool m_verbose_reporting_b;
+static void
+prompt_for_password( const string pass_name, 
+										 const string pass_app,
+										 string& password )
+{
+	cout << "Please enter the " << pass_name << " password to use on " << pass_app << "." << endl;
+	cout << "   It can be empty, or have a maximum of 32 characters:" << endl;
+	char buff[64];
+	cin.getline( buff, 64 );
+	password= buff;
+	if( 32< password.size() ) { // too long; trim
+		cout << "The password you entered was over 32 characters long," << endl;
+		cout << "   so I am dropping: \"" << string(password, 32 ) << "\"" << endl;
+		password= string( password, 0, 32 );
+	}
+}
 
-public:
+void
+prompt_for_filename( const string message,
+										 string& fn )
+{
+	cout << message << endl;
+	const int buff_size= 4096;
+	char buff[buff_size];
+	cin.getline( buff, buff_size );
 
-	struct InputPdf {
-		string m_filename;
-		string m_password;
-		bool m_authorized_b;
+	// omit enclosing quotes, if present
+	if( buff[0] && buff[strlen(buff)- 1]== '"' ) {
+		buff[strlen(buff)- 1]= 0;
+	}
+	if( buff[0]== '"' ) {
+		fn= buff+1;
+	}
+	else {
+		fn= buff;
+	}
 
-		// keep track of which pages get output under which readers,
-		// because one reader mayn't output the same page twice;
-		vector< pair< set<jint>, itext::PdfReader* > > m_readers;
-
-		jint m_num_pages;
-
-		InputPdf() : m_authorized_b(true), m_num_pages(0) {}
-	};
-	// pack input PDF in the order their given on the command line
-	vector< InputPdf > m_input_pdf;
-	typedef vector< InputPdf >::size_type InputPdfIndex;
-
-	// store input PDF handles here
-	map< string, InputPdfIndex > m_input_pdf_index;
-
-	bool add_reader( InputPdf* input_pdf_p );
-	bool open_input_pdf_readers();
-
-  enum keyword {
-    none_k= 0,
-
-    // the operations
-    cat_k, // output may also be encrypted
-		burst_k, // split a single, input PDF into individual pages
-		filter_k, // apply 'filters' to a single, input PDF based on output args
-		dump_data_k, // no PDF output
-		//
-		first_operation_k= cat_k,
-    final_operation_k= dump_data_k,
-
-		// cat page range keywords
-    end_k,
-    even_k,
-    odd_k,
-
-    output_k,
-
-		// encryption & decryption
-		input_pw_k,
-		owner_pw_k,
-		user_pw_k,
-		user_perms_k,
-
-		// output arg.s, only
-		encrypt_40bit_k,
-		encrypt_128bit_k,
-
-		// user permissions
-		perm_printing_k,
-		perm_modify_contents_k,
-		perm_copy_contents_k,
-		perm_modify_annotations_k,
-		perm_fillin_k,
-		perm_screen_readers_k,
-		perm_assembly_k,
-		perm_degraded_printing_k,
-		perm_all_k,
-
-		// filters
-		filt_uncompress_k,
-		filt_compress_k,
-
-		// pdftk options
-		verbose_k
-  };
-  static keyword is_keyword( char* ss, int* keyword_len_p );
-
-  keyword m_operation;
-
-  typedef unsigned long PageNumber;
-
-  struct PageRef {
-		InputPdfIndex m_input_pdf_index;
-    PageNumber m_page_num; // 1-based
-
-		PageRef( InputPdfIndex input_pdf_index, PageNumber page_num ) :
-			m_input_pdf_index( input_pdf_index ), m_page_num( page_num ) {}			
-  };
-  vector< PageRef > m_page_seq;
-
-  string m_output_filename;
-	string m_output_owner_pw;
-	string m_output_user_pw;
-	jint m_output_user_perms;
-	bool m_output_uncompress_b;
-	bool m_output_compress_b;
-
-	enum encryption_strength {
-		none_enc= 0,
-		bits40_enc,
-		bits128_enc
-	} m_output_encryption_strength;
-
-  TK_Session( int argc, 
-							char** argv );
-
-	~TK_Session();
-
-  bool is_valid() const;
-
-	void dump_session_data() const;
-
-	void create_output();
-
-};
-
-static void 
-OutputString( ostream& ofs,
-							java::lang::String* jss_p );
+	if( buff_size== fn.size() ) { // might have been too long for buff
+		cout << "The name you entered might have exceeded our internal buffer." << endl;
+		cout << "   Please review it and make sure it wasn't truncated:" << endl;
+		cout << fn << endl;
+	}
+}
 
 bool
 TK_Session::add_reader( InputPdf* input_pdf_p )
@@ -217,11 +151,18 @@ TK_Session::add_reader( InputPdf* input_pdf_p )
 
 	try {
 		itext::PdfReader* reader= 0;
+		if( input_pdf_p->m_filename== "PROMPT" ) {
+			prompt_for_filename( "Please enter a filename for an input PDF:",
+													 input_pdf_p->m_filename );
+		}
 		if( input_pdf_p->m_password.empty() ) {
 			reader=
 				new itext::PdfReader( JvNewStringLatin1( input_pdf_p->m_filename.c_str() ) );
 		}
 		else {
+			if( input_pdf_p->m_password== "PROMPT" ) {
+				prompt_for_password( "open", "the input PDF:\n   "+ input_pdf_p->m_filename, input_pdf_p->m_password );
+			}
 			jbyteArray password= JvNewByteArray( input_pdf_p->m_password.size() );
 			memcpy( (char*)(elements(password)), 
 							input_pdf_p->m_password.c_str(),
@@ -233,14 +174,14 @@ TK_Session::add_reader( InputPdf* input_pdf_p )
 		}
 		reader->consolidateNamedDestinations();
 		reader->removeUnusedObjects();
+		reader->shuffleSubsetNames();
 
 		input_pdf_p->m_num_pages= reader->getNumberOfPages();
 
 		// keep tally of which pages have been laid claim to in this reader;
 		// when creating the final PDF, this tally will be decremented
 		input_pdf_p->m_readers.push_back( pair< set<jint>, itext::PdfReader* >( set<jint>(), reader ) );
-		
-							
+
 		// store in this java object so the gc can trace it
 		g_dont_collect_p->addElement( reader );
 
@@ -250,7 +191,6 @@ TK_Session::add_reader( InputPdf* input_pdf_p )
 		}
 	}
 	catch( java::io::IOException* ioe_p ) { // file open error
-
 		if( ioe_p->getMessage()->equals( JvNewStringLatin1( "Bad password" ) ) ) {
 			input_pdf_p->m_authorized_b= false;
 		}
@@ -261,6 +201,22 @@ TK_Session::add_reader( InputPdf* input_pdf_p )
 		open_success_b= false;
 							
 		//t_p->printStackTrace(); // debug
+	}
+
+	if( !input_pdf_p->m_authorized_b && m_ask_about_warnings_b ) {
+		// prompt for a new password
+		cerr << "The password you supplied for the input PDF:" << endl;
+		cerr << "   " << input_pdf_p->m_filename << endl;
+		cerr << "   did not work.  This PDF is encrypted, and you must supply the" << endl;
+		cerr << "   owner password to open it.  If it has no owner password, then" << endl;
+		cerr << "   enter the user password, instead.  To quit, enter a blank password" << endl;
+		cerr << "   at the next prompt." << endl;
+
+		prompt_for_password( "open", "the input PDF:\n   "+ input_pdf_p->m_filename, input_pdf_p->m_password );
+		if( !input_pdf_p->m_password.empty() ) { // reset flags try again
+			input_pdf_p->m_authorized_b= true;
+			return( add_reader(input_pdf_p) ); // <--- recurse, return
+		}
 	}
 
 	// report
@@ -338,7 +294,33 @@ TK_Session::is_keyword( char* ss, int* keyword_len_p )
 					 strcmp( ss_copy, "datadump" )== 0 ) {
 		return dump_data_k;
 	}
-
+	else if( strcmp( ss_copy, "dump_data_fields" )== 0 ) {
+		return dump_data_fields_k;
+	}
+	else if( strcmp( ss_copy, "fill_form" )== 0 ||
+					 strcmp( ss_copy, "fillform" )== 0 ) {
+		return fill_form_k;
+	}
+	else if( strcmp( ss_copy, "attach_file" )== 0 ||
+					 strcmp( ss_copy, "attach_files" )== 0 ||
+					 strcmp( ss_copy, "attachfile" )== 0 ) {
+		return attach_file_k;
+	}
+	else if( strcmp( ss_copy, "unpack_file" )== 0 ||
+					 strcmp( ss_copy, "unpack_files" )== 0 ||
+					 strcmp( ss_copy, "unpackfiles" )== 0 ) {
+		return unpack_files_k;
+	}
+	else if( strcmp( ss_copy, "update_info" )== 0 ||
+					 strcmp( ss_copy, "undateinfo" )== 0 ) {
+		return update_info_k;
+	}
+	else if( strcmp( ss_copy, "background" )== 0 ) {
+		// pdftk 1.10: making background an operation
+		// (and preserving old behavior for backwards compatibility)
+		return background_k;
+	}
+	
 	// cat range keywords
   else if( strncmp( ss_copy, "end", 3 )== 0 ) { // note: strncmp
     *keyword_len_p= 3; // note: fixed size
@@ -350,6 +332,12 @@ TK_Session::is_keyword( char* ss, int* keyword_len_p )
   else if( strcmp( ss_copy, "odd" )== 0 ) {
     return odd_k;
   }
+
+	// file attachment option
+	else if( strcmp( ss_copy, "to_page" )== 0 ||
+					 strcmp( ss_copy, "topage" )== 0 ) {
+		return attach_file_to_page_k;
+	}
 
   else if( strcmp( ss_copy, "output" )== 0 ) {
     return output_k;
@@ -428,9 +416,20 @@ TK_Session::is_keyword( char* ss, int* keyword_len_p )
 	else if( strcmp( ss_copy, "compress" )== 0 ) {
 		return filt_compress_k;
 	}
+	else if( strcmp( ss_copy, "flatten" )== 0 ) {
+		return flatten_k;
+	}
 	else if( strcmp( ss_copy, "verbose" )== 0 ) {
 		return verbose_k;
 	}
+	else if( strcmp( ss_copy, "dont_ask" )== 0 ||
+					 strcmp( ss_copy, "dontask" )== 0 ) {
+		return dont_ask_k;
+	}
+	else if( strcmp( ss_copy, "do_ask" )== 0 ) {
+		return do_ask_k;
+	}
+	
 	
   return none_k;
 }
@@ -439,7 +438,7 @@ bool
 TK_Session::is_valid() const
 {
 	return( m_valid_b &&
-					( m_operation== dump_data_k || m_authorized_b ) &&
+					( m_operation== dump_data_k || m_operation== dump_data_fields_k || m_authorized_b ) &&
 					!m_input_pdf.empty() &&
 					m_input_pdf_readers_opened_b &&
 
@@ -454,6 +453,8 @@ TK_Session::is_valid() const
 					// these op.s do not require an output filename
 					( m_operation== burst_k ||
 					  m_operation== dump_data_k ||
+						m_operation== dump_data_fields_k ||
+						m_operation== unpack_files_k ||
 					  !m_output_filename.empty() ) );
 }
 
@@ -515,6 +516,12 @@ TK_Session::dump_session_data() const
 		break;
 	case dump_data_k:
 		cout << "   dump_data - Report statistics on a single, input PDF." << endl;
+		break;
+	case dump_data_fields_k:
+		cout << "   dump_data_fields - Report form field data on a single, input PDF." << endl;
+		break;
+	case unpack_files_k:
+		cout << "   unpack_files - Copy PDF file attachments into given directory." << endl;
 		break;
 	case none_k:
 		cout << "   NONE - No operation has been given.  See usage instructions." << endl;
@@ -652,6 +659,78 @@ TK_Session::dump_session_data() const
 
 }
 
+bool
+TK_Session::handle_some_output_options( TK_Session::keyword kw, ArgState* arg_state_p )
+{
+	switch( kw ) {
+	case output_k:
+		// added this case for the burst operation and "output" support;
+		// also helps with backward compatibility of the "background" feature
+		// change state
+		*arg_state_p= output_filename_e;
+		break;
+
+		// state-altering keywords
+	case owner_pw_k:
+		// change state
+		*arg_state_p= output_owner_pw_e;
+		break;
+	case user_pw_k:
+		// change state
+		*arg_state_p= output_user_pw_e;
+		break;
+	case user_perms_k:
+		// change state
+		*arg_state_p= output_user_perms_e;
+		break;
+
+		////
+		// no arguments to these keywords, so the state remains unchanged
+	case encrypt_40bit_k:
+		m_output_encryption_strength= bits40_enc;
+		break;
+	case encrypt_128bit_k:
+		m_output_encryption_strength= bits128_enc;
+		break;
+	case filt_uncompress_k:
+		m_output_uncompress_b= true;
+		break;
+	case filt_compress_k:
+		m_output_compress_b= true;
+		break;
+	case flatten_k:
+		m_output_flatten_b= true;
+		break;
+	case verbose_k:
+		m_verbose_reporting_b= true;
+		break;
+	case dont_ask_k:
+		m_ask_about_warnings_b= false;
+		break;
+	case do_ask_k:
+		m_ask_about_warnings_b= true;
+		break;
+
+	case background_k:
+		if( m_operation!= filter_k ) { // warning
+			cerr << "Warning: the \"background\" output option works only in filter mode." << endl;
+			cerr << "  This means it won't work in combination with \"cat\", \"burst\"," << endl;
+			cerr << "  \"attach_file\", etc.  To run pdftk in filter mode, simply omit" << endl;
+			cerr << "  the operation, e.g.: pdftk in.pdf output out.pdf background back.pdf" << endl;
+			cerr << "  Or, use background as an operation; this is the preferred technique:" << endl;
+			cerr << "    pdftk in.pdf background back.pdf output out.pdf" << endl;
+		}
+		// change state
+		*arg_state_p= background_filename_e;
+		break;
+
+	default: // not handled here; no change to *arg_state_p
+		return false;
+	}
+
+	return true;
+}
+
 TK_Session::TK_Session( int argc, 
 												char** argv ) :
 	m_valid_b( false ),
@@ -661,25 +740,13 @@ TK_Session::TK_Session( int argc,
 	m_output_user_perms( 0 ),
 	m_output_uncompress_b( false ),
 	m_output_compress_b( false ),
+	m_output_flatten_b( false ),
 	m_output_encryption_strength( none_enc ),
-	m_verbose_reporting_b( false )
+	m_verbose_reporting_b( false ),
+	m_ask_about_warnings_b( ASK_ABOUT_WARNINGS ), // set default at compile-time
+	m_input_attach_file_pagenum( 0 )
 {
-  enum {
-    input_files_e,
-		input_pw_e,
-
-    operation_e,
-    page_seq_e,
-
-    output_filename_e,
-
-		output_args_e, // output args are order-independent; switch here
-		output_owner_pw_e,
-		output_user_pw_e,
-		output_user_perms_e,
-
-		done_e
-  } arg_state = input_files_e;
+	TK_Session::ArgState arg_state = input_files_e;
 
 	g_dont_collect_p= new java::Vector();
 
@@ -689,26 +756,30 @@ TK_Session::TK_Session( int argc,
 
   bool fail_b= false;
 
+	// first, look for our "dont_ask" or "do_ask" keywords, since this
+	// setting must be known before we begin opening documents, etc.
+	for( int ii= 1; ii< argc; ++ii ) {
+    int keyword_len= 0;
+		keyword kw= is_keyword( argv[ii], &keyword_len );
+		if( kw== dont_ask_k ) {
+			m_ask_about_warnings_b= false;
+		}
+		else if( kw== do_ask_k ) {
+			m_ask_about_warnings_b= true;
+		}
+	}
+
   // iterate over cmd line arguments
   for( int ii= 1; ii< argc && !fail_b && arg_state!= done_e; ++ii ) {
     int keyword_len= 0;
     keyword arg_keyword= is_keyword( argv[ii], &keyword_len );
 
     switch( arg_state ) {
-    case input_files_e: 
-			// input_files_e:
-      // expecting input handle=filename pairs, or
-      // an input filename w/o a handle, or
-			// the PDF passwords keyword, or
-      // an operation keyword, or
-			// the output keyword
 
+    case input_files_e: 
 		case input_pw_e: {
-			// input_pw_e:
-      // expecting input handle=password pairs, or
-      // an input PDF password w/o a handle, or
-      // an operation keyword, or
-			// the output keyword
+			// look for keywords that would advance our state,
+			// and then handle the specifics of the above cases
 
 			if( arg_keyword== input_pw_k ) { // input PDF passwords keyword
 
@@ -720,15 +791,42 @@ TK_Session::TK_Session( int argc,
       }
       else if( arg_keyword== burst_k ) {
 				m_operation= burst_k;
-				arg_state= output_args_e; // skip "output <fn>" bit
+				arg_state= output_args_e; // makes "output <fn>" bit optional
       }
 			else if( arg_keyword== filter_k ) {
 				m_operation= filter_k;
-				arg_state= page_seq_e;
+				arg_state= output_e; // look for an output filename
 			}
 			else if( arg_keyword== dump_data_k ) {
 				m_operation= dump_data_k;
-				arg_state= page_seq_e; // look for an output filename
+				arg_state= output_e;
+			}
+			else if( arg_keyword== dump_data_fields_k ) {
+				m_operation= dump_data_fields_k;
+				arg_state= output_e;
+			}
+			else if( arg_keyword== fill_form_k ) {
+				m_operation= filter_k;
+				arg_state= form_data_filename_e; // look for an FDF filename
+			}
+			else if( arg_keyword== attach_file_k ) {
+				m_operation= filter_k;
+				arg_state= attach_file_filename_e;
+			}
+			else if( arg_keyword== attach_file_to_page_k ) {
+				arg_state= attach_file_pagenum_e;
+			}
+			else if( arg_keyword== unpack_files_k ) {
+				m_operation= unpack_files_k;
+				arg_state= output_e;
+			}
+			else if( arg_keyword== update_info_k ) {
+				m_operation= filter_k;
+				arg_state= update_info_filename_e;
+			}
+			else if( arg_keyword== background_k ) {
+				m_operation= filter_k;
+				arg_state= background_filename_e;
 			}
 			else if( arg_keyword== output_k ) { // we reached the output section
 				arg_state= output_filename_e;
@@ -737,6 +835,10 @@ TK_Session::TK_Session( int argc,
 				// here is where the two cases (input_files_e, input_pw_e) diverge
 
 				if( arg_state== input_files_e ) {
+					// input_files_e:
+					// expecting input handle=filename pairs, or
+					// an input filename w/o a handle
+					//
 					// treat argv[ii] like an optional input handle and filename
 					// like this: [<handle>=]<filename>
 
@@ -782,8 +884,10 @@ TK_Session::TK_Session( int argc,
 						}
 					}
 				} // end: arg_state== input_files_e
-				else { // arg_state== input_pw_e
-
+				else if( arg_state== input_pw_e ) {
+					// expecting input handle=password pairs, or
+					// an input PDF password w/o a handle
+					//
 					// treat argv[ii] like an input handle and password
 					// like this <handle>=<password>; if no handle is
 					// given, assign passwords to input in order;
@@ -868,6 +972,10 @@ TK_Session::TK_Session( int argc,
 						}
 					}
 				} // end: arg_state== input_pw_e
+				else { // error
+					cerr << "Error: Internal error: unexpected arg_state.  Exiting." << endl;
+					fail_b= true;
+				}
 			}
 			else { // error: unexpected keyword; remark and set fail_b
 				cerr << "Error: Unexpected command-line data: " << endl;
@@ -884,12 +992,6 @@ TK_Session::TK_Session( int argc,
 			}
     }
     break;
-
-    case operation_e: {
-			// error; this state should always be skipped
-			cerr << "Internal Error: Unexpected case: operation_k.  Exiting." << endl;
-		}
-		break;
 
     case page_seq_e: {
       if( m_page_seq.empty() ) {
@@ -910,9 +1012,8 @@ TK_Session::TK_Session( int argc,
 
       if( arg_keyword== output_k ) {
 				arg_state= output_filename_e; // advance state
-				break;
       }
-      else if( arg_keyword== none_k || 
+			else if( arg_keyword== none_k || 
 							 arg_keyword== end_k )
 				{ // treat argv[ii] like a page sequence
 
@@ -1133,14 +1234,141 @@ TK_Session::TK_Session( int argc,
 
 					m_page_seq.insert( m_page_seq.end(), temp_page_seq.begin(), temp_page_seq.end() );
 
-				} // end: handle page sequence
+				}
 			else { // error
-				cerr << "Error: expecting page ranges or \"output\" keyword." << endl;
+				cerr << "Error: expecting page ranges.  Instead, I got:" << endl;
+				cerr << "   " << argv[ii] << endl;
 				fail_b= true;
 				break;
 			}
-    } // end: case:page_seq_e
+		}
     break;
+
+		case form_data_filename_e: {
+      if( arg_keyword== none_k )
+				{ // treat argv[ii] like an FDF file filename
+					
+					if( m_form_data_filename.empty() ) {
+						m_form_data_filename= argv[ii];
+					}
+					else { // error
+						cerr << "Error: Multiple fill_form filenames given: " << endl;
+						cerr << "   " << m_form_data_filename << " and " << argv[ii] << endl;
+						cerr << "Exiting." << endl;
+						fail_b= true;
+						break;
+					}
+
+					// advance state
+					arg_state= output_e; // look for an output filename
+				}
+			else { // error
+				cerr << "Error: expecting an FDF file filename," << endl;
+				cerr << "   instead I got this keyword: " << argv[ii] << endl;
+				cerr << "Exiting." << endl;
+				fail_b= true;
+				break;
+			}
+		} // end: case form_data_filename_e
+		break;
+
+		case attach_file_filename_e: {
+			// keep packing filenames until we reach an expected keyword
+
+			if( arg_keyword== attach_file_to_page_k ) {
+				arg_state= attach_file_pagenum_e; // advance state
+			}
+			else if( arg_keyword== output_k ) {
+				arg_state= output_filename_e; // advance state
+			}
+			else if( arg_keyword== none_k ) { 
+				// pack argv[ii] into our list of attachment filenames
+				m_input_attach_file_filename.push_back( argv[ii] );
+			}
+			else { // error
+				cerr << "Error: expecting an attachment filename," << endl;
+				cerr << "   instead I got this keyword: " << argv[ii] << endl;
+				cerr << "Exiting." << endl;
+				fail_b= true;
+				break;
+			}
+		}
+		break;
+
+		case attach_file_pagenum_e: {
+			if( strcmp(argv[ii], "PROMPT")== 0 ) { // query the user, later
+				m_input_attach_file_pagenum= -1;
+			}
+			else if( strcmp(argv[ii], "end")== 0 ) { // attach to the final page
+				m_input_attach_file_pagenum= -2;
+			}
+			else {
+				m_input_attach_file_pagenum= 0;
+				for( int jj= 0; argv[ii][jj]; ++jj ) {
+					if( !isdigit(argv[ii][jj]) ) { // error
+						cerr << "Error: expecting a (1-based) page number.  Instead, I got:" << endl;
+						cerr << "   " << argv[ii] << endl;
+						cerr << "Exiting." << endl;
+						fail_b= true;
+						break;
+					}
+
+					m_input_attach_file_pagenum= 
+						m_input_attach_file_pagenum* 10+ argv[ii][jj]- '0';
+				}
+			}
+
+			// advance state
+			arg_state= output_e; // look for an output filename
+
+		} // end: case attach_file_pagenum_e
+		break;
+
+		case update_info_filename_e : {
+			if( arg_keyword== none_k ) {
+					if( m_update_info_filename.empty() ) {
+						m_update_info_filename= argv[ii];
+					}
+					else { // error
+						cerr << "Error: Multiple update_info filenames given: " << endl;
+						cerr << "   " << m_update_info_filename << " and " << argv[ii] << endl;
+						cerr << "Exiting." << endl;
+						fail_b= true;
+						break;
+					}
+				}
+			else { // error
+				cerr << "Error: expecting an INFO file filename," << endl;
+				cerr << "   instead I got this keyword: " << argv[ii] << endl;
+				cerr << "Exiting." << endl;
+				fail_b= true;
+				break;
+			}
+
+			// advance state
+			arg_state= output_e; // look for an output filename
+
+		} // end: case update_info_filename_e
+		break;
+
+		case output_e: {
+			if( m_input_pdf.empty() ) { // error; remark and set fail_b
+				cerr << "Error: No input files.  Exiting." << endl;
+				fail_b= true;
+				break;
+			}
+
+      if( arg_keyword== output_k ) {
+				arg_state= output_filename_e; // advance state
+      }
+			else { // error
+				cerr << "Error: expecting \"output\" keyword.  Instead, I got:" << endl;
+				cerr << "   " << argv[ii] << endl;
+				fail_b= true;
+				break;
+			}
+		}
+		break;
 
     case output_filename_e: {
 			// we have closed all possible input operations and arguments;
@@ -1178,17 +1406,19 @@ TK_Session::TK_Session( int argc,
 			if( m_output_filename.empty() ) {
 				m_output_filename= argv[ii];
 
-				// simple-minded test to see if output matches an input filename
-				for( vector< InputPdf >::const_iterator it= m_input_pdf.begin();
-						 it!= m_input_pdf.end(); ++it )
-					{
-						if( it->m_filename== m_output_filename ) {
-							cerr << "Error: The given output filename: " << m_output_filename << endl;
-							cerr << "   matches an input filename.  Exiting." << endl;
-							fail_b= true;
-							break;
+				if( m_output_filename!= "-" ) { // input and output may both be "-" (stdin and stdout)
+					// simple-minded test to see if output matches an input filename
+					for( vector< InputPdf >::const_iterator it= m_input_pdf.begin();
+							 it!= m_input_pdf.end(); ++it )
+						{
+							if( it->m_filename== m_output_filename ) {
+								cerr << "Error: The given output filename: " << m_output_filename << endl;
+								cerr << "   matches an input filename.  Exiting." << endl;
+								fail_b= true;
+								break;
+							}
 						}
-					}
+				}
 			}
 			else { // error
 				cerr << "Error: Multiple output filenames given: " << endl;
@@ -1204,46 +1434,16 @@ TK_Session::TK_Session( int argc,
 		break;
 
 		case output_args_e: {
-			// output args are order-independent but must follow "output <fn>";
+			// output args are order-independent but must follow "output <fn>", if present;
 			// we are expecting any of these keywords:
 			// owner_pw_k, user_pw_k, user_perms_k ...
+			// added output_k case in pdftk 1.10; this permits softer "output <fn>" enforcement
 			//
-			switch( arg_keyword ) {
 
-			case owner_pw_k:
-				// change state
-				arg_state= output_owner_pw_e;
+			if( handle_some_output_options( arg_keyword, &arg_state ) ) {
 				break;
-
-			case user_pw_k:
-				// change state
-				arg_state= output_user_pw_e;
-				break;
-
-			case user_perms_k:
-				// change state
-				arg_state= output_user_perms_e;
-				break;
-
-				////
-				// no arguments to these keywords, so the state remains unchanged
-			case encrypt_40bit_k:
-				m_output_encryption_strength= bits40_enc;
-				break;
-			case encrypt_128bit_k:
-				m_output_encryption_strength= bits128_enc;
-				break;
-			case filt_uncompress_k:
-				m_output_uncompress_b= true;
-				break;
-			case filt_compress_k:
-				m_output_compress_b= true;
-				break;
-			case verbose_k:
-				m_verbose_reporting_b= true;
-				break;
-
-			default: // error: unexpected matter
+			}
+			else {
 				cerr << "Error: Unexpected data in output section: " << endl;
 				cerr << "      " << argv[ii] << endl;
 				cerr << "Exiting." << endl;
@@ -1320,37 +1520,11 @@ TK_Session::TK_Session( int argc,
 
 			// we may be given any number of permission arguments,
 			// so keep an eye out for other, state-altering keywords
-			//
+			if( handle_some_output_options( arg_keyword, &arg_state ) ) {
+				break;
+			}
+
 			switch( arg_keyword ) {
-
-				// state-altering keywords
-			case owner_pw_k:
-				// change state
-				arg_state= output_owner_pw_e;
-				break;
-			case user_pw_k:
-				// change state
-				arg_state= output_user_pw_e;
-				break;
-			case user_perms_k: // our current state
-				break;
-
-				// these don't change the state
-			case encrypt_40bit_k:
-				m_output_encryption_strength= bits40_enc;
-				break;
-			case encrypt_128bit_k:
-				m_output_encryption_strength= bits128_enc;
-				break;
-			case filt_uncompress_k:
-				m_output_uncompress_b= true;
-				break;
-			case filt_compress_k:
-				m_output_compress_b= true;
-				break;
-			case verbose_k:
-				m_verbose_reporting_b= true;
-				break;
 
 				// possible permissions
 			case perm_printing_k:
@@ -1414,6 +1588,36 @@ TK_Session::TK_Session( int argc,
 		}
 		break;
 
+		case background_filename_e : {
+			if( arg_keyword== none_k ) {
+				if( m_background_filename.empty() ) {
+					m_background_filename= argv[ii];
+				}
+				else { // error
+					cerr << "Error: Multiple background filenames given: " << endl;
+					cerr << "   " << m_background_filename << " and " << argv[ii] << endl;
+					cerr << "Exiting." << endl;
+					fail_b= true;
+					break;
+				}
+			}
+			else { // error
+				cerr << "Error: expecting a PDF filename for background operation," << endl;
+				cerr << "   instead I got this keyword: " << argv[ii] << endl;
+				cerr << "Exiting." << endl;
+				fail_b= true;
+				break;
+			}
+
+			// revert state
+			// this is more liberal than used with other operations, since we want
+			// to preserve backward-compatibility with pdftk 1.00 where "background"
+			// was documented as an output option; in pdftk 1.10 we changed it to
+			// an operation
+			arg_state= output_args_e;
+		}
+		break;
+
     default: { // error
 			cerr << "Internal Error: Unexpected arg_state.  Exiting." << endl;
 			fail_b= true;
@@ -1448,593 +1652,117 @@ TK_Session::~TK_Session()
 	g_dont_collect_p->clear();
 }
 
-int
-GetPageNumber( itext::PdfDictionary* dict_p,
-							 itext::PdfReader* reader_p )
-// take a PdfPage dictionary and return its page location in the document;
-// recurse our way up the pages tree, counting pages as we go;
-// dict_p may be a page or a page tree object;
-// return value is zero-based;
+static java::OutputStream*
+get_output_stream( string output_filename,
+									 bool ask_about_warnings_b )
 {
-	if( dict_p && dict_p->contains( itext::PdfName::PARENT ) ) {
-		jint sum_pages= 0;
+	java::OutputStream* os_p= 0;
 
-		itext::PdfDictionary* parent_p= (itext::PdfDictionary*)
-			reader_p->getPdfObject( dict_p->get( itext::PdfName::PARENT ) );
-		if( parent_p && parent_p->isDictionary() ) {
-			// a parent is a page tree object and will have Kids
-
-			itext::PdfArray* parent_kids_p= (itext::PdfArray*)
-				reader_p->getPdfObject( parent_p->get( itext::PdfName::KIDS ) );
-			if( parent_kids_p && parent_kids_p->isArray() ) {
-				// Kids may be Pages or Page Tree Nodes
-
-				// iterate over *dict_p's parent's kids until we run into *dict_p
-				java::ArrayList* kids_p= parent_kids_p->getArrayList();
-				if( kids_p ) {
-					for( jint kids_ii= 0; kids_ii< kids_p->size(); ++kids_ii ) {
-
-						itext::PdfDictionary* kid_p= (itext::PdfDictionary*)
-							reader_p->getPdfObject( (itext::PdfDictionary*)(kids_p->get(kids_ii)) );
-						if( kid_p && kid_p->isDictionary() ) {
-
-							if( kid_p== dict_p ) {
-								// counting kids is complete; recurse
-
-								return sum_pages+ GetPageNumber( parent_p, reader_p ); // <--- return
-							}
-							else {
-								// is kid a page, or is kid a page tree object? add count to sum;
-								// PdfDictionary::isPage() and PdfDictionary::isPages()
-								// are not reliable, here
-
-								itext::PdfName* kid_type_p= (itext::PdfName*)
-									reader_p->getPdfObject( kid_p->get( itext::PdfName::TYPE ) );
-								if( kid_type_p && kid_type_p->isName() ) {
-
-									if( kid_type_p->compareTo( itext::PdfName::PAGE )== 0 ) {
-										// *kid_p is a Page
-
-										sum_pages+= 1;
-									}
-									else if( kid_type_p->compareTo( itext::PdfName::PAGES )== 0 ) {
-										// *kid_p is a Page Tree Node
-
-										itext::PdfNumber* count_p= (itext::PdfNumber*)
-											reader_p->getPdfObject( kid_p->get( itext::PdfName::COUNT ) );
-										if( count_p && count_p->isNumber() ) {
-
-											sum_pages+= count_p->intValue();
-
-										}
-										else { // error
-											cerr << "Internal Error: invalid count in GetPageNumber" << endl;
-										}
-									}
-									else { // error
-										cerr << "Internal Error: unexpected kid type in GetPageNumber" << endl;
-									}
-								}
-								else { // error
-									cerr << "Internal Error: invalid kid_type_p in GetPageNumber" << endl;
-								}
-							}
-						}
-						else { // error
-							cerr << "Internal Error: invalid kid_p in GetPageNumber" << endl;
-						}
-					} // done iterating over kids
-
-				}
-				else { // error
-					cerr << "Internal Error: invalid kids_p in GetPageNumber" << endl;
-				}
-			}
-			else { // error
-				cerr << "Internal Error: invalid kids array GetPageNumber" << endl;
-			}
-		}
-		else { // error
-			cerr << "Internal Error: invalid parent in GetPageNumber" << endl;
-		}
+	if( output_filename== "PROMPT" ) {
+		prompt_for_filename( "Please enter a name for the output:", 
+												 output_filename );
+	}
+	if( output_filename== "-" ) { // stdout
+		os_p= java::System::out;
 	}
 	else {
-		// *dict_p has no parent; end recursion
-		return 0;
-	}
-
-	// error: should have recursed
-	cerr << "Internal Error: recursion case skipped in GetPageNumber" << endl;
-
-	return 0;
-}
-
-static void 
-OutputString( ostream& ofs,
-							java::lang::String* jss_p )
-{
-	if( jss_p ) {
-		for( jint ii= 0; ii< jss_p->length(); ++ii ) {
-			jchar wc= jss_p->charAt(ii);
-			if( 0x20<= wc && wc<= 0x7e ) {
-				switch( wc ) {
-				case '<' :
-					ofs << "&lt;";
-					break;
-				case '>':
-					ofs << "&gt;";
-					break;
-				case '&':
-					ofs << "&amp;";
-					break;
-				case '"':
-					ofs << "&quot;";
-					break;
-				default:
-					ofs << (char)wc;
-					break;
+		if( ask_about_warnings_b ) {
+			// test for existing file by this name
+			ifstream ifs( output_filename.c_str() );
+			if( ifs ) {
+				cout << "Warning: the output file: " << output_filename << " already exists.  Overwrite? (y/n)" << endl;
+				char buff[64];
+				cin.getline( buff, 64 );
+				if( buff[0]!= 'y' && buff[0]!= 'Y' ) {
+					// recurse; try again
+					return get_output_stream( "PROMPT",
+																		ask_about_warnings_b );
 				}
 			}
-			else { // HTML numerical entity
-				ofs << "&#" << (int)wc << ";";
-			}
+		}
+
+		// attempt to open the stream
+		java::String* jv_output_filename_p=
+			JvNewStringLatin1( output_filename.c_str() );
+		try {
+			os_p= new java::FileOutputStream( jv_output_filename_p );
+		}
+		catch( java::io::IOException* ioe_p ) { // file open error
+			cerr << "Error: Failed to open output file: " << endl;
+			cerr << "   " << output_filename << endl;
+			cerr << "   No output created." << endl;
+			os_p= 0;
 		}
 	}
+
+	return os_p;
 }
 
+////
+// when uncompressing a PDF, we add this marker to every page,
+// so the PDF is easier to navigate; when compressing a PDF,
+// we remove this marker
+
+static char g_page_marker[]= "pdftk_PageNum";
 static void
-OutputPdfString( ostream& ofs,
-								 itext::PdfString* pdfss_p )
+	add_mark_to_page( itext::PdfReader* reader_p,
+										jint page_index,
+										jint page_num )
 {
-	if( pdfss_p && pdfss_p->isString() ) {
-		java::lang::String* jss_p= pdfss_p->toUnicodeString();
-		OutputString( ofs, jss_p );
+	itext::PdfName* page_marker_p=
+		new itext::PdfName( JvNewStringLatin1(g_page_marker) );
+	itext::PdfDictionary* page_p= reader_p->getPageN( page_index );
+	if( page_p && page_p->isDictionary() ) {
+		page_p->put( page_marker_p, new itext::PdfNumber( page_num ) );
 	}
 }
-
 static void
-OutputID( ostream& ofs,
-					java::lang::String* id_p )
+	add_marks_to_pages( itext::PdfReader* reader_p )
 {
-	ofs << hex;
-	for( jint ii= 0; ii< id_p->length(); ++ii ) {
-		unsigned int jc= (unsigned int)id_p->charAt(ii);
-		ofs << jc;
-	}
-	ofs << dec;
-}
-
-static void
-ReportOutlines( ostream& ofs, 
-								itext::PdfDictionary* outline_p,
-								int level,
-								itext::PdfReader* reader_p )
-{
-	// the title; HTML-compatible
-	ofs << "BookmarkTitle: ";
-	itext::PdfString* title_p= (itext::PdfString*)
-		reader_p->getPdfObject( outline_p->get( itext::PdfName::TITLE ) );
-	if( title_p && title_p->isString() ) {
-
-		OutputPdfString( ofs, title_p );
-		
-		ofs << endl;
-	}
-	else { // error
-		ofs << "[ERROR: TITLE NOT FOUND]" << endl;
-	}
-
-	// the level; 1-based to jive with HTML heading level concept
-	ofs << "BookmarkLevel: " << level+ 1 << endl;
-
-	// page number, 1-based; 
-	// a zero value indicates no page destination or an error
-	ofs << "BookmarkPageNumber: ";
-	{
-		bool fail_b= false;
-
-		// the destination object may take be in a couple different places
-		// and may take a couple, different forms
-
-		itext::PdfObject* destination_p= 0; {
-			if( outline_p->contains( itext::PdfName::DEST ) ) {
-				destination_p=
-					reader_p->getPdfObject( outline_p->get( itext::PdfName::DEST ) );
-			}
-			else if( outline_p->contains( itext::PdfName::A ) ) {
-
-				itext::PdfDictionary* action_p= (itext::PdfDictionary*)
-					reader_p->getPdfObject( outline_p->get( itext::PdfName::A ) );
-				if( action_p && action_p->isDictionary() ) {
-
-					// TODO: confirm action subtype of GoTo
-					itext::PdfName* s_p= (itext::PdfName*)
-						reader_p->getPdfObject( action_p->get( itext::PdfName::S ) );
-					if( s_p && s_p->isName() ) {
-
-						if( s_p->compareTo( itext::PdfName::GOTO )== 0 ) {
-							destination_p=
-								reader_p->getPdfObject( action_p->get( itext::PdfName::D ) );
-						}
-						else { // immediate action is not a link in this document;
-							// not an error
-
-							fail_b= true;
-						}
-					}
-					else { // error
-						fail_b= true;
-					}
-				}
-				else { // error
-					fail_b= true;
-				}
-			}
-			else { // unexpected
-				fail_b= true;
-			}
-		}
-
-		// destination is an array
-		if( destination_p && destination_p->isArray() ) {
-
-			java::ArrayList* array_list_p= ((itext::PdfArray*)destination_p)->getArrayList();
-			if( array_list_p && !array_list_p->isEmpty() ) {
-
-				itext::PdfDictionary* page_p= (itext::PdfDictionary*)
-					reader_p->getPdfObject( (itext::PdfObject*)(array_list_p->get(0)) );
-
-				if( page_p && page_p->isDictionary() ) {
-					ofs << GetPageNumber(page_p, reader_p)+ 1 << endl;
-				}
-				else { // error
-					fail_b= true;
-				}
-			}
-			else { // error
-				fail_b= true;
-			}
-		} // TODO: named destinations handling
-		else { // error
-			fail_b= true;
-		}
-
-		if( fail_b ) { // output our 'null page reference' code
-			ofs << 0 << endl;
-		}
-	}
-
-	// recurse into any children
-	if( outline_p->contains( itext::PdfName::FIRST ) ) {
-
-		itext::PdfDictionary* child_p= (itext::PdfDictionary*)
-			reader_p->getPdfObject( outline_p->get( itext::PdfName::FIRST ) );
-		if( child_p && child_p->isDictionary() ) {
-
-			ReportOutlines( ofs, child_p, level+ 1, reader_p );
-		}
-	}
-
-	// recurse into next sibling
-	if( outline_p->contains( itext::PdfName::NEXT ) ) {
-
-		itext::PdfDictionary* sibling_p= (itext::PdfDictionary*)
-			reader_p->getPdfObject( outline_p->get( itext::PdfName::NEXT ) );
-		if( sibling_p && sibling_p->isDictionary() ) {
-
-			ReportOutlines( ofs, sibling_p, level, reader_p );
-		}
+	jint num_pages= reader_p->getNumberOfPages();
+	for( jint ii= 1; ii<= num_pages; ++ii ) { // 1-based page ref.s
+		add_mark_to_page( reader_p, ii, ii );
 	}
 }
-
 static void
-ReportInfo( ostream& ofs,
-						itext::PdfDictionary* info_p,
-						itext::PdfReader* reader_p )
+	remove_mark_from_page( itext::PdfReader* reader_p,
+												 jint page_num )
 {
-	if( info_p && info_p->isDictionary() ) {
-		java::Set* keys_p= info_p->getKeys();
-
-		// iterate over Info keys
-		for( java::Iterator* it= keys_p->iterator(); it->hasNext(); ) {
-
-			itext::PdfName* key_p= (itext::PdfName*)it->next();
-			int key_len= JvGetArrayLength( key_p->getBytes() )- 1; // minus one for init. slash
-
-			itext::PdfObject* value_p= (itext::PdfObject*)info_p->get( key_p );
-
-			// don't output empty keys or values
-			if( 0< key_len &&
-					value_p->isString() && 
-					0< ((itext::PdfString*)value_p)->toString()->length() ) 
-				{ // ouput
-					const int buff_size= 128;
-					char buff[buff_size];
-					memset( buff, 0, buff_size );
-
-					// convert the PdfName into a c-string; omit initial slash
-					strncpy( buff, 
-									 (char*)elements( key_p->getBytes() )+ 1,
-									 ( key_len< buff_size- 1 ) ? key_len : buff_size- 1 );
-
-					ofs << "InfoKey: " << buff << endl;
-
-					ofs << "InfoValue: ";
-					OutputPdfString( ofs, (itext::PdfString*)value_p );
-					ofs << endl;
-				}
-		}
-
-	}
-	else { // error
+	itext::PdfName* page_marker_p=
+		new itext::PdfName( JvNewStringLatin1(g_page_marker) );
+	itext::PdfDictionary* page_p= reader_p->getPageN( page_num );
+	if( page_p && page_p->isDictionary() ) {
+		page_p->remove( page_marker_p );
 	}
 }
-
 static void
-ReportPageLabels( ostream& ofs,
-									itext::PdfDictionary* numtree_node_p,
-									itext::PdfReader* reader_p )
-	// if *numtree_node_p has Nums, report them;
-	// else if *numtree_node_p has Kids, recurse
-	// output 1-based page numbers; that's what we do for bookmarks
+	remove_marks_from_pages( itext::PdfReader* reader_p )
 {
-	itext::PdfArray* nums_p= (itext::PdfArray*)
-		reader_p->getPdfObject( numtree_node_p->get( itext::PdfName::NUMS ) );
-	if( nums_p && nums_p->isArray() ) {
-		// report page numbers
-
-		java::ArrayList* labels_p= nums_p->getArrayList();
-		if( labels_p ) {
-			for( jint labels_ii= 0; labels_ii< labels_p->size(); labels_ii+=2 ) {
-				
-				// label index
-				itext::PdfNumber* index_p= (itext::PdfNumber*)
-					reader_p->getPdfObject( (itext::PdfNumber*)(labels_p->get(labels_ii)) );
-
-				// label dictionary
-				itext::PdfDictionary* label_p= (itext::PdfDictionary*)
-					reader_p->getPdfObject( (itext::PdfDictionary*)(labels_p->get(labels_ii+ 1)) );
-
-				if( index_p && index_p->isNumber() &&
-						label_p && label_p->isDictionary() )
-					{
-						// PageLabelNewIndex
-						ofs << "PageLabelNewIndex: " << (long)(index_p->intValue())+ 1 << endl;
-						
-						{ // PageLabelStart
-							ofs << "PageLabelStart: "; 
-							itext::PdfNumber* start_p= (itext::PdfNumber*)
-								reader_p->getPdfObject( label_p->get( itext::PdfName::ST ) );
-							if( start_p && start_p->isNumber() ) {
-								ofs << (long)(start_p->intValue()) << endl;
-							}
-							else {
-								ofs << "1" << endl; // the default
-							}
-						}
-
-						{ // PageLabelPrefix
-							itext::PdfString* prefix_p= (itext::PdfString*)
-								reader_p->getPdfObject( label_p->get( itext::PdfName::P ) );
-							if( prefix_p && prefix_p->isString() ) {
-								ofs << "PageLabelPrefix: ";
-								OutputPdfString( ofs, prefix_p );
-								ofs << endl;
-							}
-						}
-
-						{ // PageLabelNumStyle
-							itext::PdfName* r_p= new itext::PdfName(JvNewStringLatin1("r"));
-							itext::PdfName* a_p= new itext::PdfName(JvNewStringLatin1("a"));
-
-							itext::PdfName* style_p= (itext::PdfName*)
-								reader_p->getPdfObject( label_p->get( itext::PdfName::S ) );
-							ofs << "PageLabelNumStyle: ";
-							if( style_p && style_p->isName() ) {
-								if( style_p->compareTo( itext::PdfName::D )== 0 ) {
-									ofs << "DecimalArabicNumerals" << endl;
-								}
-								else if( style_p->compareTo( itext::PdfName::R )== 0 ) {
-									ofs << "UppercaseRomanNumerals" << endl;
-								}
-								else if( style_p->compareTo( r_p )== 0 ) {
-									ofs << "LowercaseRomanNumerals" << endl;
-								}
-								else if( style_p->compareTo( itext::PdfName::A )== 0 ) {
-									ofs << "UppercaseLetters" << endl;
-								}
-								else if( style_p->compareTo( a_p )== 0 ) {
-									ofs << "LowercaseLetters" << endl;
-								}
-								else { // error
-									ofs << "[ERROR]" << endl;
-								}
-							}
-							else { // default
-								ofs << "NoNumber" << endl;
-							}
-						}
-
-					}
-				else { // error
-					ofs << "[ERROR: INVALID label_p IN ReportPageLabelNode]" << endl;
-				}
-			}
-		}
-		else { // error
-			ofs << "[ERROR: INVALID labels_p IN ReportPageLabelNode]" << endl;
-		}
-	}
-	else { // try recursing
-		itext::PdfArray* kids_p= (itext::PdfArray*)
-			reader_p->getPdfObject( numtree_node_p->get( itext::PdfName::KIDS ) );
-		if( kids_p && kids_p->isArray() ) {
-
-			java::ArrayList* kids_ar_p= kids_p->getArrayList();
-			if( kids_ar_p ) {
-				for( jint kids_ii= 0; kids_ii< kids_ar_p->size(); ++kids_ii ) {
-
-					itext::PdfDictionary* kid_p= (itext::PdfDictionary*)
-						reader_p->getPdfObject( (itext::PdfDictionary*)kids_ar_p->get(kids_ii) );
-					if( kid_p && kid_p->isDictionary() ) {
-
-						// recurse
-						ReportPageLabels( ofs,
-															kid_p,
-															reader_p );
-					}
-					else { // error
-						ofs << "[ERROR: INVALID kid_p]" << endl;
-					}
-				}
-			}
-			else { // error
-				ofs << "[ERROR: INVALID kids_ar_p]" << endl;
-			}
-		}
-		else { // error; a number tree must have one or the other
-			ofs << "[ERROR: INVALID PAGE LABEL NUMBER TREE]" << endl;
-		}
+	jint num_pages= reader_p->getNumberOfPages();
+	for( jint ii= 1; ii<= num_pages; ++ii ) { // 1-based page ref.s
+		remove_mark_from_page( reader_p, ii );
 	}
 }
-
-static void
-ReportOnPdf( ostream& ofs,
-						 itext::PdfReader* reader_p )
-{
-	{ // trailer data
-		itext::PdfDictionary* trailer_p= reader_p->getTrailer();
-		if( trailer_p && trailer_p->isDictionary() ) {
-
-			{ // metadata
-				itext::PdfDictionary* info_p= (itext::PdfDictionary*)
-					reader_p->getPdfObject( trailer_p->get( itext::PdfName::INFO ) );
-				if( info_p && info_p->isDictionary() ) {
-						
-					ReportInfo( ofs, info_p, reader_p );
-				}
-				else { // warning
-					cerr << "Warning: no info dictionary found" << endl;
-				}
-			}
-
-			{ // pdf ID; optional
-				itext::PdfArray* id_p= (itext::PdfArray*)
-					reader_p->getPdfObject( trailer_p->get( itext::PdfName::ID ) );
-				if( id_p && id_p->isArray() ) {
-
-					java::ArrayList* id_al_p= id_p->getArrayList();
-					if( id_al_p ) {
-
-						for( jint ii= 0; ii< id_al_p->size(); ++ii ) {
-							ofs << "PdfID" << (int)ii << ": ";
-
-							itext::PdfString* id_ss_p= (itext::PdfString*)
-								reader_p->getPdfObject( (itext::PdfObject*)id_al_p->get(ii) );
-							if( id_ss_p && id_ss_p->isString() ) {
-									
-								OutputID( ofs, id_ss_p->toString() );
-							}
-							else { // error
-								cerr << "Internal Error: invalid pdf id array string" << endl;
-							}
-
-							ofs << endl;
-						}
-					}
-					else { // error
-						cerr << "Internal Error: invalid ID ArrayList" << endl;
-					}
-				}
-			}
-
-		}
-		else { // error
-			cerr << "InternalError: invalid trailer" << endl;
-		}
-	}
-
-	{ // number of pages and outlines
-		itext::PdfDictionary* catalog_p= reader_p->catalog;
-		if( catalog_p && catalog_p->isDictionary() ) {
-
-			// number of pages
-			itext::PdfDictionary* pages_p= (itext::PdfDictionary*)
-				reader_p->getPdfObject( catalog_p->get( itext::PdfName::PAGES ) );
-			if( pages_p && pages_p->isDictionary() ) {
-
-				itext::PdfNumber* count_p= (itext::PdfNumber*)
-					reader_p->getPdfObject( pages_p->get( itext::PdfName::COUNT ) );
-				if( count_p && count_p->isNumber() ) {
-
-					ofs << "NumberOfPages: " << (unsigned int)count_p->intValue() << endl;
-				}
-				else { // error
-					cerr << "Internal Error: invalid count_p in ReportOnPdf()" << endl;
-				}
-			}
-			else { // error
-				cerr << "Internal Error: invalid pages_p in ReportOnPdf()" << endl;
-			}
-
-			// outlines; optional
-			itext::PdfDictionary* outlines_p= (itext::PdfDictionary*)
-				reader_p->getPdfObject( catalog_p->get( itext::PdfName::OUTLINES ) );
-			if( outlines_p && outlines_p->isDictionary() ) {
-
-				itext::PdfDictionary* top_outline_p= (itext::PdfDictionary*)
-					reader_p->getPdfObject( outlines_p->get( itext::PdfName::FIRST ) );
-				if( top_outline_p && top_outline_p->isDictionary() ) {
-
-					ReportOutlines( ofs, top_outline_p, 0, reader_p );
-				}
-				else { // error
-					cerr << "Internal Error: invalid top_outline_p in ReportOnPdf()" << endl;
-				}
-			}
-
-		}
-		else { // error
-			cerr << "InternalError:" << endl;
-		}
-	}
-
-	{ // page labels (a/k/a logical page numbers)
-		itext::PdfDictionary* catalog_p= reader_p->catalog;
-		if( catalog_p && catalog_p->isDictionary() ) {
-
-			itext::PdfDictionary* pagelabels_p= (itext::PdfDictionary*)
-				reader_p->getPdfObject( catalog_p->get( itext::PdfName::PAGELABELS ) );
-			if( pagelabels_p && pagelabels_p->isDictionary() ) {
-
-				ReportPageLabels( ofs,
-													pagelabels_p,
-													reader_p );
-			}
-		}
-		else { // error
-			cerr << "InternalError:" << endl;
-		}
-	}
-
-} // end: ReportOnPdf
 
 void
 TK_Session::create_output()
 {
 	if( is_valid() ) {
+
 		if( m_verbose_reporting_b ) {
 			cout << endl << "Creating Output ..." << endl;
 		}
 
-		itext::Document* output_doc_p= 0;
-		itext::PdfCopy* writer_p= 0;
-		java::FileOutputStream* ofs_p= 0;
-
+		string creator= "pdftk "+ string(PDFTK_VER)+ " - www.pdftk.com";
 		java::String* jv_creator_p= 
-			JvNewStringLatin1( "pdftk 0.94 - www.pdftk.com" );
-		java::String* jv_output_filename_p= 
-			JvNewStringLatin1( m_output_filename.c_str() );
+			JvNewStringLatin1( creator.c_str() );
+
+		if( m_output_owner_pw== "PROMPT" ) {
+			prompt_for_password( "owner", "the output PDF", m_output_owner_pw );
+		}
+		if( m_output_user_pw== "PROMPT" ) {
+			prompt_for_password( "user", "the output PDF", m_output_user_pw );
+		}
 
 		jbyteArray output_owner_pw_p= JvNewByteArray( m_output_owner_pw.size() ); {
 			jbyte* pw_p= elements(output_owner_pw_p);
@@ -2048,15 +1776,31 @@ TK_Session::create_output()
 		try {
 			switch( m_operation ) {
 
-			case cat_k : { // Catenation
-				output_doc_p= new itext::Document();
+			case cat_k : { // catenate pages
+				itext::Document* output_doc_p= new itext::Document();
 
-				ofs_p= new java::FileOutputStream( jv_output_filename_p );
-				writer_p= new itext::PdfCopy( output_doc_p, ofs_p );
+				java::OutputStream* ofs_p= 
+					get_output_stream( m_output_filename, 
+														 m_ask_about_warnings_b );
+
+				if( !ofs_p ) { // file open error
+					break;
+				}
+				itext::PdfCopy* writer_p= new itext::PdfCopy( output_doc_p, ofs_p );
 
 				output_doc_p->addCreator( jv_creator_p );
 
-				// output encryption
+				// un/compress output streams?
+				if( m_output_uncompress_b ) {
+					writer_p->filterStreams= true;
+					writer_p->compressStreams= false;
+				}
+				else if( m_output_compress_b ) {
+					writer_p->filterStreams= false;
+					writer_p->compressStreams= true;
+				}
+
+				// encrypt output?
 				if( m_output_encryption_strength!= none_enc ||
 						!m_output_owner_pw.empty() || 
 						!m_output_user_pw.empty() )
@@ -2074,12 +1818,11 @@ TK_Session::create_output()
 
 				output_doc_p->open();
 
+				int output_page_count= 0;
 				for( vector< PageRef >::const_iterator it= m_page_seq.begin();
-						 it!= m_page_seq.end(); ++it )
+						 it!= m_page_seq.end(); ++it, ++output_page_count )
 					{
 						// get the reader associated with this page ref.
-						//map< string, InputPdfIndex >::iterator jt= 
-						//	m_input_pdf_index.find( it->m_handle );
 						if( it->m_input_pdf_index< m_input_pdf.size() ) {
 							InputPdf& input_pdf= m_input_pdf[ it->m_input_pdf_index ];
 
@@ -2102,6 +1845,13 @@ TK_Session::create_output()
 							}
 
 							if( input_reader_p ) {
+								if( m_output_uncompress_b ) {
+									add_mark_to_page( input_reader_p, it->m_page_num, output_page_count+ 1 );
+								}
+								else if( m_output_compress_b ) {
+									remove_mark_from_page( input_reader_p, it->m_page_num );
+								}
+
 								itext::PdfImportedPage* page_p= 
 									writer_p->getImportedPage( input_reader_p, it->m_page_num );
 
@@ -2124,7 +1874,7 @@ TK_Session::create_output()
 			}
 			break;
 			
-			case burst_k : { // Burst input into pages
+			case burst_k : { // burst input into pages
 
 				// we should have been given only a single, input file
 				if( 1< m_input_pdf.size() ) { // error
@@ -2139,20 +1889,34 @@ TK_Session::create_output()
 				jint input_num_pages= 
 					m_input_pdf.begin()->m_num_pages;
 
+				if( m_output_filename.empty() ) {
+					m_output_filename= "pg_%04d.pdf";
+				}
 				for( jint ii= 0; ii< input_num_pages; ++ii ) {
 
 					// the filename
-					char buff[32]= "";
-					sprintf( buff, "pg_%04d.pdf", ii+ 1 );
-					jv_output_filename_p= JvNewStringLatin1( buff );
+					char buff[4096]= "";
+					sprintf( buff, m_output_filename.c_str(), ii+ 1 );
 
-					output_doc_p= new itext::Document();
-					ofs_p= new java::FileOutputStream( jv_output_filename_p );
-					writer_p= new itext::PdfCopy( output_doc_p, ofs_p );
+					java::String* jv_output_filename_p= JvNewStringLatin1( buff );
+
+					itext::Document* output_doc_p= new itext::Document();
+					java::FileOutputStream* ofs_p= new java::FileOutputStream( jv_output_filename_p );
+					itext::PdfCopy* writer_p= new itext::PdfCopy( output_doc_p, ofs_p );
 
 					output_doc_p->addCreator( jv_creator_p );
 
-					// output encryption
+					// un/compress output streams?
+					if( m_output_uncompress_b ) {
+						writer_p->filterStreams= true;
+						writer_p->compressStreams= false;
+					}
+					else if( m_output_compress_b ) {
+						writer_p->filterStreams= false;
+						writer_p->compressStreams= true;
+					}
+
+					// encrypt output?
 					if( m_output_encryption_strength!= none_enc ||
 							!m_output_owner_pw.empty() || 
 							!m_output_user_pw.empty() )
@@ -2193,65 +1957,236 @@ TK_Session::create_output()
 			}
 			break;
 
-			case filter_k: {
+			case filter_k: { // apply operations to given PDF file
 
 				// we should have been given only a single, input file
 				if( 1< m_input_pdf.size() ) { // error
-					cerr << "Error: Only one input PDF file may be given whem omitting the" << endl;
-					cerr << "   operator.Maybe you meant to use the \"cat\" operator?" << endl;
+					cerr << "Error: Only one input PDF file may be given for this" << endl;
+					cerr << "   operation.  Maybe you meant to use the \"cat\" operator?" << endl;
 					cerr << "   No output created." << endl;
 					break;
 				}
 
-				ofs_p= new java::FileOutputStream( jv_output_filename_p );
+				// try opening the FDF file before we get too involved
+				itext::FdfReader* fdf_reader_p= 0;
+				if( !m_form_data_filename.empty() ) {
+					if( m_form_data_filename== "PROMPT" ) {
+						prompt_for_filename( "Please enter a filename for the input FDF data:", 
+																 m_form_data_filename );
+					}
+					try {
+						fdf_reader_p=
+							new itext::FdfReader( JvNewStringLatin1( m_form_data_filename.c_str() ) );
+					}
+					catch( java::io::IOException* ioe_p ) { // file open error
+						cerr << "Error: Failed to open FDF (data) file: " << endl;
+						cerr << "   " << m_form_data_filename << endl;
+						cerr << "   No output created." << endl;
+						break;
+					}
+				}
+
+				// try opening the PDF background (or watermark) before we get too involved
+				itext::PdfReader* mark_p= 0;
+				com::lowagie::text::pdf::PdfImportedPage* mark_page_p= 0;
+				if( !m_background_filename.empty() ) {
+					if( m_background_filename== "PROMPT" ) {
+						prompt_for_filename( "Please enter a filename for the background PDF:", 
+																 m_background_filename );
+					}
+					try {
+						mark_p= new itext::PdfReader( JvNewStringLatin1( m_background_filename.c_str() ) );
+						mark_p->removeUnusedObjects();
+						mark_p->shuffleSubsetNames();
+					}
+					catch( java::io::IOException* ioe_p ) { // file open error
+						cerr << "Error: Failed to open background PDF file: " << endl;
+						cerr << "   " << m_background_filename << endl;
+						cerr << "   No output created." << endl;
+						break;
+					}
+				}
+
+				java::OutputStream* ofs_p= 
+					get_output_stream( m_output_filename,
+														 m_ask_about_warnings_b );
+
+				if( !ofs_p ) { // file open error
+					break;
+				}
 				itext::PdfReader* input_reader_p= 
 					m_input_pdf.begin()->m_readers.front().second;
 
+				itext::PdfStamperImp* writer_p=
+					new itext::PdfStamperImp( input_reader_p, ofs_p, 0 );
+
+				// update the info?
+				if( !m_update_info_filename.empty() ) {
+					if( m_update_info_filename== "PROMPT" ) {
+						prompt_for_filename( "Please enter an Info file filename:",
+																 m_update_info_filename );
+					}
+					if( m_update_info_filename== "-" ) {
+						if( !UpdateInfo( input_reader_p, cin ) ) {
+							cerr << "Warning: no Info added to output PDF." << endl;
+						}
+					}
+					else {
+						ifstream ifs( m_update_info_filename.c_str() );
+						if( ifs ) {
+							if( !UpdateInfo( input_reader_p, ifs ) ) {
+								cerr << "Warning: no Info added to output PDF." << endl;
+							}
+						}
+						else { // error
+							cerr << "Error: unable to open FDF file for input: " << m_update_info_filename << endl;
+							break;
+						}
+					}
+				}
+
+				// un/compress output streams?
+				if( m_output_uncompress_b ) {
+					add_marks_to_pages( input_reader_p );
+					writer_p->filterStreams= true;
+					writer_p->compressStreams= false;
+				}
+				else if( m_output_compress_b ) {
+					remove_marks_from_pages( input_reader_p );
+					writer_p->filterStreams= false;
+					writer_p->compressStreams= true;
+				}
+
+				// encrypt output?
 				if( m_output_encryption_strength!= none_enc ||
 						!m_output_owner_pw.empty() ||
 						!m_output_user_pw.empty() )
-					{ // encrypt output
+					{
 
 						// if no stregth is given, default to 128 bit,
 						// (which is incompatible w/ Acrobat 4)
 						bool bit128_b=
 							( m_output_encryption_strength!= bits40_enc );
-						
-						itext::PdfEncryptor::encrypt( input_reader_p,
-																					ofs_p,
-																					output_user_pw_p,
-																					output_owner_pw_p,
-																					m_output_user_perms,
-																					bit128_b );
+
+						writer_p->setEncryption( output_user_pw_p,
+																			output_owner_pw_p,
+																			m_output_user_perms,
+																			bit128_b );
 					}
-				else if( m_output_compress_b ||
-								 m_output_uncompress_b )
-					{ // modify output compression
 
-						itext::PdfStamper* stamper_p= 
-							new itext::PdfStamper( input_reader_p, ofs_p );
+				// fill form fields?
+				if( fdf_reader_p ) {
+					itext::AcroFields* fields_p= writer_p->getAcroFields();
+					fields_p->setGenerateAppearances( true ); // have iText create field appearances
+					if( fields_p->setFields( fdf_reader_p ) ) { // returs true if Rich Text input found
 
-						stamper_p->getWriter()->filterStreams= m_output_uncompress_b;
-						stamper_p->getWriter()->compressStreams= m_output_compress_b;
+						// set the PDF so that Acrobat will create appearances;
+						// this might appear contradictory to our setGenerateAppearances( true ) call,
+						// above; setting this, here, allows us to keep the generated appearances,
+						// in case the PDF is opened somewhere besides Acrobat; yet, Acrobat/Reader
+						// will create the Rich Text appearance if it has a chance
+						itext::PdfDictionary* catalog_p= input_reader_p->catalog;
+						if( catalog_p && catalog_p->isDictionary() ) {
+							
+							itext::PdfDictionary* acro_form_p= (itext::PdfDictionary*)
+								input_reader_p->getPdfObject( catalog_p->get( itext::PdfName::ACROFORM ) );
+							if( acro_form_p && acro_form_p->isDictionary() ) {
 
-						stamper_p->close();
+								acro_form_p->put( itext::PdfName::NEEDAPPEARANCES, itext::PdfBoolean::PDFTRUE );
+							}
+						}
 					}
-				else { // pass-through filter
-
-					itext::PdfStamper* stamper_p= 
-						new itext::PdfStamper( input_reader_p, ofs_p );
-
-					stamper_p->close();
 				}
 
+				// flatten form fields?
+				writer_p->setFormFlattening( m_output_flatten_b );
+
+				// add background/watermark?
+				if( mark_p ) {
+					com::lowagie::text::Rectangle* mark_page_size_p= mark_p->getCropBox( 1 );
+					jint mark_page_rotation= mark_p->getPageRotation( 1 );
+					for( jint mm= 0; mm< mark_page_rotation; mm+=90 ) {
+						mark_page_size_p= mark_page_size_p->rotate();
+					}
+
+					// create a PdfTemplate from the first page of mark
+					// (PdfImportedPage is derived from PdfTemplate)
+					com::lowagie::text::pdf::PdfImportedPage* mark_page_p=
+						writer_p->getImportedPage( mark_p, 1 );
+
+          // iterate over document's pages, adding mark_page as
+          // a layer 'underneath' the page content; scale mark_page
+          // and move it so it fits within the document's page;
+					jint num_pages= input_reader_p->getNumberOfPages();
+					for( jint ii= 0; ii< num_pages; ) {
+						++ii;
+						com::lowagie::text::Rectangle* doc_page_size_p= 
+							input_reader_p->getCropBox( ii );
+						jint doc_page_rotation= input_reader_p->getPageRotation( ii );
+						for( jint mm= 0; mm< doc_page_rotation; mm+=90 ) {
+							doc_page_size_p= doc_page_size_p->rotate();
+						}
+
+						jfloat h_scale= doc_page_size_p->width() / mark_page_size_p->width();
+						jfloat v_scale= doc_page_size_p->height() / mark_page_size_p->height();
+						jfloat mark_scale= (h_scale< v_scale) ? h_scale : v_scale;
+
+						jfloat h_trans= (jfloat)(doc_page_size_p->left()- mark_page_size_p->left()* mark_scale +
+																		 (doc_page_size_p->width()- 
+																			mark_page_size_p->width()* mark_scale) / 2.0);
+						jfloat v_trans= (jfloat)(doc_page_size_p->bottom()- mark_page_size_p->bottom()* mark_scale +
+																		 (doc_page_size_p->height()- 
+																			mark_page_size_p->height()* mark_scale) / 2.0);
+          
+						com::lowagie::text::pdf::PdfContentByte* content_byte_p= 
+							writer_p->getUnderContent( ii );
+						if( mark_page_rotation== 0 ) {
+							content_byte_p->addTemplate( mark_page_p, 
+																					 mark_scale, 0,
+																					 0, mark_scale,
+																					 h_trans, 
+																					 v_trans );
+						}
+						else if( mark_page_rotation== 90 ) {
+							content_byte_p->addTemplate( mark_page_p, 
+																					 0, -1* mark_scale,
+																					 mark_scale, 0,
+																					 h_trans, 
+																					 v_trans+ mark_page_size_p->height()* mark_scale );
+						}
+						else if( mark_page_rotation== 180 ) {
+							content_byte_p->addTemplate( mark_page_p, 
+																					 -1* mark_scale, 0,
+																					 0, -1* mark_scale,
+																					 h_trans+ mark_page_size_p->width()* mark_scale, 
+																					 v_trans+ mark_page_size_p->height()* mark_scale );
+						}
+						else if( mark_page_rotation== 270 ) {
+							content_byte_p->addTemplate( mark_page_p, 
+																					 0, mark_scale,
+																					 -1* mark_scale, 0,
+																					 h_trans+ mark_page_size_p->width()* mark_scale, v_trans );
+						}
+					}
+				}
+
+				// attach file to document?
+				if( !m_input_attach_file_filename.empty() ) {
+					this->attach_files( input_reader_p,
+															writer_p );
+				}
+
+				// done; write output
+				writer_p->close();
 			}
 			break;
 
+			case dump_data_fields_k :
 			case dump_data_k: { // report on input document
 
 				// we should have been given only a single, input file
 				if( 1< m_input_pdf.size() ) { // error
-					cerr << "Error: Only one input PDF file may be given for \"dump_data\" op." << endl;
+					cerr << "Error: Only one input PDF file may be used for the dump_data operation" << endl;
 					cerr << "   No output created." << endl;
 					break;
 				}
@@ -2259,13 +2194,23 @@ TK_Session::create_output()
 				itext::PdfReader* input_reader_p= 
 					m_input_pdf.begin()->m_readers.front().second;
 
-				if( m_output_filename.empty() ) {
-					ReportOnPdf( cout, input_reader_p );
+				if( m_output_filename.empty() || m_output_filename== "-" ) {
+					if( m_operation== dump_data_k ) {
+						ReportOnPdf( cout, input_reader_p );
+					}
+					else if( m_operation== dump_data_fields_k ) {
+						ReportAcroFormFields( cout, input_reader_p );
+					}
 				}
 				else {
 					ofstream ofs( m_output_filename.c_str() );
 					if( ofs ) {
-						ReportOnPdf( ofs, input_reader_p );
+						if( m_operation== dump_data_k ) {
+							ReportOnPdf( ofs, input_reader_p );
+						}
+						else if( m_operation== dump_data_fields_k ) {
+							ReportAcroFormFields( ofs, input_reader_p );
+						}
 					}
 					else { // error
 						cerr << "Error: unable to open file for output: " << m_output_filename << endl;
@@ -2274,6 +2219,21 @@ TK_Session::create_output()
 			}
 			break;
 
+			case unpack_files_k: { // copy PDF file attachments into current directory
+
+				// we should have been given only a single, input file
+				if( 1< m_input_pdf.size() ) { // error
+					cerr << "Error: Only one input PDF file may be given for \"unpack_files\" op." << endl;
+					cerr << "   No output created." << endl;
+					break;
+				}
+
+				itext::PdfReader* input_reader_p= 
+					m_input_pdf.begin()->m_readers.front().second;
+
+				this->unpack_files( input_reader_p );
+			}
+			break;
 			}
 		}
 		catch( java::lang::Throwable* t_p )
@@ -2286,25 +2246,28 @@ TK_Session::create_output()
 
 int main(int argc, char** argv)
 {
+	bool help_b= false;
 	bool version_b= false;
-	bool describe_b= ( argc== 1 );
+	bool synopsis_b= ( argc== 1 );
 	int ret_val= 0; // default: no error
 
 	for( int ii= 1; ii< argc; ++ii ) {
 		version_b=
 			(version_b || 
 			 strcmp( argv[ii], "--version" )== 0 );
-		describe_b= 
-			(describe_b || 
-			 strcmp( argv[ii], "--help" )== 0 || 
+		help_b= 
+			(strcmp( argv[ii], "--help" )== 0 || 
 			 strcmp( argv[ii], "-h" )== 0 );
 	}
 
-	if( version_b ) {
+	if( help_b ) {
+		describe_full();
+	}
+	else if( version_b ) {
 		describe_header();
 	}
-	else if( describe_b ) {
-		describe_usage();
+	else if( synopsis_b ) {
+		describe_synopsis();
 	}
 	else {
 		try {
@@ -2319,6 +2282,7 @@ int main(int argc, char** argv)
 			JvInitClass(&itext::PdfName::class$);
 			JvInitClass(&itext::PdfDictionary::class$);
 			JvInitClass(&itext::PdfOutline::class$);
+			JvInitClass(&itext::PdfBoolean::class$);
 
 			TK_Session tk_session( argc, argv );
 
@@ -2352,221 +2316,415 @@ describe_header() {
 	cout << "Copyright (C) 2003-04, Sid Steward - Please Visit: www.pdftk.com" << endl;
 	cout << "This is free software; see the source code for copying conditions. There is" << endl;
 	cout << "NO warranty, not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE." << endl;
-	cout << endl;
 }
 
 static void
-describe_usage() {
-	describe_header();
-
+describe_synopsis() {
 	cout << 
 "SYNOPSIS\n\
-       pdftk <input PDF files>\n\
-	     [input_pw <input PDF owner passwords>]\n\
-	     [<operation> <operation arguments>]\n\
-	     [output <output filename>]\n\
-	     [encrypt_40bit | encrypt_128bit] [allow <permissions>]\n\
-	     [owner_pw <owner password>] [user_pw <user password>]\n\
-	     [compress | uncompress]\n\
-	     [verbose]\n\
+       pdftk <input PDF files | - | PROMPT>\n\
+            [input_pw <input PDF owner passwords | PROMPT>]\n\
+            [<operation> <operation arguments>]\n\
+            [output <output filename | - | PROMPT>]\n\
+            [encrypt_40bit | encrypt_128bit]\n\
+            [allow <permissions>]\n\
+            [owner_pw <owner password | PROMPT>]\n\
+            [user_pw <user password | PROMPT>]\n\
+            [flatten] [compress | uncompress]\n\
+            [verbose] [dont_ask | do_ask]\n\
+       Where:\n\
+            <operation> may be empty, or:\n\
+            [cat | attach_files | unpack_files | burst |\n\
+             fill_form | background |\n\
+             dump_data | dump_data_fields | update_info]\n\
 \n\
+       For Complete Help: pdftk --help\n";
+}
+
+static void
+describe_full() {
+	describe_header();
+	cout << endl;
+
+	describe_synopsis();
+	cout << endl;
+
+	cout <<
+"DESCRIPTION\n\
+       If  PDF  is  electronic paper, then pdftk is an electronic\n\
+       staple-remover, hole-punch,  binder,  secret-decoder-ring,\n\
+       and  X-Ray-glasses.   Pdftk  is  a  simple  tool for doing\n\
+       everyday things with PDF documents.  Use it to:\n\
+\n\
+       * Merge PDF Documents\n\
+       * Split PDF Pages into a New Document\n\
+       * Decrypt Input as Necessary (Password Required)\n\
+       * Encrypt Output as Desired\n\
+       * Fill PDF Forms with FDF Data and/or Flatten Forms\n\
+       * Apply a Background Watermark\n\
+       * Report PDF Metrics such as Metadata and Bookmarks\n\
+       * Update PDF Metadata\n\
+       * Attach Files to PDF Pages or the PDF Document\n\
+       * Unpack PDF Attachments\n\
+       * Burst a PDF Document into Single Pages\n\
+       * Uncompress and Re-Compress Page Streams\n\
+       * Repair Corrupted PDF (Where Possible)\n\
+\n\
+OPTIONS\n\
+       A summary of options is included below.\n\
 \n\
        --help, -h\n\
-	      Show summary of options.\n\
+              Show summary of options.\n\
 \n\
-       <input PDF files>\n\
-	      A list of the input PDF files. If you plan to combine these PDFs\n\
-	      (without using handles) then list files in the  order  you  want\n\
-	      them  combined.	Input  files  can  be associated with handles,\n\
-	      where a handle is a single, upper-case letter:\n\
+       <input PDF files | - | PROMPT>\n\
+              A list of the input PDF files. If you plan to  com-\n\
+              bine  these  PDFs (without using handles) then list\n\
+              files in the order you want them combined.   Use  -\n\
+              to  pass  a single PDF into pdftk via stdin.  Input\n\
+              files can be associated with handles, where a  han-\n\
+              dle is a single, upper-case letter:\n\
 \n\
-	      <input PDF handle>=<input PDF filename>\n\
+              <input PDF handle>=<input PDF filename>\n\
 \n\
-	      Handles are often omitted.  They are useful when specifying  PDF\n\
-	      passwords or page ranges, later.\n\
+              Handles  are  often  omitted.  They are useful when\n\
+              specifying PDF passwords or page ranges, later.\n\
 \n\
-	      For example: A=input1.pdf B=input2.pdf\n\
+              For example: A=input1.pdf B=input2.pdf\n\
 \n\
-       [input_pw <input PDF owner passwords>]\n\
-	      Input  PDF  owner  passwords,  if necessary, are associated with\n\
-	      files by using their handles:\n\
+       [input_pw <input PDF owner passwords | PROMPT>]\n\
+              Input PDF owner passwords, if necessary, are  asso-\n\
+              ciated with files by using their handles:\n\
 \n\
-	      <input PDF handle>=<input PDF file owner password>\n\
+              <input PDF handle>=<input PDF file owner password>\n\
 \n\
-	      If handles are not given, then  passwords  are  associated  with\n\
-	      input files by order.\n\
+              If  handles are not given, then passwords are asso-\n\
+              ciated with input files by order.\n\
 \n\
-	      Most  pdftk features require that encrypted input PDF are accom-\n\
-	      panied by the ~owner~ password. If the input PDF	has  no  owner\n\
-	      password, then the user password must be given, instead.	If the\n\
-	      input PDF has no passwords, then no password should be given.\n\
+              Most pdftk features require  that  encrypted  input\n\
+              PDF are accompanied by the ~owner~ password. If the\n\
+              input PDF has no  owner  password,  then  the  user\n\
+              password  must be given, instead.  If the input PDF\n\
+              has no passwords, then no password should be given.\n\
+\n\
+              When  running in do_ask mode, pdftk will prompt you\n\
+              for a password if the supplied password  is  incor-\n\
+              rect or none was given.\n\
 \n\
        [<operation> <operation arguments>]\n\
-	      If this optional argument is omitted, then pdftk runs  in  'fil-\n\
-	      ter'  mode.   Filter mode takes only one PDF input and creates a\n\
-	      new PDF after applying all of the output arguments, like encryp-\n\
-	      tion and compression.\n\
+              If  this  optional  argument is omitted, then pdftk\n\
+              runs in 'filter' mode.  Filter mode takes only  one\n\
+              PDF  input and creates a new PDF after applying all\n\
+              of the output options, like encryption and compres-\n\
+              sion.\n\
 \n\
-	      Available  operations  are:  cat, burst, and dump_data. Only cat\n\
-	      takes additional arguments in the form of page ranges, described\n\
-	      below.\n\
+              Available   operations   are:   cat,  attach_files,\n\
+              unpack_files,   burst,    fill_form,    background,\n\
+              dump_data,   dump_data_fields,   update_info.  Some\n\
+              operations takes  additional  arguments,  described\n\
+              below.\n\
 \n\
-	      cat    Catenates	pages  from  input  PDFs  to create a new PDF.\n\
-		     Page order in the new PDF is specified by	the  order  of\n\
-		     the  given  page  ranges.	Page ranges are described like\n\
-		     this:\n\
+          cat [<page ranges>]\n\
+                 Catenates  pages from input PDFs to create a new\n\
+                 PDF.  Page order in the new PDF is specified  by\n\
+                 the order of the given page ranges.  Page ranges\n\
+                 are described like this:\n\
 \n\
-		     <input PDF handle>[<begin page  number>[-<end  page  num-\n\
-		     ber>[<qualifier>]]]\n\
+                 <input  PDF  handle>[<begin  page  number>[-<end\n\
+                 page number>[<qualifier>]]]\n\
 \n\
-		     Where  the  handle identifies one of the input PDF files,\n\
-		     and the beginning and ending page numbers	are  one-based\n\
-		     references  to  pages  in the PDF file, and the qualifier\n\
-		     can be even or odd.\n\
+                 Where the handle identifies one of the input PDF\n\
+                 files, and the beginning and ending page numbers\n\
+                 are  one-based  references  to  pages in the PDF\n\
+                 file, and the qualifier can be even or odd.\n\
 \n\
-		     If the handle is omitted, then the pages are  taken  from\n\
-		     the first input PDF.\n\
+                 If the handle is omitted from  the  page  range,\n\
+                 then  the  pages  are taken from the first input\n\
+                 PDF.\n\
 \n\
-		     If  no  arguments	are passed to cat, then pdftk combines\n\
-		     all input PDFs in the order they were given to create the\n\
-		     output.\n\
+                 If no arguments are passed to  cat,  then  pdftk\n\
+                 combines  all  input PDFs in the order they were\n\
+                 given to create the output.\n\
 \n\
-		     NOTES:\n\
-		     * The end page number may be less than begin page number.\n\
-		     * The keyword end may be used to reference the final page\n\
-		     of a document instead of a page number.\n\
-		     *	Reference  a  single  page by omitting the ending page\n\
-		     number.\n\
-		     *	The  handle  may be used alone to represent the entire\n\
-		     PDF document, i.e., B1-end is the same as B.\n\
+                 NOTES:\n\
+                 * <end page number> may be less than <begin page\n\
+                   number>.\n\
+                 *  The  keyword end may be used to reference the\n\
+                   final page of a document  instead  of  a  page\n\
+                   number.\n\
+                 * Reference a single page by omitting the ending\n\
+                   page number.\n\
+                 * The handle may be used alone to represent  the\n\
+                   entire  PDF document, e.g., B1-end is the same\n\
+                   as B.\n\
 \n\
-		     Page range examples:\n\
-		     A1-21\n\
-		     Bend-1odd\n\
-		     A72\n\
-		     A1-21 Beven A72\n\
+                 Page range examples:\n\
+                 A1-21\n\
+                 Bend-1odd\n\
+                 A72\n\
+                 A1-21 Beven A72\n\
 \n\
-	      burst  Splits  a	single,  input	PDF  document  into individual\n\
-		     pages.  Do not provide an output section. Encryption  can\n\
-		     be   applied   by	 appending   output   arguments,  like\n\
-		     encrypt_128bit, e.g.:\n\
+          attach_files <attachment filenames | PROMPT>\n\
+          [to_page <page number | PROMPT>]\n\
+                 Packs arbitrary files into  a  PDF  using  PDF's\n\
+                 file  attachment features. More than one attach-\n\
+                 ment may be listed after  attach_files.  Attach-\n\
+                 ments are added at the document level unless the\n\
+                 optional to_page option is given, in which  case\n\
+                 the  files are attached to the given page number\n\
+                 (the first page is 1, the final  page  is  end).\n\
+                 For example:\n\
 \n\
-		     pdftk in.pdf burst owner_pw foopass encrypt_128bit\n\
+                 pdftk     in.pdf     attach_files    table1.html\n\
+                 table2.html to_page 6 output out.pdf\n\
 \n\
-	      dump_data\n\
-		     Reads a  single,  input  PDF  file  and  reports  various\n\
-		     statistics,  metadata,  and  bookmarks  (outlines) to the\n\
-		     given output filename or to stdout.  Does	not  create  a\n\
-		     new PDF.\n\
+          unpack_files\n\
+                 Copies all of the attachments from the input PDF\n\
+                 into  the  current folder or to an output direc-\n\
+                 tory given after output. For example:\n\
 \n\
-       [output <output filename>]\n\
-	      The  output  PDF filename may not be set to the name of an input\n\
-	      filename.\n\
+                 pdftk report.pdf unpack_files output ~/atts/\n\
+\n\
+                 or, interactively:\n\
+\n\
+                 pdftk report.pdf unpack_files output PROMPT\n\
+\n\
+          burst  Splits a single, input PDF document  into  indi-\n\
+                 vidual   pages.  Also  creates  a  report  named\n\
+                 doc_data.txt which is the  same  as  the  output\n\
+                 from  dump_data.  If the output section is omit-\n\
+                 ted, then  PDF  pages  are  named:  pg_%04d.pdf,\n\
+                 e.g.:  pg_0001.pdf,  pg_0002.pdf,  etc.  To name\n\
+                 these pages  yourself,  supply  a  printf-styled\n\
+                 format string via the output section.  For exam-\n\
+                 ple,  if  you  want  pages  named:  page_01.pdf,\n\
+                 page_02.pdf,  etc., pass output page_%02d.pdf to\n\
+                 pdftk.  Encryption can be applied to the  output\n\
+                 by  appending  output  options such as owner_pw,\n\
+                 e.g.:\n\
+\n\
+                 pdftk in.pdf burst owner_pw foopass\n\
+\n\
+          fill_form <FDF data filename | - | PROMPT>\n\
+                 Fills the single input PDF's  form  fields  with\n\
+                 the  data  from  an FDF file or stdin. Enter the\n\
+                 FDF data filename after fill_form, or use  -  to\n\
+                 pass the data via stdin, like so:\n\
+\n\
+                 pdftk   form.pdf   fill_form   data.fdf   output\n\
+                 form.filled.pdf\n\
+\n\
+                 After filling a form,  the  form  fields  remain\n\
+                 interactive unless you also use the flatten out-\n\
+                 put option. flatten merges the form fields  with\n\
+                 the  PDF  pages. You can use flatten alone, too,\n\
+                 but only on a single PDF:\n\
+\n\
+                 pdftk form.pdf fill_form data.fdf output out.pdf\n\
+                 flatten\n\
+\n\
+                 or:\n\
+\n\
+                 pdftk form.filled.pdf output out.pdf flatten\n\
+\n\
+                 If the input FDF file includes Rich Text format-\n\
+                 ted data in addition to  plain  text,  then  the\n\
+                 Rich Text data is packed into the form fields as\n\
+                 well as the plain text.  Pdftk also sets a  flag\n\
+                 that  cues  Acrobat/Reader to generate new field\n\
+                 appearances based on the Rich Text  data.   That\n\
+                 way,  when  the  user  opens the PDF, the viewer\n\
+                 will create the Rich Text fields  on  the  spot.\n\
+                 If  the  user's PDF viewer does not support Rich\n\
+                 Text, then the user will see the plain text data\n\
+                 instead.   If you flatten this form before Acro-\n\
+                 bat has a chance to create (and save) new  field\n\
+                 appearances,  then  the plain text field data is\n\
+                 what you'll see.\n\
+\n\
+          background <background PDF filename | - | PROMPT>\n\
+                 Applies a PDF watermark to the background  of  a\n\
+                 single  input  PDF.   Pass  the background PDF's\n\
+                 filename after background like so:\n\
+\n\
+                 pdftk in.pdf background back.pdf output out.pdf\n\
+\n\
+                 Pdftk uses only the first page  from  the  back-\n\
+                 ground  PDF  and applies it to every page of the\n\
+                 input PDF.  This page is scaled and  rotated  as\n\
+                 needed  to fit the input page.  You can use - to\n\
+                 pass a background PDF into pdftk via stdin.  For\n\
+                 backward  compatibility  with  pdftk  1.0, back-\n\
+                 ground can be used as an  output  option.   How-\n\
+                 ever,  this  old  technique  works  only when no\n\
+                 operation is given.\n\
+\n\
+          dump_data\n\
+                 Reads a single, input PDF file and reports vari-\n\
+                 ous  statistics, metadata, bookmarks (a/k/a out-\n\
+                 lines), and page  labels  to  the  given  output\n\
+                 filename  or  (if no output is given) to stdout.\n\
+                 Does not create a new PDF.\n\
+\n\
+          dump_data_fields\n\
+                 Reads a single, input PDF file and reports  form\n\
+                 field statistics to the given output filename or\n\
+                 (if no output is given)  to  stdout.   Does  not\n\
+                 create a new PDF.\n\
+\n\
+          update_info <info data filename | - | PROMPT>\n\
+                 Changes  the  metadata  stored in a single PDF's\n\
+                 Info dictionary to match the  input  data  file.\n\
+                 The  input data file uses the same syntax as the\n\
+                 output from dump_data. This does not change  the\n\
+                 metadata  stored  in the PDF's XMP stream, if it\n\
+                 has one. For example:\n\
+\n\
+                 pdftk in.pdf update_info in.info output out.pdf\n\
+\n\
+       [output <output filename | - | PROMPT>]\n\
+              The output PDF filename may not be set to the  name\n\
+              of  an  input  filename. Use - to output to stdout.\n\
+              When using the dump_data operation, use  output  to\n\
+              set  the  name  of the output data file. When using\n\
+              the unpack_files operation, use output to  set  the\n\
+              name  of an output directory.  When using the burst\n\
+              operation,  you  can  use  output  to  control  the\n\
+              resulting PDF page filenames (described above).\n\
 \n\
        [encrypt_40bit | encrypt_128bit]\n\
-	      If an output PDF user or owner password  is  given,  output  PDF\n\
-	      encryption  strength defaults to 128 bits.  This can be overrid-\n\
-	      den by specifying encrypt_40bit.\n\
+              If  an  output PDF user or owner password is given,\n\
+              output PDF  encryption  strength  defaults  to  128\n\
+              bits.    This   can  be  overridden  by  specifying\n\
+              encrypt_40bit.\n\
 \n\
        [allow <permissions>]\n\
-	      Permissions are applied to the output PDF only if an  encryption\n\
-	      strength is specified or an owner or user password is given.  If\n\
-	      permissions are not specified, they  default  to	'none,'  which\n\
-	      means all of the following features are disabled.\n\
+              Permissions are applied to the output PDF  only  if\n\
+              an  encryption strength is specified or an owner or\n\
+              user password is given.   If  permissions  are  not\n\
+              specified,  they default to 'none,' which means all\n\
+              of the following features are disabled.\n\
 \n\
-	      The permissions section may include one or more of the following\n\
-	      features:\n\
+              The permissions section may include one or more  of\n\
+              the following features:\n\
 \n\
-	      Printing\n\
-		     Top Quality Printing\n\
+              Printing\n\
+                     Top Quality Printing\n\
 \n\
-	      DegradedPrinting\n\
-		     Lower Quality Printing\n\
+              DegradedPrinting\n\
+                     Lower Quality Printing\n\
 \n\
-	      ModifyContents\n\
+              ModifyContents\n\
+                     Also allows Assembly\n\
 \n\
-	      Assembly\n\
+              Assembly\n\
 \n\
-	      CopyContents\n\
+              CopyContents\n\
+                     Also allows ScreenReaders\n\
 \n\
-	      ScreenReaders\n\
+              ScreenReaders\n\
 \n\
-	      ModifyAnnotations\n\
+              ModifyAnnotations\n\
+                     Also allows FillIn\n\
 \n\
-	      FillIn\n\
+              FillIn\n\
 \n\
-	      AllFeatures\n\
-		     Allows the user to perform all of the above.\n\
+              AllFeatures\n\
+                     Allows the user to perform all of the above,\n\
+                     and top quality printing.\n\
 \n\
-       [owner_pw <owner password>] [user_pw <user password>]\n\
-	      If an encryption strength is given but  no  passwords  are  sup-\n\
-	      plied,  then  the  owner	and user passwords remain empty, which\n\
-	      means that the resulting PDF may	be  opened  and  its  security\n\
-	      parameters altered by anybody.\n\
+       [owner_pw <owner password | PROMPT>]\n\
+       [user_pw <user password | PROMPT>]\n\
+              If an encryption strength is given but no passwords\n\
+              are  supplied,  then  the  owner and user passwords\n\
+              remain empty, which means that  the  resulting  PDF\n\
+              may  be  opened and its security parameters altered\n\
+              by anybody.\n\
 \n\
        [compress | uncompress]\n\
-	      These  are  only useful when you want to edit PDF code in a text\n\
-	      editor like vim or emacs.  Remove PDF page stream compression by\n\
-	      applying	the  uncompress  filter.  Use  the  compress filter to\n\
-	      restore compression.\n\
+              These are only useful when you  want  to  edit  PDF\n\
+              code  in  a  text editor like vim or emacs.  Remove\n\
+              PDF page stream compression by applying the  uncom-\n\
+              press  filter.  Use  the compress filter to restore\n\
+              compression.\n\
+\n\
+       [flatten]\n\
+              Use this option to merge an input PDF's interactive\n\
+              form  fields (and their data) with the PDF's pages.\n\
+              Only one input PDF may  be  given.  Sometimes  used\n\
+              with the fill_form operation.\n\
 \n\
        [verbose]\n\
-	      By default, pdftk runs quietly. Append verbose to the end and it\n\
-	      will speak up.\n\
+              By  default,  pdftk runs quietly. Append verbose to\n\
+              the end and it will speak up.\n\
+\n\
+       [dont_ask | do_ask]\n\
+              Depending  on  the   compile-time   settings   (see\n\
+              ASK_ABOUT_WARNINGS),  pdftk  might  prompt  you for\n\
+              further input when it encounters a problem, such as\n\
+              a  bad  password. Override this default behavior by\n\
+              adding dont_ask (so pdftk won't ask you what to do)\n\
+              or do_ask (so pdftk will ask you what to do).\n\
+\n\
+              When  running  in  dont_ask  mode, pdftk will over-\n\
+              write files with its output without notice.\n\
 \n\
 EXAMPLES\n\
        Decrypt a PDF\n\
-	      pdftk secured.pdf input_pw foopass output unsecured.pdf\n\
+         pdftk secured.pdf input_pw foopass output unsecured.pdf\n\
 \n\
-       Encrypt	a  PDF using 128-bit strength (the default), withhold all per-\n\
-       missions (the default)\n\
-	      pdftk 1.pdf output 1.128.pdf owner_pw foopass\n\
+       Encrypt a PDF using 128-bit strength (the default),  with-\n\
+       hold all permissions (the default)\n\
+         pdftk 1.pdf output 1.128.pdf owner_pw foopass\n\
 \n\
-       Same  as  above, except password 'baz' must also be used to open output\n\
-       PDF\n\
-	      pdftk 1.pdf output 1.128.pdf owner_pw foo user_pw baz\n\
+       Same as above, except password 'baz' must also be used  to\n\
+       open output PDF\n\
+         pdftk 1.pdf output 1.128.pdf owner_pw foo user_pw baz\n\
 \n\
-       Same as above, except printing is allowed (once the PDF is open)\n\
-	      pdftk  1.pdf  output  1.128.pdf  owner_pw  foo user_pw baz allow\n\
-	      printing\n\
+       Same as above, except printing is allowed (once the PDF is\n\
+       open)\n\
+         pdftk 1.pdf output 1.128.pdf owner_pw  foo  user_pw  baz\n\
+         allow printing\n\
 \n\
        Join in1.pdf and in2.pdf into a new PDF, out1.pdf\n\
-	      pdftk in1.pdf in2.pdf cat output out1.pdf\n\
-	      or (using handles):\n\
-	      pdftk A=in1.pdf B=in2.pdf cat A B output out1.pdf\n\
-	      or (using wildcards):\n\
-	      pdftk *.pdf cat output combined.pdf\n\
+         pdftk in1.pdf in2.pdf cat output out1.pdf\n\
+         or (using handles):\n\
+         pdftk A=in1.pdf B=in2.pdf cat A B output out1.pdf\n\
+         or (using wildcards):\n\
+         pdftk *.pdf cat output combined.pdf\n\
 \n\
        Remove 'page 13' from in1.pdf to create out1.pdf\n\
-	      pdftk in.pdf cat 1-12 14-end output out1.pdf\n\
-	      or:\n\
-	      pdftk A=in1.pdf cat A1-12 A14-end output out1.pdf\n\
+         pdftk in.pdf cat 1-12 14-end output out1.pdf\n\
+         or:\n\
+         pdftk A=in1.pdf cat A1-12 A14-end output out1.pdf\n\
 \n\
-       Apply 40-bit  encryption  to  output,  revoking	all  permissions  (the\n\
-       default). Set the owner PW to 'foopass'.\n\
-	      pdftk  1.pdf  2.pdf  cat	output	3.pdf  encrypt_40bit  owner_pw\n\
-	      foopass\n\
+       Apply  40-bit  encryption  to output, revoking all permis-\n\
+       sions (the default). Set the owner PW to 'foopass'.\n\
+         pdftk   1.pdf   2.pdf  cat  output  3.pdf  encrypt_40bit\n\
+         owner_pw foopass\n\
 \n\
-       Join  two files, one of which requires the password 'foopass'. The out-\n\
-       put is not encrypted.\n\
-	      pdftk A=secured.pdf 2.pdf input_pw A=foopass cat output 3.pdf\n\
+       Join  two  files,  one  of  which  requires  the  password\n\
+       'foopass'. The output is not encrypted.\n\
+         pdftk A=secured.pdf 2.pdf input_pw A=foopass cat  output\n\
+         3.pdf\n\
 \n\
-       Uncompress PDF page streams for editing the PDF in a text editor (e.g.,\n\
-       vim, emacs)\n\
-	      pdftk doc.pdf output doc.unc.pdf uncompress\n\
+       Uncompress  PDF page streams for editing the PDF in a text\n\
+       editor (e.g., vim, emacs)\n\
+         pdftk doc.pdf output doc.unc.pdf uncompress\n\
 \n\
-       Repair a PDF's corrupted XREF table and stream lengths, if possible\n\
-	      pdftk broken.pdf output fixed.pdf\n\
+       Repair a PDF's corrupted XREF table and stream lengths, if\n\
+       possible\n\
+         pdftk broken.pdf output fixed.pdf\n\
 \n\
-       Burst   a  single  PDF  document  into  pages  and  dump  its  data  to\n\
-       doc_data.txt\n\
-	      pdftk mydoc.pdf burst\n\
+       Burst  a  single PDF document into pages and dump its data\n\
+       to doc_data.txt\n\
+         pdftk mydoc.pdf burst\n\
 \n\
-       Burst  a  single  PDF  document into encrypted pages. Allow low-quality\n\
-       printing\n\
-	      pdftk mydoc.pdf burst owner_pw foopass allow DegradedPrinting\n\
+       Burst  a  single  PDF document into encrypted pages. Allow\n\
+       low-quality printing\n\
+         pdftk  mydoc.pdf  burst owner_pw foopass allow Degraded-\n\
+         Printing\n\
 \n\
-       Write a report on PDF document metadata and bookmarks to report.txt\n\
-	      pdftk mydoc.pdf dump_data output report.txt\n";
-
+       Write a report on PDF document metadata and  bookmarks  to\n\
+       report.txt\n\
+         pdftk mydoc.pdf dump_data output report.txt\n";
 }
