@@ -11,10 +11,27 @@
 # 	 								
 
 # tools
-CXX= g++
+TOOLPATH=
+VERSUFF= -3.3
+CXX= $(TOOLPATH)g++$(VERSUFF)
+export GCJ= $(TOOLPATH)gcj$(VERSUFF)
+export GCJH= $(TOOLPATH)gcjh$(VERSUFF)
+export AR= ar
+export RM= rm
 
-# compiler options specific to Debian (Sarge dist.)
-CC_OPTS= -lgcj -O3
+# pdftk compiler flags; 0x2f is a forward slash; 0x5c is a backslash
+# if you want pdftk to ask before overwriting a file, set
+# ASK_ABOUT_WARNINGS to true; otherwise: false; override this default
+# with the dont_ask or do_ask command-line options
+CPPFLAGS= -O3 -DPATH_DELIM=0x2f -DASK_ABOUT_WARNINGS=false
+CXXFLAGS= -lgcj
+
+# itext compiler flags
+export GCJFLAGS=
+
+#
+export ARFLAGS= rs
+export RMFLAGS= -vf
 
 #
 include Makefile.Base
