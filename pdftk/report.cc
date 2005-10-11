@@ -65,6 +65,7 @@
 #include "com/lowagie/text/pdf/PdfEncryptor.h"
 #include "com/lowagie/text/pdf/PdfNameTree.h"
 #include "com/lowagie/text/pdf/FdfReader.h"
+#include "com/lowagie/text/pdf/FdfWriter.h"
 #include "com/lowagie/text/pdf/AcroFields.h"
 #include "com/lowagie/text/pdf/PdfIndirectReference.h"
 #include "com/lowagie/text/pdf/PdfIndirectObject.h"
@@ -907,6 +908,219 @@ ReportAcroFormFields( ostream& ofs,
 	}
 
 	return ret_val_b;
+}
+
+static void
+ReportGenerateFDF( itext::PdfArray* array, itext::PdfArray* kids_array_p, itext::PdfReader* reader_p )
+{
+	java::ArrayList* kids_p= kids_array_p->getArrayList();
+	if( kids_p ) {
+		for( jint kids_ii= 0; kids_ii< kids_p->size(); ++kids_ii ) {
+
+			itext::PdfDictionary* kid_p= (itext::PdfDictionary*)
+				reader_p->getPdfObject( (itext::PdfDictionary*)(kids_p->get(kids_ii)) );
+			if( kid_p && kid_p->isDictionary() ) {
+				itext::PdfDictionary* dict = new itext::PdfDictionary();
+
+				// field type
+				if( kid_p->contains( itext::PdfName::FT ) ) {
+					itext::PdfName* ft_p= (itext::PdfName*)
+						reader_p->getPdfObject( kid_p->get( itext::PdfName::FT ) );
+					if( ft_p && ft_p->isName() ) {
+
+						
+						if( ft_p->equals( itext::PdfName::TX ) ) { // text
+						}
+						else if( ft_p->equals( itext::PdfName::CH ) ) { // choice
+						}
+						else if( ft_p->equals( itext::PdfName::SIG ) ) { // signature
+						} else
+							continue;
+					}
+				}
+
+				// field name; special inheritance rule: prepend parent name
+				if( kid_p->contains( itext::PdfName::T ) ) {
+					itext::PdfString* pdfs_p= (itext::PdfString*)
+						reader_p->getPdfObject( kid_p->get( itext::PdfName::T ) );
+					if( pdfs_p ) {
+						dict->put( itext::PdfName::T, pdfs_p);
+					}
+				}
+
+				// field alt. name
+				if( kid_p->contains( itext::PdfName::TU ) ) {
+					itext::PdfString* pdfs_p= (itext::PdfString*)
+						reader_p->getPdfObject( kid_p->get( itext::PdfName::TU ) );
+					if( pdfs_p ) {
+						dict->put( itext::PdfName::T, pdfs_p);
+					}
+				}
+
+				// field value; inheritable; may be string or name
+				if( kid_p->contains( itext::PdfName::V ) ) {
+					itext::PdfObject* pdfs_p= 
+						reader_p->getPdfObject( kid_p->get( itext::PdfName::V ) );
+					if( pdfs_p ) {
+						dict->put( itext::PdfName::V, pdfs_p);
+					}
+				} else
+				if( kid_p->contains( itext::PdfName::DV ) ) {
+					itext::PdfObject* pdfs_p= 
+						reader_p->getPdfObject( kid_p->get( itext::PdfName::DV ) );
+					if( pdfs_p ) {
+						dict->put( itext::PdfName::V, pdfs_p);
+					}
+				} else {
+					dict->put( itext::PdfName::V, new itext::PdfString(JvNewStringLatin1("\n%%EOF\n")));
+				}
+
+				// rich text value; may be a string or a stream
+				if( kid_p->contains( itext::PdfName::RV ) ) {
+					itext::PdfObject* pdfo_p= (itext::PdfObject*)
+						reader_p->getPdfObject( kid_p->get( itext::PdfName::RV ) );
+					if( pdfo_p ) {
+						dict->put( itext::PdfName::RV, pdfo_p);
+					}
+				}
+
+/* IT would be nice to also process those somehow...
+  				// available states
+				if( kid_p->contains( itext::PdfName::AP ) ) {
+					itext::PdfDictionary* ap_p= (itext::PdfDictionary*)
+						reader_p->getPdfObject( kid_p->get( itext::PdfName::AP ) );
+					if( ap_p && ap_p->isDictionary() ) {
+
+						// this is one way to cull button option names: iterate over
+						// appearance state names
+
+						// N
+						if( ap_p->contains( itext::PdfName::N ) ) {
+							itext::PdfObject* n_p= 
+								reader_p->getPdfObject( ap_p->get( itext::PdfName::N ) );
+							if( n_p && n_p->isDictionary() ) {
+								java::Set* n_set_p= ((itext::PdfDictionary*)n_p)->getKeys();
+								for( java::Iterator* it= n_set_p->iterator(); it->hasNext(); ) {
+									itext::PdfName* key_p= (itext::PdfName*)it->next();
+
+									ostringstream oss;
+									OutputPdfName( oss, key_p );
+									acc_state.m_states.insert( oss.str() );
+								}
+							}
+						}
+
+						// D
+						if( ap_p->contains( itext::PdfName::D ) ) {
+							itext::PdfObject* n_p= 
+								reader_p->getPdfObject( ap_p->get( itext::PdfName::D ) );
+							if( n_p && n_p->isDictionary() ) {
+								java::Set* n_set_p= ((itext::PdfDictionary*)n_p)->getKeys();
+								for( java::Iterator* it= n_set_p->iterator(); it->hasNext(); ) {
+									itext::PdfName* key_p= (itext::PdfName*)it->next();
+
+									ostringstream oss;
+									OutputPdfName( oss, key_p );
+									acc_state.m_states.insert( oss.str() );
+								}
+							}
+						}
+
+						// R
+						if( ap_p->contains( itext::PdfName::R ) ) {
+							itext::PdfObject* n_p= 
+								reader_p->getPdfObject( ap_p->get( itext::PdfName::N ) );
+							if( n_p && n_p->isDictionary() ) {
+								java::Set* n_set_p= ((itext::PdfDictionary*)n_p)->getKeys();
+								for( java::Iterator* it= n_set_p->iterator(); it->hasNext(); ) {
+									itext::PdfName* key_p= (itext::PdfName*)it->next();
+
+									ostringstream oss;
+									OutputPdfName( oss, key_p );
+									acc_state.m_states.insert( oss.str() );
+								}
+							}
+						}
+
+					}
+				}
+
+				// list-box / combo-box possible states
+				if( kid_p->contains( itext::PdfName::OPT ) ) {
+					itext::PdfArray* kid_opts_p= (itext::PdfArray*)
+						reader_p->getPdfObject( kid_p->get( itext::PdfName::OPT ) );
+					if( kid_opts_p && kid_opts_p->isArray() ) {
+						java::ArrayList* opts_p= kid_opts_p->getArrayList();
+						for( jint opts_ii= 0; opts_ii< opts_p->size(); ++opts_ii ) {
+							itext::PdfString* opt_p= (itext::PdfString*)
+								reader_p->getPdfObject( (itext::PdfObject*)(opts_p->get(opts_ii)) );
+							if( opt_p && opt_p->isString() ) {
+								ostringstream name_oss;
+								OutputPdfString( name_oss, opt_p );
+								acc_state.m_states.insert( name_oss.str() );
+							}
+						}
+					}
+				}
+*/
+
+				if( kid_p->contains( itext::PdfName::KIDS ) ) { // recurse
+					itext::PdfArray* kid_kids_p= (itext::PdfArray*)
+						reader_p->getPdfObject( kid_p->get( itext::PdfName::KIDS )  );
+					if( kid_kids_p && kid_kids_p->isArray() ) {
+						itext::PdfArray* kida = new itext::PdfArray();
+
+						ReportGenerateFDF(kida, kid_kids_p, reader_p );
+
+						dict->put( itext::PdfName::KIDS, kida);
+
+					}
+					else { // error
+					}
+				}
+				if( kid_p->contains( itext::PdfName::T ) ) { 
+					itext::PdfObject* pdfo_p= (itext::PdfObject*)
+						reader_p->getPdfObject( kid_p->get( itext::PdfName::T ) );
+					if( pdfo_p ) {
+						dict->put( itext::PdfName::T, pdfo_p);
+					}
+
+				}
+
+				array->add(dict);
+			}
+		}
+	}
+	else { // error
+		cerr << "Internal Error: unable to get ArrayList in ReportAcroFormFields()" << endl;
+	}
+}
+
+void ReportGenerateFDF(java::OutputStream* ofs_p, itext::PdfReader* reader_p )
+{
+	itext::PdfDictionary* catalog_p= reader_p->catalog;
+	if( catalog_p && catalog_p->isDictionary() ) {
+		itext::PdfArray* array = new itext::PdfArray();
+
+		itext::PdfDictionary* acro_form_p= (itext::PdfDictionary*)
+			reader_p->getPdfObject( catalog_p->get( itext::PdfName::ACROFORM ) );
+		if( acro_form_p && acro_form_p->isDictionary() ) {
+
+			itext::PdfArray* fields_p= (itext::PdfArray*)
+				reader_p->getPdfObject( acro_form_p->get( itext::PdfName::FIELDS ) );
+			if( fields_p && fields_p->isArray() ) {
+
+				// enter recursion
+				ReportGenerateFDF( array, fields_p, reader_p );
+			}
+		}
+		itext::FdfWriter* writer = new itext::FdfWriter();
+		writer->setVerbField(array);
+		writer->writeTo(ofs_p);
+	}
+	else { // error
+		cerr << "Internal Error: unable to access PDF catalog from ReportAcroFormFields()" << endl;
+	}
 }
 
 void

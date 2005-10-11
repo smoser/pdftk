@@ -62,6 +62,7 @@
 #include "com/lowagie/text/pdf/PdfEncryptor.h"
 #include "com/lowagie/text/pdf/PdfNameTree.h"
 #include "com/lowagie/text/pdf/FdfReader.h"
+#include "com/lowagie/text/pdf/FdfWriter.h"
 #include "com/lowagie/text/pdf/AcroFields.h"
 #include "com/lowagie/text/pdf/PdfIndirectReference.h"
 #include "com/lowagie/text/pdf/PdfIndirectObject.h"
@@ -294,6 +295,11 @@ TK_Session::is_keyword( char* ss, int* keyword_len_p )
 					 strcmp( ss_copy, "datadump" )== 0 ) {
 		return dump_data_k;
 	}
+        else if( strcmp( ss_copy, "generate_fdf" )== 0 ||
+					strcmp( ss_copy, "fdfgen" )== 0 ||
+					strcmp( ss_copy, "fdfdump" )== 0 ) {
+		return generate_fdf_k;
+	}
 	else if( strcmp( ss_copy, "dump_data_fields" )== 0 ) {
 		return dump_data_fields_k;
 	}
@@ -438,7 +444,7 @@ bool
 TK_Session::is_valid() const
 {
 	return( m_valid_b &&
-					( m_operation== dump_data_k || m_operation== dump_data_fields_k || m_authorized_b ) &&
+					( m_operation== dump_data_k || m_operation== dump_data_fields_k || generate_fdf_k || m_authorized_b ) &&
 					!m_input_pdf.empty() &&
 					m_input_pdf_readers_opened_b &&
 
@@ -454,6 +460,7 @@ TK_Session::is_valid() const
 					( m_operation== burst_k ||
 					  m_operation== dump_data_k ||
 						m_operation== dump_data_fields_k ||
+						m_operation== generate_fdf_k ||
 						m_operation== unpack_files_k ||
 					  !m_output_filename.empty() ) );
 }
@@ -519,6 +526,9 @@ TK_Session::dump_session_data() const
 		break;
 	case dump_data_fields_k:
 		cout << "   dump_data_fields - Report form field data on a single, input PDF." << endl;
+		break;
+	case generate_fdf_k:
+		cout << "   generate_fdf_k - Generate a dummy FDF file from a PDF." << endl;
 		break;
 	case unpack_files_k:
 		cout << "   unpack_files - Copy PDF file attachments into given directory." << endl;
@@ -803,6 +813,10 @@ TK_Session::TK_Session( int argc,
 			}
 			else if( arg_keyword== dump_data_fields_k ) {
 				m_operation= dump_data_fields_k;
+				arg_state= output_e;
+			}
+			else if( arg_keyword== generate_fdf_k ) {
+				m_operation= generate_fdf_k;
 				arg_state= output_e;
 			}
 			else if( arg_keyword== fill_form_k ) {
@@ -2181,6 +2195,7 @@ TK_Session::create_output()
 			}
 			break;
 
+			case generate_fdf_k :
 			case dump_data_fields_k :
 			case dump_data_k: { // report on input document
 
@@ -2194,6 +2209,26 @@ TK_Session::create_output()
 				itext::PdfReader* input_reader_p= 
 					m_input_pdf.begin()->m_readers.front().second;
 
+				if( m_operation== generate_fdf_k ) {
+					java::OutputStream* ofs_p= 0;
+
+					if( m_output_filename.empty() || m_output_filename== "-" ) {
+					ofs_p = 
+					ofs_p = get_output_stream( "-", 
+								m_ask_about_warnings_b );
+					} else {
+					ofs_p = get_output_stream( m_output_filename, 
+								m_ask_about_warnings_b );
+					}
+
+					if( ofs_p ) {
+						ReportGenerateFDF( ofs_p, input_reader_p );
+					}
+					else { // error
+						cerr << "Error: unable to open file for output: " << m_output_filename << endl;
+					}
+				} 
+				else
 				if( m_output_filename.empty() || m_output_filename== "-" ) {
 					if( m_operation== dump_data_k ) {
 						ReportOnPdf( cout, input_reader_p );
@@ -2336,7 +2371,7 @@ describe_synopsis() {
             <operation> may be empty, or:\n\
             [cat | attach_files | unpack_files | burst |\n\
              fill_form | background |\n\
-             dump_data | dump_data_fields | update_info]\n\
+             dump_data | dump_data_fields | generate_fdf | update_info]\n\
 \n\
        For Complete Help: pdftk --help\n";
 }
@@ -2418,8 +2453,8 @@ OPTIONS\n\
               sion.\n\
 \n\
               Available   operations   are:   cat,  attach_files,\n\
-              unpack_files,   burst,    fill_form,    background,\n\
-              dump_data,   dump_data_fields,   update_info.  Some\n\
+              unpack_files, generata_fdf, fill_form,  background,\n\
+             dump_data, burst, dump_data_fields, update_info. Some\n\
               operations takes  additional  arguments,  described\n\
               below.\n\
 \n\
@@ -2570,6 +2605,10 @@ OPTIONS\n\
                  field statistics to the given output filename or\n\
                  (if no output is given)  to  stdout.   Does  not\n\
                  create a new PDF.\n\
+\n\
+          generate_fdf\n\
+                 Reads a single,  input  PDF  file  and  generate\n\
+		 and generate a FDF file from it.\n\
 \n\
           update_info <info data filename | - | PROMPT>\n\
                  Changes  the  metadata  stored in a single PDF's\n\
