@@ -12,7 +12,7 @@
 
 # tools
 TOOLPATH=
-VERSUFF= -3.3
+VERSUFF=
 CXX= $(TOOLPATH)g++$(VERSUFF)
 export GCJ= $(TOOLPATH)gcj$(VERSUFF)
 export GCJH= $(TOOLPATH)gcjh$(VERSUFF)

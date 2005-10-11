@@ -69,6 +69,7 @@ public:
 		filter_k, // apply 'filters' to a single, input PDF based on output args
 		dump_data_k, // no PDF output
 		dump_data_fields_k,
+		generate_fdf_k,
 		unpack_files_k, // unpack files from input; no PDF output
 		//
 		first_operation_k= cat_k,
