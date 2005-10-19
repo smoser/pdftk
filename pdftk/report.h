@@ -27,6 +27,9 @@ ReportAcroFormFields( ostream& ofs,
 											itext::PdfReader* reader_p );
 
 void
+ReportGenerateFDF(java::OutputStream* ofs_p, itext::PdfReader* reader_p );
+
+void
 ReportOnPdf( ostream& ofs,
 						 itext::PdfReader* reader_p );
 
