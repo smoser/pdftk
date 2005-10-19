@@ -62,6 +62,7 @@ import com.lowagie.text.DocumentException;
 public class FdfWriter {
     static byte[] HEADER_FDF = DocWriter.getISOBytes("%FDF-1.2\n%\u00e2\u00e3\u00cf\u00d3\n");
     HashMap fields = new HashMap();
+    PdfArray verbfields = null;
 
     /** The PDF file associated with the FDF. */
     private String file;
@@ -79,7 +80,11 @@ public class FdfWriter {
         Wrt wrt = new Wrt(os, this);
         wrt.writeTo();
     }
-    
+
+    void setVerbField(PdfArray array) {
+        verbfields = array;
+    }
+
     boolean setField(String field, PdfObject value) {
         HashMap map = fields;
         StringTokenizer tk = new StringTokenizer(field, ".");
@@ -300,6 +305,10 @@ public class FdfWriter {
         
         void writeTo() throws DocumentException, IOException {
             PdfDictionary dic = new PdfDictionary();
+	    if( fdf.verbfields != null )
+	        dic.put(PdfName.FIELDS, fdf.verbfields);
+	    else
+	        dic.put(PdfName.FIELDS, calculate(fdf.fields));
             dic.put(PdfName.FIELDS, calculate(fdf.fields));
             if (fdf.file != null)
                 dic.put(PdfName.F, new PdfString(fdf.file, PdfObject.TEXT_UNICODE));

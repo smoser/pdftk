@@ -1,3 +1,43 @@
+pdftk (1.12-7) unstable; urgency=low
+
+  * Build with -fdollars-in-identifiers to workaround a gcc bug on arm
+    (closes: bug#334642). 
+
+ -- Aurelien Jarno <aurel32@debian.org>  Wed, 19 Oct 2005 19:31:00 +0200
+
+pdftk (1.12-6) unstable; urgency=low
+
+  * Fixed FTBFS.
+
+ -- Aurelien Jarno <aurel32@debian.org>  Sun, 16 Oct 2005 21:21:49 +0200
+
+pdftk (1.12-5) unstable; urgency=low
+
+  * C++ ABI transition. 
+
+ -- Aurelien Jarno <aurel32@debian.org>  Wed,  6 Jul 2005 01:03:57 +0200
+
+pdftk (1.12-4) unstable; urgency=low
+
+  * Suggests: xpdf-utils (closes: bug#306625).
+
+ -- Aurelien Jarno <aurel32@debian.org>  Sun,  1 May 2005 11:27:28 +0200
+
+pdftk (1.12-3) unstable; urgency=low
+
+  * Depends on libgcj-dev instead of libgcj4-dev.
+  * Build with gcj instead of gcj-3.3.
+
+ -- Aurelien Jarno <aurel32@debian.org>  Wed, 30 Mar 2005 16:44:02 +0200
+
+pdftk (1.12-2) unstable; urgency=low
+
+  * Added a patch from Bernhard R. Link to adds a new generate_fdf 
+    action to generate a FDF out of a PDF file. The patch will also be
+    added in the next upstream version (closes: bug#289846).
+
+ -- Aurelien Jarno <aurel32@debian.org>  Tue, 11 Jan 2005 23:22:59 +0100
+
 pdftk (1.12-1) unstable; urgency=low
 
   * New upstream release. 

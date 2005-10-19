@@ -44,7 +44,7 @@ Where:
 .br
      [\fBcat\fR | \fBattach_files\fR | \fBunpack_files\fR | \fBburst\fR |
 .br
-      \fBfill_form\fR | \fBbackground\fR |
+      \fBfill_form\fR | \fBbackground\fR | \fBgenerate_fdf\fR
 .br
       \fBdump_data\fR | \fBdump_data_fields\fR | \fBupdate_info\fR]
 .br
@@ -64,6 +64,8 @@ If PDF is electronic paper, then pdftk is an electronic staple-remover, hole-pun
 * Encrypt Output as Desired
 .br
 * Fill PDF Forms with FDF Data and/or Flatten Forms
+.br
+* Generate FDF Data Stencil from PDF Forms
 .br
 * Apply a Background Watermark
 .br
@@ -122,7 +124,7 @@ Filter mode takes only one PDF input and creates a new PDF after
 applying all of the output options, like encryption and compression.
 
 Available operations are: \fBcat\fR, \fBattach_files\fR, \fBunpack_files\fR, \fBburst\fR, \fBfill_form\fR, 
-\fBbackground\fR, \fBdump_data\fR, \fBdump_data_fields\fR, \fBupdate_info\fR. Some operations
+\fBbackground\fR, \fBdump_data\fR, \fBdump_data_fields\fR, \fBgenerate_fdf\fR, \fBupdate_info\fR. Some operations
 takes additional arguments, described below.
 .RS 3
 .TP
@@ -241,6 +243,11 @@ filename or (if no output is given) to stdout.  Does not create a new PDF.
 .TP
 .B dump_data_fields
 Reads a single, input PDF file and reports form field statistics to the given output
+filename or (if no output is given) to stdout.  Does not create a new PDF.
+.TP
+.B generate_fdf
+Reads a single, input PDF file and generates a FDF file suitable for \fBfill_form\fR
+out of it to the given output
 filename or (if no output is given) to stdout.  Does not create a new PDF.
 .TP
 .B update_info <info data filename | - | PROMPT>

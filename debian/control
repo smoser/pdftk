@@ -2,12 +2,13 @@ Source: pdftk
 Maintainer: Aurelien Jarno <aurel32@debian.org>
 Section: text
 Priority: optional
-Build-Depends: debhelper (>= 4.0.0), libgcj4-dev (>= 3.3.0)
+Build-Depends: debhelper (>= 4.0.0), libgcj-dev
 Standards-Version: 3.6.1
 
 Package: pdftk
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
+Suggests: xpdf-utils
 Description: A useful tool for manipulating PDF documents
  If PDF is electronic paper, then pdftk is an electronic stapler-remover,
  hole-punch, binder, secret-decoder-ring, and X-Ray-glasses. Pdftk is a

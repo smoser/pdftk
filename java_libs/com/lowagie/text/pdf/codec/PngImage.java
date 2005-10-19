@@ -93,7 +93,7 @@ import java.util.zip.InflaterInputStream;
 
 import com.lowagie.text.ExceptionConverter;
 import com.lowagie.text.Image;
-//SID import com.lowagie.text.ImgRaw;
+import com.lowagie.text.ImgRaw;
 import com.lowagie.text.pdf.ByteBuffer;
 import com.lowagie.text.pdf.PdfArray;
 import com.lowagie.text.pdf.PdfDictionary;
