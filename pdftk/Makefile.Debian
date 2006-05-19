@@ -12,7 +12,7 @@
 
 # tools
 TOOLPATH=
-VERSUFF=
+VERSUFF=-4.1
 CXX= $(TOOLPATH)g++$(VERSUFF)
 export GCJ= $(TOOLPATH)gcj$(VERSUFF)
 export GCJH= $(TOOLPATH)gcjh$(VERSUFF)
@@ -27,7 +27,7 @@ CPPFLAGS= -O3 -DPATH_DELIM=0x2f -DASK_ABOUT_WARNINGS=false -fdollars-in-identifi
 CXXFLAGS= -lgcj
 
 # itext compiler flags
-export GCJFLAGS=
+export GCJFLAGS= -O2
 
 #
 export ARFLAGS= rs

@@ -1,3 +1,30 @@
+pdftk (1.12-11) unstable; urgency=low
+
+  * Mixing different versions of g++ and gcj does not work, explicitely
+    use gcj-4.1 and g++-4.1.
+
+ -- Aurelien Jarno <aurel32@debian.org>  Sat, 20 May 2006 00:40:04 +0200
+
+pdftk (1.12-10) unstable; urgency=low
+
+  * Added -O2 to GCJFLAGS (closes: bug#366661) .
+  * Bumped Standards-Version to 3.7.2 (no changes).
+
+ -- Aurelien Jarno <aurel32@debian.org>  Wed, 10 May 2006 10:56:37 +0200
+
+pdftk (1.12-9) unstable; urgency=low
+
+  * Fix previous FDF patch (closes: bug#365084).
+
+ -- Aurelien Jarno <aurel32@debian.org>  Thu, 27 Apr 2006 23:27:01 +0200
+
+pdftk (1.12-8) unstable; urgency=low
+
+  * Added a patch to support page rotating. Thanks to David Fabel.
+  * Bumped Standards-Version to 3.6.2 (no changes).
+
+ -- Aurelien Jarno <aurel32@debian.org>  Mon, 24 Apr 2006 22:03:59 +0200
+
 pdftk (1.12-7) unstable; urgency=low
 
   * Build with -fdollars-in-identifiers to workaround a gcc bug on arm

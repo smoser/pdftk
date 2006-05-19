@@ -236,8 +236,8 @@ this:</td></table>
 <tr valign="top" align="left">
 <td width="26%"></td><td width="74%">
 <i>&lt;input PDF handle&gt;</i>[<i>&lt;begin page
-number&gt;</i>[<b>-</b><i>&lt;end page
-number&gt;</i>[<i>&lt;qualifier&gt;</i>]]]</td></table>
+number&gt;</i>[<i>&lt;rotation&gt;</i>][<b>-</b><i>&lt;end page
+number&gt;</i>[<i>&lt;rotation&gt;</i>][<i>&lt;qualifier&gt;</i>]]]</td></table>
 
 <table width="100%" border=0 rules="none" frame="void"
        cols="2" cellspacing="0" cellpadding="0">
@@ -254,6 +254,60 @@ be <b>even</b> or <b>odd</b>.</td></table>
 <td width="26%"></td><td width="74%">
 If the handle is omitted from the page range, then the pages
 are taken from the first input PDF.</td></table>
+
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="26%"></td><td width="74%">
+Rotation is defined absolutely</td></table>
+
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="26%"></td><td width="74%">
+N - North (0°)</td></table>
+
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="26%"></td><td width="74%">
+E - East (90°)</td></table>
+
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="26%"></td><td width="74%">
+S - South (180°)</td></table>
+
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="26%"></td><td width="74%">
+W - West (270°)</td></table>
+
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="26%"></td><td width="74%">
+or relative:</td></table>
+
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="26%"></td><td width="74%">
+R - right (+90°)</td></table>
+
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="26%"></td><td width="74%">
+L - left (-90°)</td></table>
+
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="26%"></td><td width="74%">
+D - upsize down (+180°)</td></table>
 
 <table width="100%" border=0 rules="none" frame="void"
        cols="2" cellspacing="0" cellpadding="0">
@@ -301,13 +355,25 @@ document, e.g., B1-end is the same as B.</td></table>
        cols="2" cellspacing="0" cellpadding="0">
 <tr valign="top" align="left">
 <td width="26%"></td><td width="74%">
+* Ranges B1L-1, B1-1L, B1R-1L, B1L is identical</td></table>
+
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="26%"></td><td width="74%">
 <b>Page range examples:</b></td></table>
 
 <table width="100%" border=0 rules="none" frame="void"
        cols="2" cellspacing="0" cellpadding="0">
 <tr valign="top" align="left">
 <td width="26%"></td><td width="74%">
-A1-21</td></table>
+A1L-21</td></table>
+
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="26%"></td><td width="74%">
+A1-21R</td></table>
 
 <table width="100%" border=0 rules="none" frame="void"
        cols="2" cellspacing="0" cellpadding="0">
@@ -319,7 +385,19 @@ Bend-1odd</td></table>
        cols="2" cellspacing="0" cellpadding="0">
 <tr valign="top" align="left">
 <td width="26%"></td><td width="74%">
+Bend-1Dodd</td></table>
+
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="26%"></td><td width="74%">
 A72</td></table>
+
+<table width="100%" border=0 rules="none" frame="void"
+       cols="2" cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="26%"></td><td width="74%">
+A72W</td></table>
 
 <table width="100%" border=0 rules="none" frame="void"
        cols="2" cellspacing="0" cellpadding="0">
@@ -881,16 +959,22 @@ pdftk *.pdf cat output combined.pdf</td></table>
        cols="2" cellspacing="0" cellpadding="0">
 <tr valign="top" align="left">
 <td width="10%"></td><td width="90%">
-<b>Remove 'page 13' from in1.pdf to create
-out1.pdf</b></td></table>
+<b>Remove 'page 4' from in1.pdf to create out1.pdf 
+and rotate 'page 6' upsize down and 'pages 7 to end' to 
+South</b></td></table>
 
 <table width="100%" border=0 rules="none" frame="void"
        cols="2" cellspacing="0" cellpadding="0">
 <tr valign="top" align="left">
 <td width="13%"></td><td width="87%">
-pdftk in.pdf cat 1-12 14-end output out1.pdf<br>
+pdftk in1.pdf cat 1-3 5 6D 7S-end output out1.pdf<br>
 or:<br>
-pdftk A=in1.pdf cat A1-12 A14-end output
+pdftk in1.pdf cat 1-3 5 6D 7-Send output out1.pdf<br>
+or:<br>
+pdftk A=in1.pdf cat A1-3 A5 A6D A7S-end output
+out1.pdf<br>
+or:<br>
+pdftk A=in1.pdf cat A1-3 A5 A6D A7-Send output
 out1.pdf</td></table>
 
 <table width="100%" border=0 rules="none" frame="void"

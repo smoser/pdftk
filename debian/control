@@ -2,8 +2,8 @@ Source: pdftk
 Maintainer: Aurelien Jarno <aurel32@debian.org>
 Section: text
 Priority: optional
-Build-Depends: debhelper (>= 4.0.0), libgcj-dev
-Standards-Version: 3.6.1
+Build-Depends: debhelper (>= 4.0.0), gcj-4.1, g++-4.1
+Standards-Version: 3.7.2
 
 Package: pdftk
 Architecture: any
