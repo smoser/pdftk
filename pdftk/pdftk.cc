@@ -1061,6 +1061,10 @@ TK_Session::TK_Session( int argc,
 					if( hyphen_loc )
 						*hyphen_loc= 0;
 
+					//DF declare rotate vars
+					PageRotate page_rotate= NORTH;
+					PageRotateAbsolute page_rotate_absolute= false;
+
 					////
 					// start of page range
 
@@ -1068,9 +1072,55 @@ TK_Session::TK_Session( int argc,
 					for( ; argv[ii][jj] && isdigit(argv[ii][jj]); ++jj ) {
 						page_num_beg= page_num_beg* 10+ argv[ii][jj]- '0';
 					}
+            
+					// DF detect rotate arg
+					switch( argv[ii][jj] ) {
+					case 'N':
+					    page_rotate= NORTH; // rotate 0
+							page_rotate_absolute= true;
+							++jj;
+							break;
+
+					case 'W':
+					    page_rotate= WEST; // rotate 90
+							page_rotate_absolute= true;
+ 							++jj;
+							break;
+
+					case 'E':
+							page_rotate= EAST; // rotate 180
+							page_rotate_absolute= true;
+							++jj;
+							break;
+
+					case 'S':
+					    page_rotate= SOUTH; // rotate 270
+							page_rotate_absolute= true;
+							++jj;
+							break;
+
+					case 'L':
+					 		page_rotate_absolute= false;
+					  	page_rotate= WEST; // rotate -90
+							++jj;
+							break;
+
+					case 'R':
+					  	page_rotate_absolute= false;
+					  	page_rotate= EAST; // rotate +90
+	 						++jj;
+		 					break;
+
+					case 'D':
+					    page_rotate_absolute= false;
+					  	page_rotate= SOUTH; // rotate 180
+							++jj;
+							break;
+					}
 
 					if( argv[ii][jj] ) { // process possible text keyword in page range start
 						if( page_num_beg ) { // error: can't have numbers ~and~ a keyword at the beginning
+
 							cerr << "Error: Unexpected combination of digits and text in" << endl;
 							cerr << "   page range start, here: " << argv[ii] << endl;
 							cerr << "   Exiting." << endl;
@@ -1133,6 +1183,51 @@ TK_Session::TK_Session( int argc,
 						// digits
 						for( ; argv[ii][jj] && isdigit(argv[ii][jj]); ++jj ) {
 							page_num_end= page_num_end* 10+ argv[ii][jj]- '0';
+						}
+
+						// DF detect rotate arg
+						switch( argv[ii][jj] ) {
+						case 'N':
+						    page_rotate= NORTH; // rotate 0
+								page_rotate_absolute= true;
+								++jj;
+								break;
+
+						case 'W':
+						    page_rotate= WEST; // rotate 90
+								page_rotate_absolute= true;
+								++jj;
+								break;
+
+						case 'E':
+								page_rotate= EAST; // rotate 180
+								page_rotate_absolute= true;
+								++jj;
+								break;
+
+						case 'S':
+						    page_rotate= SOUTH; // rotate 270
+								page_rotate_absolute= true;
+								++jj;
+								break;
+
+						case 'L':
+						  	page_rotate= WEST; // rotate -90
+								page_rotate_absolute= false;
+								++jj;
+								break;
+
+						case 'R':
+						  	page_rotate= EAST; // rotate +90
+								page_rotate_absolute= false;
+								++jj;
+								break;
+
+						case 'D':
+						  	page_rotate= SOUTH; // rotate 180
+								page_rotate_absolute= false;
+								++jj;
+								break;
 						}
 
 						// trailing text
@@ -1217,7 +1312,9 @@ TK_Session::TK_Session( int argc,
 									}
 									//
 									if( it== m_input_pdf[range_pdf_index].m_readers.end() ) {
+
 										// need to create a new reader for kk
+
 										if( add_reader( &(m_input_pdf[range_pdf_index]) ) ) {
 											m_input_pdf[range_pdf_index].m_readers.back().first.insert( kk );
 										}
@@ -1229,7 +1326,7 @@ TK_Session::TK_Session( int argc,
 									}
 
 									//
-									temp_page_seq.push_back( PageRef(range_pdf_index, kk) );
+									temp_page_seq.push_back( PageRef(range_pdf_index, kk, page_rotate, page_rotate_absolute) ); // DF rotate
 
 								}
 								else { // error; break later to get most feedback
@@ -1411,7 +1508,7 @@ TK_Session::TK_Session( int argc,
 						InputPdf& input_pdf= m_input_pdf[ii];
 
 						for( PageNumber jj= 1; jj<= input_pdf.m_num_pages; ++jj ) {
-							m_page_seq.push_back( PageRef( ii, jj ) );
+							m_page_seq.push_back( PageRef( ii, jj, NORTH, false) ); // DF rotace
 							m_input_pdf[ii].m_readers.back().first.insert( jj ); // mark our claim
 						}
 					}
@@ -1841,7 +1938,7 @@ TK_Session::create_output()
 							InputPdf& input_pdf= m_input_pdf[ it->m_input_pdf_index ];
 
 							if( m_verbose_reporting_b ) {
-								cout << "   Adding page " << it->m_page_num;
+								cout << "   Adding page " << it->m_page_num << " X" << it->m_page_rot << "X ";
 								cout << " from " << input_pdf.m_filename << endl;
 							}
 
@@ -1865,11 +1962,25 @@ TK_Session::create_output()
 								else if( m_output_compress_b ) {
 									remove_mark_from_page( input_reader_p, it->m_page_num );
 								}
-
 								itext::PdfImportedPage* page_p= 
 									writer_p->getImportedPage( input_reader_p, it->m_page_num );
 
+								// DF rotace
+								com::lowagie::text::pdf::PdfDictionary* input_dict_page=
+									input_reader_p->getPageN(it->m_page_num);
+								int page_rotation;
+								if (it->m_page_abs)	{
+									page_rotation= it->m_page_rot;
+								} 
+								else {
+									page_rotation= input_reader_p->getPageRotation(it->m_page_num) + it->m_page_rot;
+								}
+								input_dict_page->put(com::lowagie::text::pdf::PdfName::ROTATE,
+																		 new itext::PdfNumber((jint) page_rotation));
+
 								writer_p->addPage( page_p );
+
+
 							}
 							else { // error
 								cerr << "Internal Error: no reader found for page: ";
@@ -2464,8 +2575,9 @@ OPTIONS\n\
                  the order of the given page ranges.  Page ranges\n\
                  are described like this:\n\
 \n\
-                 <input  PDF  handle>[<begin  page  number>[-<end\n\
-                 page number>[<qualifier>]]]\n\
+                 <input PDF handle>\n\
+                   [<begin page number>[<rotation>]\n\
+                   [-<end page number>[<rotation>][<qualifier>]]]\n\
 \n\
                  Where the handle identifies one of the input PDF\n\
                  files, and the beginning and ending page numbers\n\
@@ -2475,6 +2587,17 @@ OPTIONS\n\
                  If the handle is omitted from  the  page  range,\n\
                  then  the  pages  are taken from the first input\n\
                  PDF.\n\
+\n\
+                 Rotation is defined absolutely\n\
+                   N - North (0°)\n\
+                   E - East (90°)\n\
+                   S - South (180°)\n\
+                   W - West (270°)\n\
+\n\
+                 or relative:\n\
+                   R - right (+90°)\n\
+                   L - left (-90°)\n\
+                   D - upsize down (+180°)\n\
 \n\
                  If no arguments are passed to  cat,  then  pdftk\n\
                  combines  all  input PDFs in the order they were\n\
@@ -2491,11 +2614,15 @@ OPTIONS\n\
                  * The handle may be used alone to represent  the\n\
                    entire  PDF document, e.g., B1-end is the same\n\
                    as B.\n\
+                 * Ranges B1L-1, B1-1L, B1R-1L, B1L is identical\n\
 \n\
                  Page range examples:\n\
-                 A1-21\n\
+                 A1L-21\n\
+                 A1-21R\n\
                  Bend-1odd\n\
+                 Bend-1Dodd\n\
                  A72\n\
+                 A72W\n\
                  A1-21 Beven A72\n\
 \n\
           attach_files <attachment filenames | PROMPT>\n\
@@ -2731,10 +2858,15 @@ EXAMPLES\n\
          or (using wildcards):\n\
          pdftk *.pdf cat output combined.pdf\n\
 \n\
-       Remove 'page 13' from in1.pdf to create out1.pdf\n\
-         pdftk in.pdf cat 1-12 14-end output out1.pdf\n\
+       Remove 'page 4' from in1.pdf to create out1.pdf and rotate\n\
+       'page 6' upsize down and 'pages 7 to end' to South\n\
+         pdftk in1.pdf cat 1-3 5 6D 7S-end output out1.pdf\n\
          or:\n\
-         pdftk A=in1.pdf cat A1-12 A14-end output out1.pdf\n\
+         pdftk in1.pdf cat 1-3 5 6D 7-Send output out1.pdf\n\
+         or:\n\
+         pdftk A=in1.pdf cat A1-3 A5 A6D A7S-end output out1.pdf\n\
+         or:\n\
+         pdftk A=in1.pdf cat A1-3 A5 A6D A7-Send output out1.pdf\n\
 \n\
        Apply  40-bit  encryption  to output, revoking all permis-\n\
        sions (the default). Set the owner PW to 'foopass'.\n\

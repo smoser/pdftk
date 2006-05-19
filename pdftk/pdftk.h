@@ -130,13 +130,18 @@ public:
   keyword m_operation;
 
   typedef unsigned long PageNumber;
-
+  typedef enum { NORTH= 0, EAST= 90, SOUTH= 180, WEST= 270 } PageRotate; // DF rotation
+  typedef bool PageRotateAbsolute; // DF absolute / relative rotation
+  
   struct PageRef {
 		InputPdfIndex m_input_pdf_index;
     PageNumber m_page_num; // 1-based
+    PageRotate m_page_rot; // DF rotation
+    PageRotateAbsolute m_page_abs; //DF absolute / relative rotation
 
-		PageRef( InputPdfIndex input_pdf_index, PageNumber page_num ) :
-			m_input_pdf_index( input_pdf_index ), m_page_num( page_num ) {}			
+		PageRef( InputPdfIndex input_pdf_index, PageNumber page_num, PageRotate page_rot, PageRotateAbsolute page_abs ) :
+						m_input_pdf_index( input_pdf_index ), m_page_num( page_num ), m_page_rot( page_rot ), m_page_abs( page_abs ) {}
+		
   };
   vector< PageRef > m_page_seq;
 

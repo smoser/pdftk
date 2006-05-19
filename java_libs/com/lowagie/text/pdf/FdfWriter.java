@@ -309,7 +309,6 @@ public class FdfWriter {
 	        dic.put(PdfName.FIELDS, fdf.verbfields);
 	    else
 	        dic.put(PdfName.FIELDS, calculate(fdf.fields));
-            dic.put(PdfName.FIELDS, calculate(fdf.fields));
             if (fdf.file != null)
                 dic.put(PdfName.F, new PdfString(fdf.file, PdfObject.TEXT_UNICODE));
             PdfDictionary fd = new PdfDictionary();
