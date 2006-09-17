@@ -1,3 +1,10 @@
+pdftk (1.12-11build1) edgy; urgency=low
+
+  * No-change rebuild to make package installable due to libgcj7-0
+    (Closes Ubuntu: #60970).
+
+ -- Daniel T Chen <crimsun@ubuntu.com>  Sun, 17 Sep 2006 17:38:32 -0400
+
 pdftk (1.12-11) unstable; urgency=low
 
   * Mixing different versions of g++ and gcj does not work, explicitely
