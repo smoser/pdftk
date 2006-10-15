@@ -34,7 +34,7 @@ afm_objects= $(patsubst %.afm, %.o, $(afms))
 # the "$*" automatic variable, here
 #
 %.h : %.class
-	$(GCJH) $*;
+	$(GCJH) --classpath="." $*;
 	$(RM) $<
 
 ##

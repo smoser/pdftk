@@ -1,5 +1,5 @@
 /*
- * $Id: PdfImage.java,v 1.32 2002/06/20 13:30:25 blowagie Exp $
+ * $Id: PdfImage.java,v 1.58 2004/11/29 14:07:00 blowagie Exp $
  * $Name:  $
  *
  * Copyright 1999, 2000, 2001, 2002 Bruno Lowagie
@@ -68,7 +68,6 @@
 
 package com.lowagie.text.pdf;
 
-import com.lowagie.text.ExceptionConverter;
 import com.lowagie.text.Image;
 
 import java.io.ByteArrayOutputStream;
@@ -105,6 +104,8 @@ class PdfImage extends PdfStream {
         put(PdfName.SUBTYPE, PdfName.IMAGE);
         put(PdfName.WIDTH, new PdfNumber(image.width()));
         put(PdfName.HEIGHT, new PdfNumber(image.height()));
+        if (image.getLayer() != null)
+            put(PdfName.OC, image.getLayer().getRef());
         if (image.isMask() && (image.bpc() == 1 || image.bpc() > 0xff))
             put(PdfName.IMAGEMASK, PdfBoolean.PDFTRUE);
         if (maskRef != null) {

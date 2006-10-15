@@ -1,5 +1,5 @@
 /*
- * $Id: Anchor.java,v 1.52 2002/06/20 13:30:25 blowagie Exp $
+ * $Id: Anchor.java,v 1.84 2005/05/03 13:03:49 blowagie Exp $
  * $Name:  $
  *
  * Copyright 1999, 2000, 2001, 2002 by Bruno Lowagie.
@@ -198,7 +198,7 @@ public class Anchor extends Phrase implements TextElementArray, MarkupAttributes
         if ((value = (String)attributes.remove(ElementTags.LEADING)) != null) {
             setLeading(Float.valueOf(value + "f").floatValue());
         }
-        else if ((value = (String)attributes.remove(MarkupTags.CSS_LINEHEIGHT)) != null) {
+        else if ((value = (String)attributes.remove(MarkupTags.CSS_KEY_LINEHEIGHT)) != null) {
             setLeading(MarkupParser.parseLength(value));
         }
         if ((value = (String)attributes.remove(ElementTags.NAME)) != null) {
@@ -265,6 +265,8 @@ public class Anchor extends Phrase implements TextElementArray, MarkupAttributes
             if (localDestination) {
                 chunk.setLocalGoto(reference.substring(1));
             }
+            else if (reference != null)
+                chunk.setAnchor(reference);
             tmp.add(chunk);
         }
         return tmp;

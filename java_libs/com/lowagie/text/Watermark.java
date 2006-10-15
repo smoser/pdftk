@@ -1,5 +1,5 @@
 /*
- * $Id: Watermark.java,v 1.26 2002/06/20 13:30:25 blowagie Exp $
+ * $Id: Watermark.java,v 1.52 2004/12/14 11:52:47 blowagie Exp $
  * $Name:  $
  *
  * Copyright 2000, 2001, 2002 by Bruno Lowagie.
@@ -78,6 +78,7 @@ public class Watermark extends Image implements Element {
  * @param		image		an <CODE>Image</CODE>-object
  * @param		offsetX		the offset in x-direction
  * @param		offsetY		the offset in y-direction
+ * @throws MalformedURLException
  */
     
     public Watermark(Image image, float offsetX, float offsetY) throws MalformedURLException {

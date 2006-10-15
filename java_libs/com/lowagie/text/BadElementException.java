@@ -1,5 +1,5 @@
 /*
- * $Id: BadElementException.java,v 1.26 2002/06/20 13:30:24 blowagie Exp $
+ * $Id: BadElementException.java,v 1.50 2004/12/14 11:33:49 blowagie Exp $
  * $Name:  $
  *
  * Copyright 1999, 2000, 2001, 2002 by Bruno Lowagie.
@@ -61,6 +61,10 @@ package com.lowagie.text;
 public class BadElementException extends DocumentException {
     
     // constructors
+    /**
+     * Constructs a BadElementException
+     * @param ex an Exception object that has to be turned into a BadElementException
+     */
     public BadElementException(Exception ex) {
         super(ex);
     }

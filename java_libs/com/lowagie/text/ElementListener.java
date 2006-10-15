@@ -1,5 +1,5 @@
 /*
- * $Id: ElementListener.java,v 1.24 2002/06/20 13:30:24 blowagie Exp $
+ * $Id: ElementListener.java,v 1.48 2004/12/14 11:52:46 blowagie Exp $
  * $Name:  $
  *
  * Copyright 2001, 2002 by Bruno Lowagie.
@@ -65,7 +65,8 @@ public interface ElementListener extends EventListener {
     
 /**
  * Signals that an <CODE>Element</CODE> was added to the <CODE>Document</CODE>.
- *
+ * 
+ * @param element a high level object
  * @return	<CODE>true</CODE> if the element was added, <CODE>false</CODE> if not.
  * @throws	DocumentException	when a document isn't open yet, or has been closed
  */

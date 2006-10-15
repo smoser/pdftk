@@ -1,5 +1,5 @@
 /*
- * $Id: Meta.java,v 1.40 2002/07/09 10:41:39 blowagie Exp $
+ * $Id: Meta.java,v 1.65 2005/04/13 09:17:11 blowagie Exp $
  * $Name:  $
  *
  * Copyright 1999, 2000, 2001, 2002 by Bruno Lowagie.
@@ -197,8 +197,9 @@ public class Meta implements Element, MarkupAttributes {
     
 /**
  * Returns the name of the meta information.
- *
- * @return	a <CODE>String</CODE>
+ * 
+ * @param tag iText tag for meta information
+ * @return	the Element value corresponding with the given tag
  */
     
     public static int getType(String tag) {
@@ -228,7 +229,7 @@ public class Meta implements Element, MarkupAttributes {
  * @see com.lowagie.text.MarkupAttributes#setMarkupAttribute(java.lang.String, java.lang.String)
  */
     public void setMarkupAttribute(String name, String value) {
-        markupAttributes = (markupAttributes == null) ? new Properties() : markupAttributes;
+		if (markupAttributes == null) markupAttributes = new Properties();
         markupAttributes.put(name, value);
     }
     

@@ -1,5 +1,5 @@
 Source: pdftk
-Maintainer: Aurelien Jarno <aurel32@debian.org>
+Maintainer: Aurélien GÉRÔME <ag@roxor.cx>
 Section: text
 Priority: optional
 Build-Depends: debhelper (>= 4.0.0), gcj-4.1, g++-4.1

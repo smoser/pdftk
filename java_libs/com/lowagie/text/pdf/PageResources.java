@@ -1,5 +1,7 @@
 /*
- * Copyright 2003 by Paulo Soares.
+ * $Id: PRTokeniser.java,v 1.15 2002/06/20 13:30:25 blowagie Exp $
+ *
+ * Copyright 2003-2005 by Paulo Soares.
  *
  * The contents of this file are subject to the Mozilla Public License Version 1.1
  * (the "License"); you may not use this file except in compliance with the License.
@@ -57,6 +59,7 @@ class PageResources {
     protected PdfDictionary patternDictionary = new PdfDictionary();
     protected PdfDictionary shadingDictionary = new PdfDictionary();
     protected PdfDictionary extGStateDictionary = new PdfDictionary();
+    protected PdfDictionary propertyDictionary = new PdfDictionary();
     protected HashMap forbiddenNames;
     protected PdfDictionary originalResources;
     protected int namePtr[] = {0};
@@ -151,6 +154,12 @@ class PageResources {
         return name;
     }
 
+    PdfName addProperty(PdfName name, PdfIndirectReference reference) {
+        name = translateName(name);
+        propertyDictionary.put(name, reference);
+        return name;
+    }
+
     PdfDictionary getResources() {
        PdfResources resources = new PdfResources();
         if (originalResources != null)
@@ -162,6 +171,17 @@ class PageResources {
         resources.add(PdfName.PATTERN, patternDictionary);
         resources.add(PdfName.SHADING, shadingDictionary);
         resources.add(PdfName.EXTGSTATE, extGStateDictionary);
+        resources.add(PdfName.PROPERTIES, propertyDictionary);
         return resources;
+    }
+    
+    boolean hasResources() {
+        return (fontDictionary.size() > 0
+            || xObjectDictionary.size() > 0
+            || colorDictionary.size() > 0
+            || patternDictionary.size() > 0
+            || shadingDictionary.size() > 0
+            || extGStateDictionary.size() > 0
+            || propertyDictionary.size() > 0);
     }
 }

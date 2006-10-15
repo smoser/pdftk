@@ -1,5 +1,5 @@
 /*
- * $Id: FontFactory.java,v 1.39 2002/07/08 09:17:07 blowagie Exp $
+ * $Id: FontFactory.java,v 1.65 2005/05/03 13:03:47 blowagie Exp $
  * $Name:  $
  *
  * Copyright 2002 by Bruno Lowagie.
@@ -53,7 +53,7 @@ package com.lowagie.text;
 import java.awt.Color;
 import java.io.IOException;
 import java.util.Hashtable;
-import java.util.HashSet;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Properties;
 import java.util.Set;
@@ -121,53 +121,60 @@ public class FontFactory extends java.lang.Object {
 /** This is a map of postscriptfontnames of True Type fonts and the path of their ttf- or ttc-file. */
     private static Properties trueTypeFonts = new Properties();
     
+    private static String[] TTFamilyOrder = {
+        "3", "1", "1033",
+        "3", "0", "1033",
+        "1", "0", "0",
+        "0", "3", "0"
+    };
+
     static {
-        trueTypeFonts.put(COURIER, COURIER);
-        trueTypeFonts.put(COURIER_BOLD, COURIER_BOLD);
-        trueTypeFonts.put(COURIER_OBLIQUE, COURIER_OBLIQUE);
-        trueTypeFonts.put(COURIER_BOLDOBLIQUE, COURIER_BOLDOBLIQUE);
-        trueTypeFonts.put(HELVETICA, HELVETICA);
-        trueTypeFonts.put(HELVETICA_BOLD, HELVETICA_BOLD);
-        trueTypeFonts.put(HELVETICA_OBLIQUE, HELVETICA_OBLIQUE);
-        trueTypeFonts.put(HELVETICA_BOLDOBLIQUE, HELVETICA_BOLDOBLIQUE);
-        trueTypeFonts.put(SYMBOL, SYMBOL);
-        trueTypeFonts.put(TIMES_ROMAN, TIMES_ROMAN);
-        trueTypeFonts.put(TIMES_BOLD, TIMES_BOLD);
-        trueTypeFonts.put(TIMES_ITALIC, TIMES_ITALIC);
-        trueTypeFonts.put(TIMES_BOLDITALIC, TIMES_BOLDITALIC);
-        trueTypeFonts.put(ZAPFDINGBATS, ZAPFDINGBATS);
+        trueTypeFonts.setProperty(COURIER.toLowerCase(), COURIER);
+        trueTypeFonts.setProperty(COURIER_BOLD.toLowerCase(), COURIER_BOLD);
+        trueTypeFonts.setProperty(COURIER_OBLIQUE.toLowerCase(), COURIER_OBLIQUE);
+        trueTypeFonts.setProperty(COURIER_BOLDOBLIQUE.toLowerCase(), COURIER_BOLDOBLIQUE);
+        trueTypeFonts.setProperty(HELVETICA.toLowerCase(), HELVETICA);
+        trueTypeFonts.setProperty(HELVETICA_BOLD.toLowerCase(), HELVETICA_BOLD);
+        trueTypeFonts.setProperty(HELVETICA_OBLIQUE.toLowerCase(), HELVETICA_OBLIQUE);
+        trueTypeFonts.setProperty(HELVETICA_BOLDOBLIQUE.toLowerCase(), HELVETICA_BOLDOBLIQUE);
+        trueTypeFonts.setProperty(SYMBOL.toLowerCase(), SYMBOL);
+        trueTypeFonts.setProperty(TIMES_ROMAN.toLowerCase(), TIMES_ROMAN);
+        trueTypeFonts.setProperty(TIMES_BOLD.toLowerCase(), TIMES_BOLD);
+        trueTypeFonts.setProperty(TIMES_ITALIC.toLowerCase(), TIMES_ITALIC);
+        trueTypeFonts.setProperty(TIMES_BOLDITALIC.toLowerCase(), TIMES_BOLDITALIC);
+        trueTypeFonts.setProperty(ZAPFDINGBATS.toLowerCase(), ZAPFDINGBATS);
     }
     
 /** This is a map of fontfamilies. */
     private static Hashtable fontFamilies = new Hashtable();
     
     static {
-        HashSet tmp;
-        tmp = new HashSet();
+        ArrayList tmp;
+        tmp = new ArrayList();
         tmp.add(COURIER);
         tmp.add(COURIER_BOLD);
         tmp.add(COURIER_OBLIQUE);
         tmp.add(COURIER_BOLDOBLIQUE);
-        fontFamilies.put(COURIER, tmp);
-        tmp = new HashSet();
+        fontFamilies.put(COURIER.toLowerCase(), tmp);
+        tmp = new ArrayList();
         tmp.add(HELVETICA);
         tmp.add(HELVETICA_BOLD);
         tmp.add(HELVETICA_OBLIQUE);
         tmp.add(HELVETICA_BOLDOBLIQUE);
-        fontFamilies.put(HELVETICA, tmp);
-        tmp = new HashSet();
+        fontFamilies.put(HELVETICA.toLowerCase(), tmp);
+        tmp = new ArrayList();
         tmp.add(SYMBOL);
-        fontFamilies.put(SYMBOL, tmp);
-        tmp = new HashSet();
+        fontFamilies.put(SYMBOL.toLowerCase(), tmp);
+        tmp = new ArrayList();
         tmp.add(TIMES_ROMAN);
         tmp.add(TIMES_BOLD);
         tmp.add(TIMES_ITALIC);
         tmp.add(TIMES_BOLDITALIC);
-        fontFamilies.put(TIMES, tmp);
-        fontFamilies.put(TIMES_ROMAN, tmp);
-        tmp = new HashSet();
+        fontFamilies.put(TIMES.toLowerCase(), tmp);
+        fontFamilies.put(TIMES_ROMAN.toLowerCase(), tmp);
+        tmp = new ArrayList();
         tmp.add(ZAPFDINGBATS);
-        fontFamilies.put(ZAPFDINGBATS, tmp);
+        fontFamilies.put(ZAPFDINGBATS.toLowerCase(), tmp);
     }
     
     
@@ -190,14 +197,15 @@ public class FontFactory extends java.lang.Object {
  * @param	size	    the size of this font
  * @param	style	    the style of this font
  * @param	color	    the <CODE>Color</CODE> of this font.
+ * @return the Font constructed based on the parameters
  */
     
     public static Font getFont(String fontname, String encoding, boolean embedded, float size, int style, Color color) {
         if (fontname == null) return new Font(Font.UNDEFINED, size, style, color);
-        HashSet tmp = (HashSet) fontFamilies.get(fontname);
+        String lowercasefontname = fontname.toLowerCase();
+        ArrayList tmp = (ArrayList) fontFamilies.get(lowercasefontname);
         if (tmp != null) {
             // some bugs were fixed here by Daniel Marczisovszky
-            String lowercasefontname = fontname.toLowerCase();
             int s = style == Font.UNDEFINED ? Font.NORMAL : style;
             int fs = Font.NORMAL;
             boolean found = false;
@@ -225,7 +233,7 @@ public class FontFactory extends java.lang.Object {
             }
             catch(DocumentException de) {
                 // the font is a true type font or an unknown font
-                fontname = trueTypeFonts.getProperty(fontname);
+                fontname = trueTypeFonts.getProperty(fontname.toLowerCase());
                 // the font is not registered as truetype font
                 if (fontname == null) return new Font(Font.UNDEFINED, size, style, color);
                 // the font is registered as truetype font
@@ -251,6 +259,7 @@ public class FontFactory extends java.lang.Object {
  * Constructs a <CODE>Font</CODE>-object.
  *
  * @param   attributes  the attributes of a <CODE>Font</CODE> object.
+ * @return the Font constructed based on the attributes
  */
     
     public static Font getFont(Properties attributes) {
@@ -260,14 +269,14 @@ public class FontFactory extends java.lang.Object {
         float size = Font.UNDEFINED;
         int style = Font.NORMAL;
         Color color = null;
-        String value = (String) attributes.remove(MarkupTags.STYLE);
+        String value = (String) attributes.remove(MarkupTags.HTML_ATTR_STYLE);
         if (value != null && value.length() > 0) {
             Properties styleAttributes = MarkupParser.parseAttributes(value);
             if (styleAttributes.size() == 0) {
-                attributes.put(MarkupTags.STYLE, value);
+                attributes.put(MarkupTags.HTML_ATTR_STYLE, value);
             }
             else {
-                fontname = (String)styleAttributes.remove(MarkupTags.CSS_FONTFAMILY);
+                fontname = (String)styleAttributes.remove(MarkupTags.CSS_KEY_FONTFAMILY);
                 if (fontname != null) {
                     String tmp;
                     while (fontname.indexOf(",") != -1) {
@@ -280,23 +289,19 @@ public class FontFactory extends java.lang.Object {
                         }
                     }
                 }
-                if ((value = (String)styleAttributes.remove(MarkupTags.CSS_FONTSIZE)) != null) {
+                if ((value = (String)styleAttributes.remove(MarkupTags.CSS_KEY_FONTSIZE)) != null) {
                     size = MarkupParser.parseLength(value);
                 }
-                if ((value = (String)styleAttributes.remove(MarkupTags.CSS_FONTWEIGHT)) != null) {
+                if ((value = (String)styleAttributes.remove(MarkupTags.CSS_KEY_FONTWEIGHT)) != null) {
                     style |= Font.getStyleValue(value);
                 }
-                if ((value = (String)styleAttributes.remove(MarkupTags.CSS_FONTSTYLE)) != null) {
+                if ((value = (String)styleAttributes.remove(MarkupTags.CSS_KEY_FONTSTYLE)) != null) {
                     style |= Font.getStyleValue(value);
                 }
-                if ((value = (String)styleAttributes.remove(MarkupTags.CSS_COLOR)) != null) {
+                if ((value = (String)styleAttributes.remove(MarkupTags.CSS_KEY_COLOR)) != null) {
                     color = MarkupParser.decodeColor(value);
                 }
-                for (Enumeration e = styleAttributes.keys(); e.hasMoreElements();) {
-                Object o = e.nextElement();
-                attributes.put(o, styleAttributes.get(o));
-            }
-
+                attributes.putAll(styleAttributes);
                 for (Enumeration e = styleAttributes.keys(); e.hasMoreElements();) {
                     Object o = e.nextElement();
                     attributes.put(o, styleAttributes.get(o));
@@ -315,7 +320,7 @@ public class FontFactory extends java.lang.Object {
         if ((value = (String)attributes.remove(ElementTags.SIZE)) != null) {
             size = Float.valueOf(value + "f").floatValue();
         }
-        if ((value = (String)attributes.remove(MarkupTags.STYLE)) != null) {
+        if ((value = (String)attributes.remove(MarkupTags.HTML_ATTR_STYLE)) != null) {
             style |= Font.getStyleValue(value);
         }
         if ((value = (String)attributes.remove(ElementTags.STYLE)) != null) {
@@ -350,6 +355,7 @@ public class FontFactory extends java.lang.Object {
  * @param       embedded    true if the font is to be embedded in the PDF
  * @param	size	    the size of this font
  * @param	style	    the style of this font
+ * @return the Font constructed based on the parameters
  */
     
     public static Font getFont(String fontname, String encoding, boolean embedded, float size, int style) {
@@ -363,6 +369,7 @@ public class FontFactory extends java.lang.Object {
  * @param	encoding    the encoding of the font
  * @param       embedded    true if the font is to be embedded in the PDF
  * @param	size	    the size of this font
+ * @return the Font constructed based on the parameters
  */
     
     public static Font getFont(String fontname, String encoding, boolean embedded, float size) {
@@ -375,6 +382,7 @@ public class FontFactory extends java.lang.Object {
  * @param	fontname    the name of the font
  * @param	encoding    the encoding of the font
  * @param       embedded    true if the font is to be embedded in the PDF
+ * @return the Font constructed based on the parameters
  */
     
     public static Font getFont(String fontname, String encoding, boolean embedded) {
@@ -389,6 +397,7 @@ public class FontFactory extends java.lang.Object {
  * @param	size	    the size of this font
  * @param	style	    the style of this font
  * @param	color	    the <CODE>Color</CODE> of this font.
+ * @return the Font constructed based on the parameters
  */
     
     public static Font getFont(String fontname, String encoding, float size, int style, Color color) {
@@ -402,6 +411,7 @@ public class FontFactory extends java.lang.Object {
  * @param	encoding    the encoding of the font
  * @param	size	    the size of this font
  * @param	style	    the style of this font
+ * @return the Font constructed based on the parameters
  */
     
     public static Font getFont(String fontname, String encoding, float size, int style) {
@@ -414,6 +424,7 @@ public class FontFactory extends java.lang.Object {
  * @param	fontname    the name of the font
  * @param	encoding    the encoding of the font
  * @param	size	    the size of this font
+ * @return the Font constructed based on the parameters
  */
     
     public static Font getFont(String fontname, String encoding, float size) {
@@ -425,6 +436,7 @@ public class FontFactory extends java.lang.Object {
  *
  * @param	fontname    the name of the font
  * @param	encoding    the encoding of the font
+ * @return the Font constructed based on the parameters
  */
     
     public static Font getFont(String fontname, String encoding) {
@@ -438,6 +450,7 @@ public class FontFactory extends java.lang.Object {
  * @param	size	    the size of this font
  * @param	style	    the style of this font
  * @param	color	    the <CODE>Color</CODE> of this font.
+ * @return the Font constructed based on the parameters
  */
     
     public static Font getFont(String fontname, float size, int style, Color color) {
@@ -450,6 +463,7 @@ public class FontFactory extends java.lang.Object {
  * @param	fontname    the name of the font
  * @param	size	    the size of this font
  * @param	style	    the style of this font
+ * @return the Font constructed based on the parameters
  */
     
     public static Font getFont(String fontname, float size, int style) {
@@ -461,6 +475,7 @@ public class FontFactory extends java.lang.Object {
  *
  * @param	fontname    the name of the font
  * @param	size	    the size of this font
+ * @return the Font constructed based on the parameters
  */
     
     public static Font getFont(String fontname, float size) {
@@ -471,6 +486,7 @@ public class FontFactory extends java.lang.Object {
  * Constructs a <CODE>Font</CODE>-object.
  *
  * @param	fontname    the name of the font
+ * @return the Font constructed based on the parameters
  */
     
     public static Font getFont(String fontname) {
@@ -498,35 +514,58 @@ public class FontFactory extends java.lang.Object {
         try {
             if (path.toLowerCase().endsWith(".ttf") || path.toLowerCase().endsWith(".otf") || path.toLowerCase().indexOf(".ttc,") > 0) {
                 Object allNames[] = BaseFont.getAllFontNames(path, BaseFont.WINANSI, null);
-                trueTypeFonts.put((String)allNames[0], path);
+                trueTypeFonts.setProperty(((String)allNames[0]).toLowerCase(), path);
                 if (alias != null) {
-                    trueTypeFonts.put(alias, path);
+                    trueTypeFonts.setProperty(alias, path);
+                }
+                // register all the font names with all the locales
+                String[][] names = (String[][])allNames[2]; //full name
+                for (int i = 0; i < names.length; i++) {
+                    trueTypeFonts.setProperty(names[i][3].toLowerCase(), path);
                 }
                 String fullName = null;
                 String familyName = null;
-                String[][] names = (String[][])allNames[2];
-                for (int i = 0; i < names.length; i++) {
-                    if ("0".equals(names[i][2])) {
-                        fullName = names[i][3];
-                        break;
+                names = (String[][])allNames[1]; //family name
+                for (int k = 0; k < TTFamilyOrder.length; k += 3) {
+                    for (int i = 0; i < names.length; i++) {
+                        if (TTFamilyOrder[k].equals(names[i][0]) && TTFamilyOrder[k + 1].equals(names[i][1]) && TTFamilyOrder[k + 2].equals(names[i][2])) {
+                            familyName = names[i][3].toLowerCase();
+                            k = TTFamilyOrder.length;
+                            break;
+                        }
                     }
                 }
-                // register all the font names with all the locales
-                for (int i = 0; i < names.length; i++) {
-                    trueTypeFonts.put(names[i][3], path);
-                }
-                if (fullName != null) {
-                    names = (String[][])allNames[1];
+                if (familyName != null) {
+                    String lastName = "";
+                    names = (String[][])allNames[2]; //full name
                     for (int i = 0; i < names.length; i++) {
-                        if ("0".equals(names[i][2])) {
-                            familyName = names[i][3];
-                            HashSet tmp = (HashSet) fontFamilies.get(familyName);
-                            if (tmp == null) {
-                                tmp = new HashSet();
+                        for (int k = 0; k < TTFamilyOrder.length; k += 3) {
+                            if (TTFamilyOrder[k].equals(names[i][0]) && TTFamilyOrder[k + 1].equals(names[i][1]) && TTFamilyOrder[k + 2].equals(names[i][2])) {
+                                fullName = names[i][3];
+                                if (fullName.equals(lastName))
+                                    continue;
+                                lastName = fullName;
+                                ArrayList tmp = (ArrayList) fontFamilies.get(familyName);
+                                if (tmp == null) {
+                                    tmp = new ArrayList();
+                                    tmp.add(fullName);
+                                    fontFamilies.put(familyName, tmp);
+                                }
+                                else {
+                                    int fullNameLength = fullName.length();
+                                    boolean inserted = false;
+                                    for (int j = 0; j < tmp.size(); ++j) {
+                                        if (((String)tmp.get(j)).length() >= fullNameLength) {
+                                            tmp.add(j, fullName);
+                                            inserted = true;
+                                            break;
+                                        }
+                                    }
+                                    if (!inserted)
+                                        tmp.add(fullName);
+                                }
+                                break;
                             }
-                            tmp.add(fullName);
-                            fontFamilies.put(familyName, tmp);
-                            break;
                         }
                     }
                 }
@@ -541,8 +580,8 @@ public class FontFactory extends java.lang.Object {
             }
             else if (path.toLowerCase().endsWith(".afm")) {
                 BaseFont bf = BaseFont.createFont(path, BaseFont.CP1252, false);
-                trueTypeFonts.put(bf.getPostscriptFontName(), path);
-                trueTypeFonts.put(bf.getFullFontName()[0][3], path);
+                trueTypeFonts.setProperty(bf.getPostscriptFontName().toLowerCase(), path);
+                trueTypeFonts.setProperty((bf.getFullFontName()[0][3]).toLowerCase(), path);
             }
         }
         catch(DocumentException de) {
@@ -606,6 +645,7 @@ public class FontFactory extends java.lang.Object {
 
 /**
  * Gets a set of registered fontnames.
+ * @return a set of registered fonts
  */
     
     public static Set getRegisteredFonts() {
@@ -614,6 +654,7 @@ public class FontFactory extends java.lang.Object {
     
 /**
  * Gets a set of registered fontnames.
+ * @return a set of registered font families
  */
     
     public static Set getRegisteredFamilies() {
@@ -622,10 +663,12 @@ public class FontFactory extends java.lang.Object {
     
 /**
  * Gets a set of registered fontnames.
+ * @param fontname of a font that may or may not be registered
+ * @return true if a given font is registered
  */
     
     public static boolean contains(String fontname) {
-        return trueTypeFonts.containsKey(fontname);
+        return trueTypeFonts.containsKey(fontname.toLowerCase());
     }
     
 /**
@@ -636,13 +679,6 @@ public class FontFactory extends java.lang.Object {
  */
     
     public static boolean isRegistered(String fontname) {
-        String tmp;
-        for (Enumeration e = trueTypeFonts.propertyNames(); e.hasMoreElements(); ) {
-            tmp = (String) e.nextElement();
-            if (fontname.equalsIgnoreCase(tmp)) {
-                return true;
-            }
-        }
-        return false;
+        return trueTypeFonts.containsKey(fontname.toLowerCase());
     }
 }

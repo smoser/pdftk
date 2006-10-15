@@ -1,5 +1,5 @@
 /*
- * $Id: RandomAccessFileOrArray.java,v 1.11 2002/06/20 13:30:25 blowagie Exp $
+ * $Id: RandomAccessFileOrArray.java,v 1.48 2005/09/11 08:38:18 blowagie Exp $
  * $Name:  $
  *
  * Copyright 2001, 2002 Paulo Soares
@@ -52,6 +52,7 @@ package com.lowagie.text.pdf;
 
 import java.io.DataInputStream;
 import java.io.DataInput;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.EOFException;
 import java.io.RandomAccessFile;
@@ -75,31 +76,22 @@ public class RandomAccessFileOrArray implements DataInput {
     
     /** Holds value of property startOffset. */
     private int startOffset = 0;
-    
+
     public RandomAccessFileOrArray(String filename) throws IOException {
+    	this(filename, false);
+    }
+    
+    public RandomAccessFileOrArray(String filename, boolean forceRead) throws IOException {
         File file = new File(filename);
         if (!file.canRead()) {
             if (filename.startsWith("file:/") || filename.startsWith("http://") || filename.startsWith("https://") || filename.startsWith("jar:")) {
                 InputStream is = new URL(filename).openStream();
                 try {
-                    byte b[] = new byte[4096];
-                    ByteArrayOutputStream out = new ByteArrayOutputStream();
-                    for (;;) {
-                        int read = is.read(b);
-                        if (read < 1)
-                            break;
-                        out.write(b, 0, read);
-                    }
-                    this.arrayIn = out.toByteArray();
+                    this.arrayIn = InputStreamToArray(is);
                     return;
                 }
                 finally {
-                    try {
-                        is.close();
-                    }
-                    catch (IOException ioe) {
-                        // empty on purpose
-                    }
+                    try {is.close();}catch(IOException ioe){}
                 }
             }
             else {
@@ -114,26 +106,24 @@ public class RandomAccessFileOrArray implements DataInput {
                 if (is == null)
                     throw new IOException(filename + " not found as file or resource.");
                 try {
-                    byte b[] = new byte[4096];
-                    ByteArrayOutputStream out = new ByteArrayOutputStream();
-                    for (;;) {
-                        int read = is.read(b);
-                        if (read < 1)
-                            break;
-                        out.write(b, 0, read);
-                    }
-                    this.arrayIn = out.toByteArray();
+                    this.arrayIn = InputStreamToArray(is);
                     return;
                 }
                 finally {
-                    try {
-                        is.close();
-                    }
-                    catch (IOException ioe) {
-                        // empty on purpose
-                    }
+                    try {is.close();}catch(IOException ioe){}
                 }
             }
+        }
+        else if (forceRead) {
+            InputStream s = null;
+            try {
+                s = new FileInputStream(file);
+                this.arrayIn = InputStreamToArray(s);
+            }
+            finally {
+                try {s.close();}catch(Exception e){}
+            }
+        	return;
         }
         this.filename = filename;
         rf = new RandomAccessFile(filename, "r");
@@ -142,25 +132,27 @@ public class RandomAccessFileOrArray implements DataInput {
     public RandomAccessFileOrArray(URL url) throws IOException {
         InputStream is = url.openStream();
         try {
-            byte b[] = new byte[4096];
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
-            for (;;) {
-                int read = is.read(b);
-                if (read < 1)
-                    break;
-                out.write(b, 0, read);
-            }
-            this.arrayIn = out.toByteArray();
-            return;
+            this.arrayIn = InputStreamToArray(is);
         }
         finally {
-            try {
-                is.close();
-            }
-            catch (IOException ioe) {
-                // empty on purpose
-            }
+            try {is.close();}catch(IOException ioe){}
         }
+    }
+
+    public RandomAccessFileOrArray(InputStream is) throws IOException {
+        this.arrayIn = InputStreamToArray(is);
+    }
+    
+    public static byte[] InputStreamToArray(InputStream is) throws IOException {
+        byte b[] = new byte[8192];
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        while (true) {
+            int read = is.read(b);
+            if (read < 1)
+                break;
+            out.write(b, 0, read);
+        }
+        return out.toByteArray();
     }
 
     public RandomAccessFileOrArray(byte arrayIn[]) {
@@ -276,22 +268,19 @@ public class RandomAccessFileOrArray implements DataInput {
     }
     
     public void reOpen() throws IOException {
-        isBack = false;
-        if (filename != null) {
-            close();
+        if (filename != null && rf == null)
             rf = new RandomAccessFile(filename, "r");
-            if (startOffset != 0)
-                rf.seek(startOffset);
-        }
-        else {
-            arrayInPtr = startOffset;
-        }
+        seek(0);
     }
     
     protected void insureOpen() throws IOException {
         if (filename != null && rf == null) {
             reOpen();
         }
+    }
+    
+    public boolean isOpen() {
+        return (filename == null || rf != null);
     }
     
     public void close() throws IOException {
@@ -303,8 +292,10 @@ public class RandomAccessFileOrArray implements DataInput {
     }
     
     public int length() throws IOException {
-        if (arrayIn == null)
+        if (arrayIn == null) {
+            insureOpen();
             return (int)rf.length() - startOffset;
+        }
         else
             return arrayIn.length - startOffset;
     }
@@ -325,9 +316,11 @@ public class RandomAccessFileOrArray implements DataInput {
     }
     
     public int getFilePointer() throws IOException {
+        insureOpen();
         int n = isBack ? 1 : 0;
-        if (arrayIn == null)
+        if (arrayIn == null) {
             return (int)rf.getFilePointer() - n - startOffset;
+        }
         else
             return arrayInPtr - n - startOffset;
     }

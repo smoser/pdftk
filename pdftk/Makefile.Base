@@ -1,5 +1,5 @@
 # Makefile.Base
-# Copyright 2003, 2004 Sid Steward, Updated by Andre Gompel
+# Copyright 2003, 2004, 2006 Sid Steward, Updated by Andre Gompel
 # This is part of pdftk: www.pdftk.com
 #
 # Don't call this makefile directly; it is included by other,
@@ -20,9 +20,12 @@ $(java_libs_root)/com/lowagie/text/pdf/pdf.a \
 $(java_libs_root)/com/lowagie/text/text.a \
 $(java_libs_root)/com/lowagie/text/pdf/pdf.a \
 $(java_libs_root)/com/lowagie/text/pdf/codec/codec.a \
-$(java_libs_root)/com/lowagie/text/pdf/wmf/wmf.a \
+$(java_libs_root)/com/lowagie/text/pdf/codec/wmf/wmf.a \
 $(java_libs_root)/com/lowagie/text/pdf/fonts/fonts.a \
 $(java_libs_root)/com/lowagie/text/markup/markup.a \
+$(java_libs_root)/com/lowagie/text/xml/xmp/xmp.a \
+$(java_libs_root)/com/lowagie/bc/asn1/asn1.a \
+$(java_libs_root)/com/lowagie/text/pdf/codec/postscript/postscript.a \
 
 # font metric files, included as resources
 afms= $(wildcard $(java_libs_root)/com/lowagie/text/pdf/fonts/*.afm)
@@ -30,9 +33,9 @@ afm_objects= $(patsubst %.afm, %.o, $(afms))
 
 # older versions of libgcj might not have the MD5 algorithm,
 # so I added it here; these *_local java files were grabbed from
-# libgcj CVS on March 7, 2004
+# libgcj CVS on March 7, 2004; diffed September 5, 2006 w/ gcc 4.1.1
 #
-# gnu/gcj/convert/Input_UnicodeBig.java was grabbed March 26, 2004
+# gnu/gcj/convert/Input_UnicodeBig.java was grabbed March 26, 2004; diffed September 5, 2006 w/ gcc 4.1.1
 #
 libgcj_local_libs = \
 $(java_libs_root)/java_local/security/security.a \
@@ -43,7 +46,7 @@ $(java_libs_root)/gnu/gcj/convert/convert.a
 # this must already be set according to your platform Makefile;
 # we're just appending to it, here
 #
-CPPFLAGS += -DPDFTK_VER=\"1.12\"
+CPPFLAGS += -DPDFTK_VER=\"1.40\"
 
 all : java_libs pdftk
 
@@ -66,8 +69,8 @@ install:
 	/usr/bin/install pdftk /usr/local/bin 
 
 uninstall:
-	rm -fv /usr/local/bin/pdftk
+	rm -vf /usr/local/bin/pdftk
 
 clean:
-	rm *.o
 	$(MAKE) -C $(java_libs_root) clean
+	rm -vf *.o

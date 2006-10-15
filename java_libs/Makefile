@@ -11,7 +11,7 @@
 java_libs_root= $(CURDIR)
 
 # append gcj flags
-export GCJFLAGS+= --encoding=UTF-8 -I"$(java_libs_root)"
+export GCJFLAGS+= --encoding=UTF-8 --classpath="$(java_libs_root)"
 
 all : libgcj_local itext
 
@@ -28,9 +28,12 @@ itext :
 	$(MAKE) -C "$(java_libs_root)/com/lowagie/text/pdf";
 	$(MAKE) -C "$(java_libs_root)/com/lowagie/text/pdf/codec";
 #	$(MAKE) -C "$(java_libs_root)/com/lowagie/text/pdf/hyphenation";
-	$(MAKE) -C "$(java_libs_root)/com/lowagie/text/pdf/wmf";
+	$(MAKE) -C "$(java_libs_root)/com/lowagie/text/pdf/codec/wmf";
 #	$(MAKE) -C "$(java_libs_root)/com/lowagie/text/rtf";
 	$(MAKE) -C "$(java_libs_root)/com/lowagie/text/pdf/fonts";
+	$(MAKE) -C "$(java_libs_root)/com/lowagie/text/xml/xmp";
+	$(MAKE) -C "$(java_libs_root)/com/lowagie/bc/asn1";
+	$(MAKE) -C "$(java_libs_root)/com/lowagie/text/pdf/codec/postscript";
 
 clean : libgcj_local_clean itext_clean
 
@@ -47,6 +50,9 @@ itext_clean :
 	$(MAKE) -iC "$(java_libs_root)/com/lowagie/text/pdf" clean;
 	$(MAKE) -iC "$(java_libs_root)/com/lowagie/text/pdf/codec" clean;
 #	$(MAKE) -iC "$(java_libs_root)/com/lowagie/text/pdf/hyphenation" clean;
-	$(MAKE) -iC "$(java_libs_root)/com/lowagie/text/pdf/wmf" clean;
+	$(MAKE) -iC "$(java_libs_root)/com/lowagie/text/pdf/codec/wmf" clean;
 #	$(MAKE) -iC "$(java_libs_root)/com/lowagie/text/rtf" clean;
 	$(MAKE) -iC "$(java_libs_root)/com/lowagie/text/pdf/fonts" clean;
+	$(MAKE) -iC "$(java_libs_root)/com/lowagie/text/xml/xmp" clean;
+	$(MAKE) -iC "$(java_libs_root)/com/lowagie/bc/asn1" clean;
+	$(MAKE) -iC "$(java_libs_root)/com/lowagie/text/pdf/codec/postscript" clean;

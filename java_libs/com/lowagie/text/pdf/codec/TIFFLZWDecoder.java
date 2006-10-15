@@ -72,7 +72,7 @@ public class TIFFLZWDecoder {
     public byte[] decode(byte data[], byte uncompData[], int h) {
         
         if(data[0] == (byte)0x00 && data[1] == (byte)0x01) {
-            throw new RuntimeException("TIFF 5.0-style LZW codes are not supported.");
+            throw new UnsupportedOperationException("TIFF 5.0-style LZW codes are not supported.");
         }
         
         initializeStringTable();

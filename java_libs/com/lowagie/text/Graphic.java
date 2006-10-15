@@ -1,5 +1,5 @@
 /*
- * $Id: Graphic.java,v 1.30 2002/06/20 13:30:24 blowagie Exp $
+ * $Id: Graphic.java,v 1.57 2004/12/14 12:33:47 blowagie Exp $
  * $Name:  $
  *
  * Copyright 1999, 2000, 2001, 2002 by Bruno Lowagie.
@@ -95,6 +95,7 @@ public class Graphic extends PdfContentByte implements Element {
  *
  * @param	listener	an <CODE>ElementListener</CODE>
  * <CODE>true</CODE> if the element was processed successfully
+ * @return true if processing this object succeeded
  */
     
     public boolean process(ElementListener listener) {
@@ -126,26 +127,59 @@ public class Graphic extends PdfContentByte implements Element {
         return new ArrayList();
     }
     
-/**
- * Orders this graphic to draw a horizontal line.
- */
+    /**
+     * Orders this graphic to draw a horizontal, centered line.
+     * @param linewidth the line width
+     * @param percentage the percentage horizontal width in relation to the margins or if negative, an absolute value
+     */
     
     public void setHorizontalLine(float linewidth, float percentage) {
         if (attributes == null) attributes = new HashMap();
-        attributes.put(HORIZONTAL_LINE, new Object[]{new Float(linewidth), new Float(percentage), new Color(0, 0, 0)});
+        attributes.put(HORIZONTAL_LINE, new Object[]{new Float(linewidth), new Float(percentage), Color.black, new Integer(Element.ALIGN_CENTER)});
     }
     
-/**
- * Orders this graphic to draw a horizontal line.
- */
+    /**
+     * Orders this graphic to draw a horizontal line with some alignment.
+     * @param linewidth the line width
+     * @param percentage the percentage horizontal width in relation to the margins or if negative, an absolute value
+     * @param align the line alignment
+     */
+    public void setHorizontalLine(float linewidth, float percentage, int align) {
+        if (attributes == null) attributes = new HashMap();
+        attributes.put(HORIZONTAL_LINE, new Object[]{new Float(linewidth), new Float(percentage), Color.black, new Integer(align)});
+    }
+    
+    /**
+     * Orders this graphic to draw a horizontal, centered line.
+     * @param linewidth the line width
+     * @param percentage the percentage horizontal width in relation to the margins or if negative, an absolute value
+     * @param color the color of the line
+     */
     
     public void setHorizontalLine(float linewidth, float percentage, Color color) {
         if (attributes == null) attributes = new HashMap();
-        attributes.put(HORIZONTAL_LINE, new Object[]{new Float(linewidth), new Float(percentage), color});
+        attributes.put(HORIZONTAL_LINE, new Object[]{new Float(linewidth), new Float(percentage), color, new Integer(Element.ALIGN_CENTER)});
+    }
+    
+    /**
+     * Orders this graphic to draw a horizontal, centered line.
+     * @param linewidth the line width
+     * @param percentage the percentage horizontal width in relation to the margins or if negative, an absolute value
+     * @param color the color of the line
+     * @param align the line alignment
+     */
+    public void setHorizontalLine(float linewidth, float percentage, Color color, int align) {
+        if (attributes == null) attributes = new HashMap();
+        attributes.put(HORIZONTAL_LINE, new Object[]{new Float(linewidth), new Float(percentage), color, new Integer(align)});
     }
     
 /**
  * draws a horizontal line.
+ * @param lineWidth width of the line
+ * @param color color of the line
+ * @param x1 start position of the line
+ * @param x2 end position of the line
+ * @param y y-coordinate of the line
  */
     
     public void drawHorizontalLine(float lineWidth, Color color, float x1, float x2, float y) {
@@ -159,6 +193,8 @@ public class Graphic extends PdfContentByte implements Element {
     
 /**
  * Orders this graphic to draw a horizontal line.
+ * @param linewidth linewidth of the border
+ * @param extraSpace extraspace needed as marging on the page
  */
     
     public void setBorder(float linewidth, float extraSpace) {
@@ -168,6 +204,9 @@ public class Graphic extends PdfContentByte implements Element {
     
 /**
  * Orders this graphic to draw a horizontal line.
+ * @param linewidth linewidth of the border
+ * @param extraSpace extraspace needed as marging on the page
+ * @param color color of the borderbox
  */
     
     public void setBorder(float linewidth, float extraSpace, Color color) {
@@ -177,6 +216,12 @@ public class Graphic extends PdfContentByte implements Element {
     
 /**
  * Draws a border
+ * @param lineWidth linewidth of the border
+ * @param color color of the borderbox
+ * @param llx lower left x coordinate
+ * @param lly lower left y coordinate
+ * @param urx upper right x coordinate
+ * @param ury upper right y coordinate
  */
     public void drawBorder(float lineWidth, Color color, float llx, float lly, float urx, float ury) {
         setLineWidth(lineWidth);
@@ -188,6 +233,11 @@ public class Graphic extends PdfContentByte implements Element {
     
 /**
  * Processes the attributes of this object.
+ * @param llx lower left x coordinate
+ * @param lly lower left y coordinate
+ * @param urx upper right x coordinate
+ * @param ury upper right y coordinate
+ * @param y
  */
     
     public void processAttributes(float llx, float lly, float urx, float ury, float y) {
@@ -199,8 +249,24 @@ public class Graphic extends PdfContentByte implements Element {
             o = (Object[]) attributes.get(attribute);
             if (HORIZONTAL_LINE.equals(attribute)) {
                 float p = ((Float)o[1]).floatValue();
-                float w = (urx - llx) * (100.0f - p) / 200.0f;
-                drawHorizontalLine(((Float)o[0]).floatValue(), (Color)o[2], llx + w, urx - w, y);
+                float w;
+                if (p < 0)
+                    w = -p;
+                else
+                    w = (urx - llx) * p / 100.0f;
+                int align = ((Integer)o[3]).intValue();
+                float s;
+                switch (align) {
+                    case Element.ALIGN_LEFT:
+                        s = 0;
+                        break;
+                    case Element.ALIGN_RIGHT:
+                        s = urx - llx - w;
+                        break;
+                    default:
+                        s = (urx - llx - w) / 2;
+                }
+                drawHorizontalLine(((Float)o[0]).floatValue(), (Color)o[2], s + llx, s + w + llx, y);
             }
             if (BORDER.equals(attribute)) {
                 float extra = ((Float)o[1]).floatValue();

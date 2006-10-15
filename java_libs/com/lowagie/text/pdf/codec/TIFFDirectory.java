@@ -58,7 +58,6 @@ import com.lowagie.text.pdf.RandomAccessFileOrArray;
  * <p><b> This class is not a committed part of the JAI API.  It may
  * be removed or changed in future releases of JAI.</b>
  *
- * @see javax.media.jai.operator.TIFFDescriptor
  * @see TIFFField
  */
 public class TIFFDirectory extends Object implements Serializable {
@@ -399,11 +398,11 @@ public class TIFFDirectory extends Object implements Serializable {
      */
     public int[] getTags() {
         int[] tags = new int[fieldIndex.size()];
-        Enumeration enum = fieldIndex.keys();
+        Enumeration e = fieldIndex.keys();
         int i = 0;
         
-        while (enum.hasMoreElements()) {
-            tags[i++] = ((Integer)enum.nextElement()).intValue();
+        while (e.hasMoreElements()) {
+            tags[i++] = ((Integer)e.nextElement()).intValue();
         }
         
         return tags;

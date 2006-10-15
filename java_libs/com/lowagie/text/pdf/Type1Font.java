@@ -1,5 +1,5 @@
 /*
- * $Id: Type1Font.java,v 1.33 2002/07/09 11:28:24 blowagie Exp $
+ * $Id: Type1Font.java,v 1.64 2005/07/16 16:49:25 blowagie Exp $
  * $Name:  $
  *
  * Copyright 2001, 2002 Paulo Soares
@@ -50,10 +50,8 @@
 
 package com.lowagie.text.pdf;
 
-import com.lowagie.text.ExceptionConverter;
 import com.lowagie.text.DocumentException;
 import java.util.HashMap;
-import java.util.ArrayList;
 import java.util.StringTokenizer;
 import com.lowagie.text.pdf.fonts.FontsResourceAnchor;
 import java.io.*;
@@ -135,10 +133,11 @@ class Type1Font extends BaseFont
     private int StdVW = 80;
     
 /** Represents the section CharMetrics in the AFM file. Each
- *  element of this array contains a <CODE>Object[3]</CODE> with an
- *  Integer, Integer and String. This is the code, width and name.
+ *  value of this array contains a <CODE>Object[4]</CODE> with an
+ *  Integer, Integer, String and int[]. This is the code, width, name and char bbox.
+ *  The key is the name of the char and also an Integer with the char number.
  */
-    private ArrayList CharMetrics = new ArrayList();
+    private HashMap CharMetrics = new HashMap();
 /** Represents the section KernPairs in the AFM file. The key is
  *  the name of the first character and the value is a <CODE>Object[]</CODE>
  *  with 2 elements for each kern pair. Position 0 is the name of
@@ -244,8 +243,31 @@ class Type1Font extends BaseFont
                 }
             }
         }
+        else if (afmFile.toLowerCase().endsWith(".pfm")) {
+            try {
+                ByteArrayOutputStream ba = new ByteArrayOutputStream();
+                if (ttfAfm == null)
+                    rf = new RandomAccessFileOrArray(afmFile);
+                else
+                    rf = new RandomAccessFileOrArray(ttfAfm);
+                Pfm2afm.convert(rf, ba);
+                rf.close();
+                rf = new RandomAccessFileOrArray(ba.toByteArray());
+                process(rf);
+            }
+            finally {
+                if (rf != null) {
+                    try {
+                        rf.close();
+                    }
+                    catch (Exception e) {
+                        // empty on purpose
+                    }
+                }
+            }
+        }
         else
-            throw new DocumentException(afmFile + " is not an AFM font file.");
+            throw new DocumentException(afmFile + " is not an AFM or PFM font file.");
         try {
             EncodingScheme = EncodingScheme.trim();
             if (EncodingScheme.equals("AdobeStandardEncoding") || EncodingScheme.equals("StandardEncoding")) {
@@ -269,29 +291,18 @@ class Type1Font extends BaseFont
  * @param name the glyph name
  * @return the width of the char
  */
-    int getRawWidth(int c, String name)
-    {
-        try {
-            if (name == null) { // font specific
-                for (int k = 0; k < CharMetrics.size(); ++k) {
-                    Object metrics[] = (Object[])CharMetrics.get(k);
-                    if (((Integer)(metrics[0])).intValue() == c)
-                        return ((Integer)(metrics[1])).intValue();
-                }
-            }
-            else {
-                if (name.equals(".notdef"))
-                    return 0;
-                for (int k = 0; k < CharMetrics.size(); ++k) {
-                    Object metrics[] = (Object[])CharMetrics.get(k);
-                    if (name.equals(metrics[2]))
-                        return ((Integer)(metrics[1])).intValue();
-                }
-            }
+    int getRawWidth(int c, String name) {
+        Object metrics[];
+        if (name == null) { // font specific
+            metrics = (Object[])CharMetrics.get(new Integer(c));
         }
-        catch (Exception e) {
-            throw new ExceptionConverter(e);
+        else {
+            if (name.equals(".notdef"))
+                return 0;
+            metrics = (Object[])CharMetrics.get(name);
         }
+        if (metrics != null)
+            return ((Integer)(metrics[1])).intValue();
         return 0;
     }
     
@@ -397,6 +408,8 @@ class Type1Font extends BaseFont
             Integer C = new Integer(-1);
             Integer WX = new Integer(250);
             String N = "";
+            int B[] = null;
+
             tok = new StringTokenizer(line, ";");
             while (tok.hasMoreTokens())
             {
@@ -410,8 +423,17 @@ class Type1Font extends BaseFont
                     WX = new Integer(Float.valueOf(tokc.nextToken()).intValue());
                 else if (ident.equals("N"))
                     N = tokc.nextToken();
+                else if (ident.equals("B")) {
+                    B = new int[]{Integer.parseInt(tokc.nextToken()), 
+                                         Integer.parseInt(tokc.nextToken()),
+                                         Integer.parseInt(tokc.nextToken()),
+                                         Integer.parseInt(tokc.nextToken())};
+                }
             }
-            CharMetrics.add(new Object[]{C, WX, N});
+            Object metrics[] = new Object[]{C, WX, N, B};
+            if (C.intValue() >= 0)
+                CharMetrics.put(C, metrics);
+            CharMetrics.put(N, metrics);
         }
         if (isMetrics)
             throw new DocumentException("Missing EndCharMetrics in " + fileName);
@@ -735,7 +757,7 @@ class Type1Font extends BaseFont
      * Sets the kerning between two Unicode chars.
      * @param char1 the first char
      * @param char2 the second char
-     * @paran kern the kerning to apply in normalized 1000 units
+     * @param kern the kerning to apply in normalized 1000 units
      * @return <code>true</code> if the kerning was applied, <code>false</code> otherwise
      */
     public boolean setKerning(char char1, char char2, int kern) {
@@ -765,4 +787,20 @@ class Type1Font extends BaseFont
         KernPairs.put(first, obj2);
         return true;
     }
+    
+    protected int[] getRawCharBBox(int c, String name) {
+        Object metrics[];
+        if (name == null) { // font specific
+            metrics = (Object[])CharMetrics.get(new Integer(c));
+        }
+        else {
+            if (name.equals(".notdef"))
+                return null;
+            metrics = (Object[])CharMetrics.get(name);
+        }
+        if (metrics != null)
+            return ((int[])(metrics[3]));
+        return null;
+    }
+    
 }

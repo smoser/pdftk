@@ -1,5 +1,5 @@
 /*
- * $Id: Section.java,v 1.53 2002/07/09 10:41:40 blowagie Exp $
+ * $Id: Section.java,v 1.81 2005/09/28 07:55:29 blowagie Exp $
  * $Name:  $
  *
  * Copyright 1999, 2000, 2001, 2002 by Bruno Lowagie.
@@ -76,8 +76,8 @@ import java.util.Properties;
  * Paragraph someSectionText = new Paragraph("This is some silly paragraph in a chapter and/or section. It contains some text to test the functionality of Chapters and Section.");
  * <STRONG>section1.add(someSectionText);</STRONG>
  * Paragraph title211 = new Paragraph("This is SubSection 1 in Section 1 in Chapter 2", FontFactory.getFont(FontFactory.HELVETICA, 14, Font.BOLD, new Color(255, 0, 0)));
- * <STRONG>Section section11 = section1.addSection(40, title211, 2);<STRONG>
- * <STRONG>section11.add(someSectionText);<STRONG>
+ * <STRONG>Section section11 = section1.addSection(40, title211, 2);</STRONG>
+ * <STRONG>section11.add(someSectionText);</STRONG>
  * </PRE></BLOCKQUOTE>
  */
 
@@ -109,6 +109,8 @@ public class Section extends ArrayList implements TextElementArray {
     /** false if the bookmark children are not visible */
     protected boolean bookmarkOpen = true;
     
+    /** The bookmark title if different from the content title */
+    protected String bookmarkTitle;
     // constructors
     
 /**
@@ -292,6 +294,7 @@ public class Section extends ArrayList implements TextElementArray {
  * @param	indentation	the indentation of the new section
  * @param	title		the title of the new section
  * @param	numberDepth	the numberDepth of the section
+ * @return  a new Section object
  */
     
     public Section addSection(float indentation, Paragraph title, int numberDepth) {
@@ -306,6 +309,7 @@ public class Section extends ArrayList implements TextElementArray {
  *
  * @param	indentation	the indentation of the new section
  * @param	title		the title of the new section
+ * @return  a new Section object
  */
     
     public Section addSection(float indentation, Paragraph title) {
@@ -320,6 +324,7 @@ public class Section extends ArrayList implements TextElementArray {
  *
  * @param	title		the title of the new section
  * @param	numberDepth	the numberDepth of the section
+ * @return  a new Section object
  */
     
     public Section addSection(Paragraph title, int numberDepth) {
@@ -332,10 +337,11 @@ public class Section extends ArrayList implements TextElementArray {
  * Creates a <CODE>Section</CODE>, adds it to this <CODE>Section</CODE> and returns it.
  *
  * @param	title		the title of the new section
+ * @return  a new Section object
  */
     
     public Section addSection(Paragraph title) {
-        Section section = new Section(title, 1);
+        Section section = new Section(title, numberDepth + 1);
         add(section);
         return section;
     }
@@ -346,6 +352,7 @@ public class Section extends ArrayList implements TextElementArray {
  * @param	indentation	the indentation of the new section
  * @param	title		the title of the new section
  * @param	numberDepth	the numberDepth of the section
+ * @return  a new Section object
  */
     
     public Section addSection(float indentation, String title, int numberDepth) {
@@ -360,6 +367,7 @@ public class Section extends ArrayList implements TextElementArray {
  *
  * @param	title		the title of the new section
  * @param	numberDepth	the numberDepth of the section
+ * @return  a new Section object
  */
     
     public Section addSection(String title, int numberDepth) {
@@ -373,6 +381,7 @@ public class Section extends ArrayList implements TextElementArray {
  *
  * @param	indentation	the indentation of the new section
  * @param	title		the title of the new section
+ * @return  a new Section object
  */
     
     public Section addSection(float indentation, String title) {
@@ -386,10 +395,11 @@ public class Section extends ArrayList implements TextElementArray {
  * Adds a <CODE>Section</CODE> to this <CODE>Section</CODE> and returns it.
  *
  * @param	title		the title of the new section
+ * @return  a new Section object
  */
     
     public Section addSection(String title) {
-        Section section = new Section(new Paragraph(title), 1);
+        Section section = new Section(new Paragraph(title), numberDepth + 1);
         add(section);
         return section;
     }
@@ -626,4 +636,25 @@ public class Section extends ArrayList implements TextElementArray {
     public void setBookmarkOpen(boolean bookmarkOpen) {
         this.bookmarkOpen = bookmarkOpen;
     }
+    
+    /**
+     * Gets the bookmark title.
+     * @return the bookmark title
+     */    
+    public Paragraph getBookmarkTitle() {
+        if (bookmarkTitle == null)
+            return title();
+        else
+            return new Paragraph(bookmarkTitle);
+    }
+    
+    /**
+     * Sets the bookmark title. The bookmark title is the same as the section title but
+     * can be changed with this method.
+     * @param bookmarkTitle the bookmark title
+     */    
+    public void setBookmarkTitle(String bookmarkTitle) {
+        this.bookmarkTitle = bookmarkTitle;
+    }
+    
 }

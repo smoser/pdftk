@@ -1,5 +1,5 @@
 /*
- * $Id: PdfEncryption.java,v 1.20 2003/03/11 09:33:34 blowagie Exp $
+ * $Id: PdfEncryption.java,v 1.53 2005/08/05 23:13:44 psoares33 Exp $
  * $Name:  $
  *
  * Copyright 2001, 2002 Paulo Soares
@@ -50,7 +50,7 @@
 
 package com.lowagie.text.pdf;
 
-import java_local.security.MessageDigest;
+import java_local.security.MessageDigest; // ssteward
 import com.lowagie.text.ExceptionConverter;
 
 /**
@@ -98,6 +98,16 @@ public class PdfEncryption {
         }
     }
 
+    public PdfEncryption(PdfEncryption enc) {
+        this();
+        mkey = (byte[])enc.mkey.clone();
+        ownerKey = (byte[])enc.ownerKey.clone();
+        userKey = (byte[])enc.userKey.clone();
+        permissions = enc.permissions;
+        if (enc.documentID != null)
+            documentID = (byte[])enc.documentID.clone();
+    }
+    
     /**
      */
     private byte[] padPassword(byte userPassword[]) {
@@ -283,6 +293,7 @@ public class PdfEncryption {
         for (int k = 0; k < 16; ++k)
             buf.appendHex(id[k]);
         buf.append('>').append('<');
+        id = createDocumentId();
         for (int k = 0; k < 16; ++k)
             buf.appendHex(id[k]);
         buf.append('>').append(']');

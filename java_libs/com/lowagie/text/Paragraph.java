@@ -1,5 +1,5 @@
 /*
- * $Id: Paragraph.java,v 1.58 2002/07/09 10:41:39 blowagie Exp $
+ * $Id: Paragraph.java,v 1.83 2005/05/03 13:03:48 blowagie Exp $
  * $Name:  $
  *
  * Copyright 1999, 2000, 2001, 2002 by Bruno Lowagie.
@@ -97,6 +97,19 @@ public class Paragraph extends Phrase implements TextElementArray, MarkupAttribu
     
 /** Does the paragraph has to be kept together on 1 page. */
     protected boolean keeptogether = false;
+    
+    /** The text leading that is multiplied by the biggest font size in the line. */
+    protected float multipliedLeading = 0;
+    
+    /**
+     * Holds value of property firstLineIndent.
+     */
+    private float firstLineIndent = 0;
+    
+    /**
+     * Holds value of property extraParagraphSpace.
+     */
+    private float extraParagraphSpace = 0;
     
     // constructors
     
@@ -221,7 +234,7 @@ public class Paragraph extends Phrase implements TextElementArray, MarkupAttribu
         if ((value = (String)attributes.remove(ElementTags.LEADING)) != null) {
             setLeading(Float.valueOf(value + "f").floatValue());
         }
-        else if ((value = (String)attributes.remove(MarkupTags.CSS_LINEHEIGHT)) != null) {
+        else if ((value = (String)attributes.remove(MarkupTags.CSS_KEY_LINEHEIGHT)) != null) {
             setLeading(MarkupParser.parseLength(value));
         }
         else {
@@ -257,6 +270,7 @@ public class Paragraph extends Phrase implements TextElementArray, MarkupAttribu
  * Adds an <CODE>Object</CODE> to the <CODE>Paragraph</CODE>.
  *
  * @param	o   object		the object to add.
+ * @return true is adding the object succeeded
  */
     
     public boolean add(Object o) {
@@ -438,4 +452,65 @@ public class Paragraph extends Phrase implements TextElementArray, MarkupAttribu
     public static boolean isTag(String tag) {
         return ElementTags.PARAGRAPH.equals(tag);
     }
+    
+    /**
+     * Sets the leading fixed and variable. The resultant leading will be
+     * fixedLeading+multipliedLeading*maxFontSize where maxFontSize is the
+     * size of the bigest font in the line.
+     * @param fixedLeading the fixed leading
+     * @param multipliedLeading the variable leading
+     */
+    public void setLeading(float fixedLeading, float multipliedLeading) {
+        this.leading = fixedLeading;
+        this.multipliedLeading = multipliedLeading;
+    }
+    
+    /**
+     * @see com.lowagie.text.Phrase#setLeading(float)
+     */
+    public void setLeading(float fixedLeading) {
+        this.leading = fixedLeading;
+        this.multipliedLeading = 0;
+    }
+    
+    /**
+     * Gets the variable leading
+     * @return the leading
+     */
+    public float getMultipliedLeading() {
+        return multipliedLeading;
+    }
+    
+    /**
+     * Getter for property firstLineIndent.
+     * @return Value of property firstLineIndent.
+     */
+    public float getFirstLineIndent() {
+        return this.firstLineIndent;
+    }
+    
+    /**
+     * Setter for property firstLineIndent.
+     * @param firstLineIndent New value of property firstLineIndent.
+     */
+    public void setFirstLineIndent(float firstLineIndent) {
+        this.firstLineIndent = firstLineIndent;
+    }
+    
+    /**
+     * Getter for property extraParagraphSpace.
+     * @return Value of property extraParagraphSpace.
+     */
+    public float getExtraParagraphSpace() {
+        return this.extraParagraphSpace;
+    }
+    
+    /**
+     * Setter for property extraParagraphSpace.
+     * @param extraParagraphSpace New value of property extraParagraphSpace.
+     */
+    public void setExtraParagraphSpace(float extraParagraphSpace) {
+        this.extraParagraphSpace = extraParagraphSpace;
+    }
+    
 }

@@ -1,6 +1,6 @@
 /* -*- Mode: Java; tab-width: 4; c-basic-offset: 4 -*- */
 /*
- * $Id: PdfCopy.java,v 1.11 2003/05/02 09:01:17 blowagie Exp $
+ * $Id: PdfCopy.java,v 1.35 2005/05/04 14:32:21 blowagie Exp $
  * $Name:  $
  *
  * Copyright 1999, 2000, 2001, 2002 Bruno Lowagie
@@ -172,6 +172,7 @@ public class PdfCopy extends PdfWriter {
         if (currentPdfReaderInstance != null) {
             if (currentPdfReaderInstance.getReader() != reader) {
                 try {
+                    currentPdfReaderInstance.getReader().close();
                     currentPdfReaderInstance.getReaderFile().close();
                 }
                 catch (IOException ioe) {
@@ -200,22 +201,64 @@ public class PdfCopy extends PdfWriter {
         PdfIndirectReference theRef;
         RefKey key = new RefKey(in);
         IndirectReferences iRef = (IndirectReferences)indirects.get(key);
+		boolean recurse_b= true; // ssteward
+
         if (iRef != null) {
             theRef = iRef.getRef();
-            if (iRef.getCopied()) {
-                //	        System.out.println(">>> Value is " + theRef.toString());
+            if (iRef.getCopied()) { // we've already copied this
                 return theRef;
             }
-            //	    System.out.println(">>> Fill in " + theRef.toString());
         }
         else {
             theRef = body.getPdfIndirectReference();
             iRef = new IndirectReferences(theRef);
             indirects.put(key, iRef);
-        }
-        iRef.setCopied();
-        PdfObject obj = copyObject((PdfObject)PdfReader.getPdfObject(in));
-        PdfIndirectObject theObj = body.add(obj, theRef);
+		}
+
+		// ssteward; if this is a ref to a dictionary with a parent,
+		// and we haven't copied the parent yet, then don't recurse
+		// into this dictionary; wait to recurse via the parent;
+		// this was written to fix a problem with references to pages
+		// inside pdf destinations; this problem caused pdf bloat;
+		// the pdf spec says broken indirect ref.s (ref, but no obj) are okay;
+		//
+		// update: we /do/ want to recurse up form field parents (see addPage()),
+		// just /not/ pages with parents
+		//
+		// note: copying an indirect reference to a dictionary is
+		// more suspect than copying a dictionary
+		//
+		// simplify this by not recursing into /any/ type==page via indirect ref?
+
+		PdfObject in_obj= (PdfObject)reader.getPdfObject( in );
+		if( in_obj!= null && in_obj.isDictionary() ) {
+			PdfDictionary in_dict= (PdfDictionary)in_obj;
+
+			PdfName type= (PdfName)in_dict.get( PdfName.TYPE );
+			if( type!= null && type.isName() && type.equals( PdfName.PAGE ) ) {
+
+				PdfObject parent_obj=
+					(PdfObject)in_dict.get( PdfName.PARENT );
+				if( parent_obj!= null && parent_obj.isIndirect() ) {
+					PRIndirectReference parent_iref= (PRIndirectReference)parent_obj;
+
+					RefKey parent_key= new RefKey( parent_iref );
+					IndirectReferences parent_ref= (IndirectReferences)indirects.get( parent_key );
+
+					if( parent_ref== null || !parent_ref.getCopied() ) {
+						// parent has not been copied yet, so we've jumped here somehow;
+						recurse_b= false;
+					}
+				}
+			}
+		}
+
+		if( recurse_b ) {
+			iRef.setCopied();
+			PdfObject obj = copyObject((PdfObject)PdfReader.getPdfObjectRelease(in));
+			PdfIndirectObject theObj = addToBody(obj, theRef);
+		}
+
         return theRef;
     }
     
@@ -231,10 +274,12 @@ public class PdfCopy extends PdfWriter {
         for (Iterator it = in.getKeys().iterator(); it.hasNext();) {
             PdfName key = (PdfName)it.next();
             PdfObject value = (PdfObject) in.get(key);
-            //	    System.out.println("Copy " + key);
-            if (key.equals(PdfName.PARENT) &&
-            type != null && ((PdfName)type).equals(PdfName.PAGE)) {
-                out.put(PdfName.PARENT, topPageParent);
+			// System.err.println("Copy " + key); // debug
+            if (type != null && PdfName.PAGE.equals(type)) {
+                if (key.equals(PdfName.PARENT))
+                    out.put(PdfName.PARENT, topPageParent);
+                else if (!key.equals(PdfName.B))
+                    out.put(key, copyObject(value));
             }
             else
                 out.put(key, copyObject(value));
@@ -278,7 +323,7 @@ public class PdfCopy extends PdfWriter {
     protected PdfObject copyObject(PdfObject in) throws IOException,BadPdfFormatException {
         switch (in.type) {
             case PdfObject.DICTIONARY:
-                //	        System.out.println("Dictionary: " + in.toString());
+                // System.err.println("Dictionary: " + in.toString());
                 return copyDictionary((PdfDictionary)in);
             case PdfObject.INDIRECT:
                 return copyIndirect((PRIndirectReference)in);
@@ -301,7 +346,7 @@ public class PdfCopy extends PdfWriter {
                     }
                     return new PdfLiteral(lit);
                 }
-                System.out.println("CANNOT COPY type " + in.type);
+                System.err.println("CANNOT COPY type " + in.type);
                 return null;
         }
     }
@@ -348,6 +393,7 @@ public class PdfCopy extends PdfWriter {
         
         PdfDictionary thePage = reader.getPageN(pageNum);
         PRIndirectReference origRef = reader.getPageOrigRef(pageNum);
+        reader.releasePage(pageNum);
         RefKey key = new RefKey(origRef);
         PdfIndirectReference pageRef;
         IndirectReferences iRef = (IndirectReferences)indirects.get(key);
@@ -364,13 +410,14 @@ public class PdfCopy extends PdfWriter {
         ++currentPageNumber;
         if (! iRef.getCopied()) {
             iRef.setCopied();
-
+			
+			// ssteward
 			if( !this.topFormFieldReadersData.containsKey( reader ) ) { // add
 				this.topFormFieldReadersData.put( reader, new TopFormFieldData() );
 			}
 			TopFormFieldData readerData= (TopFormFieldData)topFormFieldReadersData.get(reader);
 
-			// ssteward: pdftk-1.10;
+			// ssteward
 			// if duplicate form field names are encountered
 			// make names unique by inserting a new top parent "field";
 			// insert this new parent into the PdfReader of the input document,
@@ -397,9 +444,11 @@ public class PdfCopy extends PdfWriter {
 										//
 										String full_name= ""; // construct a full name from partial names using '.', e.g.: foo.bar.
 										String top_name= "";
+										boolean is_unicode_b= false; // if names are unicode, they must all be unicode
 										PdfString tt= (PdfString)reader.getPdfObject(annot.get(PdfName.T));
 										if( tt!= null && tt.isString() ) {
 											top_name= tt.toString();
+											is_unicode_b= ( is_unicode_b || tt.isUnicode() );
 										}
 										//
 										// dig upwards, parent-wise; replace annot as we go with the
@@ -420,6 +469,8 @@ public class PdfCopy extends PdfWriter {
 													}
 													top_name= tt.toString();
 												}
+
+												is_unicode_b= ( is_unicode_b || tt.isUnicode() );
 											}
 									
 										// once we have seen a top-level field parent, we wave
@@ -428,7 +479,7 @@ public class PdfCopy extends PdfWriter {
 										// represented by more than one annotation on the page; this logic
 										// respects that programming
 										//
-										//System.out.println( full_name+ top_name+ "." ); // debug
+										//System.err.println( full_name+ top_name+ "." ); // debug
 										if( readerData.allNames.contains( top_name ) )
 											{ // a parent we have seen or created in this reader
 												this.fullFormFieldNames.add( full_name+ top_name+ "." ); // tally
@@ -459,8 +510,12 @@ public class PdfCopy extends PdfWriter {
 												}
 												else { // create a new parent using this name
 													PdfDictionary new_parent= new PdfDictionary();
+													PdfString new_parent_name_pdf= new PdfString( new_parent_name );
+													if( is_unicode_b ) { // if names are unicode, they must all be unicode
+														new_parent_name_pdf= new PdfString( new_parent_name, PdfObject.TEXT_UNICODE );
+													}
 													new_parent_ref= reader.getPRIndirectReference( new_parent );
-													new_parent.put( PdfName.T, new PdfString( new_parent_name ) );
+													new_parent.put( PdfName.T, new_parent_name_pdf );
 											
 													new_parent_kids= new PdfArray();
 													PdfIndirectReference new_parent_kids_ref= 
@@ -500,6 +555,7 @@ public class PdfCopy extends PdfWriter {
 
 			// copy the page; this will copy our work, above, into the target document
             PdfDictionary newPage = copyDictionary(thePage);
+			
 
 			// ssteward: pdftk-1.00;
 			// copy page form field ref.s into document AcroForm
@@ -577,11 +633,10 @@ public class PdfCopy extends PdfWriter {
 			
 
             newPage.put(PdfName.PARENT, topPageParent);
-            PdfIndirectObject pageObj = body.add(newPage, pageRef);
+            PdfIndirectObject pageObj = addToBody(newPage, pageRef);
         }
         root.addPage(pageRef);
         pageNumbersToRefs.add(pageRef);
-
     }
     
     public PdfIndirectReference getPageReference(int page) {
@@ -601,7 +656,10 @@ public class PdfCopy extends PdfWriter {
         setFromReader(reader);
         
         PdfDictionary catalog = reader.getCatalog();
-        PRIndirectReference hisRef = (PRIndirectReference)catalog.get(PdfName.ACROFORM);
+        PRIndirectReference hisRef = null;
+        PdfObject o = catalog.get(PdfName.ACROFORM);
+        if (o != null && o.type() == PdfObject.INDIRECT)
+            hisRef = (PRIndirectReference)o;
         RefKey key = new RefKey(hisRef);
         PdfIndirectReference myRef;
         IndirectReferences iRef = (IndirectReferences)indirects.get(key);
@@ -616,7 +674,7 @@ public class PdfCopy extends PdfWriter {
         if (! iRef.getCopied()) {
             iRef.setCopied();
             PdfDictionary theForm = copyDictionary((PdfDictionary)PdfReader.getPdfObject(hisRef));
-            PdfIndirectObject myObj = body.add(theForm, myRef);
+            PdfIndirectObject myObj = addToBody(theForm, myRef);
         }
     }
 	*/
@@ -674,6 +732,7 @@ public class PdfCopy extends PdfWriter {
             super.close();
             if (ri != null) {
                 try {
+                    ri.getReader().close();
                     ri.getReaderFile().close();
                 }
                 catch (IOException ioe) {

@@ -27,6 +27,7 @@ CPPFLAGS= -O3 -DPATH_DELIM=0x2f -DASK_ABOUT_WARNINGS=false -fdollars-in-identifi
 CXXFLAGS= -lgcj
 
 # itext compiler flags
+# -O3 causes pdftk to segfault (during a cat operation) when compiled on sarge using gcc 3.4.4
 export GCJFLAGS= -O2
 
 #

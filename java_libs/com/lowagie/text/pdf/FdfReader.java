@@ -47,6 +47,7 @@
  */
 package com.lowagie.text.pdf;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.HashMap;
 import java.util.ArrayList;
 import java.net.URL;
@@ -57,6 +58,7 @@ public class FdfReader extends PdfReader {
     
     HashMap fields;
     String fileSpec;
+    PdfName encoding;
     
     /** Reads an FDF form.
      * @param filename the file name of the form
@@ -80,6 +82,15 @@ public class FdfReader extends PdfReader {
      */    
     public FdfReader(URL url) throws IOException {
         super(url);
+    }
+    
+    /** Reads an FDF form.
+     * @param is the <CODE>InputStream</CODE> containing the document. The stream is read to the
+     * end but is not closed
+     * @throws IOException on error
+     */    
+    public FdfReader(InputStream is) throws IOException {
+        super(is);
     }
     
     protected void readPdf() throws IOException {
@@ -134,6 +145,7 @@ public class FdfReader extends PdfReader {
         PdfArray fld = (PdfArray)getPdfObject(fdf.get(PdfName.FIELDS));
         if (fld == null)
             return;
+        encoding = (PdfName)getPdfObject(fdf.get(PdfName.ENCODING));
         PdfDictionary merged = new PdfDictionary();
         merged.put(PdfName.KIDS, fld);
         kidNode(merged, "");
@@ -170,13 +182,31 @@ public class FdfReader extends PdfReader {
             return null;
         if (v.isName())
             return PdfName.decodeName(((PdfName)v).toString());
-        else if (v.isString())
-            return ((PdfString)v).toUnicodeString();
-        else
-            return null;
+        else if (v.isString()) {
+            PdfString vs = (PdfString)v;
+            if (encoding == null || vs.getEncoding() != null)
+                return vs.toUnicodeString();
+            byte b[] = vs.getBytes();
+            if (b.length >= 2 && b[0] == (byte)254 && b[1] == (byte)255)
+                return vs.toUnicodeString();
+            try {
+                if (encoding.equals(PdfName.SHIFT_JIS))
+                    return new String(b, "SJIS");
+                else if (encoding.equals(PdfName.UHC))
+                    return new String(b, "MS949");
+                else if (encoding.equals(PdfName.GBK))
+                    return new String(b, "GBK");
+                else if (encoding.equals(PdfName.BIGFIVE))
+                    return new String(b, "Big5");
+            }
+            catch (Exception e) {
+            }
+            return vs.toUnicodeString();
+        }
+        return null;
     }
     
-    // ssteward, pdftk-1.10, 040923
+    // ssteward
     // in a PDF, the Rich Text value of a field may be stored in
     // a string or a stream; I wonder if this applied to FDF, too?
     public String getFieldRichValue(String name) {
@@ -192,8 +222,8 @@ public class FdfReader extends PdfReader {
             return ((PdfString)rv).toUnicodeString();
         else
             return null;
-    }
-    
+	}
+
     /** Gets the PDF file specification contained in the FDF.
      * @return the PDF file specification contained in the FDF
      */    

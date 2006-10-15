@@ -1,5 +1,5 @@
 /*
- * $Id: PdfContentByte.java,v 1.60 2003/05/02 09:01:14 blowagie Exp $
+ * $Id: PdfContentByte.java,v 1.91 2005/07/19 18:24:27 psoares33 Exp $
  * $Name:  $
  *
  * Copyright 1999, 2000, 2001, 2002 Bruno Lowagie
@@ -51,12 +51,17 @@
 package com.lowagie.text.pdf;
 import java.awt.Color;
 import java.util.ArrayList;
-//import java.awt.geom.AffineTransform;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.awt.geom.AffineTransform;
+import java.awt.print.PrinterJob;
 
 import com.lowagie.text.DocumentException;
 import com.lowagie.text.Element;
 import com.lowagie.text.Image;
 import com.lowagie.text.Rectangle;
+import com.lowagie.text.Annotation;
+import com.lowagie.text.ExceptionConverter;
 
 /**
  * <CODE>PdfContentByte</CODE> is an object containing the user positioned
@@ -99,18 +104,38 @@ public class PdfContentByte {
     /** The alignement is right */
     public static final int ALIGN_RIGHT = Element.ALIGN_RIGHT;
 
+    /** A possible line cap value */
     public static final int LINE_CAP_BUTT = 0;
+    /** A possible line cap value */
     public static final int LINE_CAP_ROUND = 1;
+    /** A possible line cap value */
     public static final int LINE_CAP_PROJECTING_SQUARE = 2;
-    
+
+    /** A possible line join value */
+    public static final int LINE_JOIN_MITER = 0;
+    /** A possible line join value */
+    public static final int LINE_JOIN_ROUND = 1;
+    /** A possible line join value */
+    public static final int LINE_JOIN_BEVEL = 2;
+
+    /** A possible text rendering value */
     public static final int TEXT_RENDER_MODE_FILL = 0;
+    /** A possible text rendering value */
     public static final int TEXT_RENDER_MODE_STROKE = 1;
+    /** A possible text rendering value */
     public static final int TEXT_RENDER_MODE_FILL_STROKE = 2;
+    /** A possible text rendering value */
     public static final int TEXT_RENDER_MODE_INVISIBLE = 3;
+    /** A possible text rendering value */
     public static final int TEXT_RENDER_MODE_FILL_CLIP = 4;
+    /** A possible text rendering value */
     public static final int TEXT_RENDER_MODE_STROKE_CLIP = 5;
+    /** A possible text rendering value */
     public static final int TEXT_RENDER_MODE_FILL_STROKE_CLIP = 6;
+    /** A possible text rendering value */
     public static final int TEXT_RENDER_MODE_CLIP = 7;
+    
+    private static final float[] unitRect = {0, 0, 0, 1, 1, 0, 1, 1};
     // membervariables
     
     /** This is the actual content */
@@ -128,9 +153,27 @@ public class PdfContentByte {
     /** The list were we save/restore the state */
     protected ArrayList stateList = new ArrayList();
     
+    /** The list were we save/restore the layer depth */
+    protected ArrayList layerDepth;
+    
     /** The separator between commands.
      */
     protected int separator = '\n';
+    
+    private static HashMap abrev = new HashMap();
+    
+    static {
+        abrev.put(PdfName.BITSPERCOMPONENT, "/BPC ");
+        abrev.put(PdfName.COLORSPACE, "/CS ");
+        abrev.put(PdfName.DECODE, "/D ");
+        abrev.put(PdfName.DECODEPARMS, "/DP ");
+        abrev.put(PdfName.FILTER, "/F ");
+        abrev.put(PdfName.HEIGHT, "/H ");
+        abrev.put(PdfName.IMAGEMASK, "/IM ");
+        abrev.put(PdfName.INTENT, "/Intent ");
+        abrev.put(PdfName.INTERPOLATE, "/I ");
+        abrev.put(PdfName.WIDTH, "/W ");
+    }
     
     // constructors
     
@@ -163,7 +206,7 @@ public class PdfContentByte {
      * Gets the internal buffer.
      * @return the internal buffer
      */
-    ByteBuffer getInternalBuffer() {
+    public ByteBuffer getInternalBuffer() {
         return content;
     }
     
@@ -298,11 +341,32 @@ public class PdfContentByte {
     }
     
     /**
+     * Changes the value of the <VAR>line dash pattern</VAR>.
+     * <P>
+     * The line dash pattern controls the pattern of dashes and gaps used to stroke paths.
+     * It is specified by an <I>array</I> and a <I>phase</I>. The array specifies the length
+     * of the alternating dashes and gaps. The phase specifies the distance into the dash
+     * pattern to start the dash.<BR>
+     *
+     * @param		array		length of the alternating dashes and gaps
+     * @param		phase		the value of the phase
+     */
+    
+    public final void setLineDash(float[] array, float phase) {
+        content.append("[");
+        for (int i = 0; i < array.length; i++) {
+            content.append(array[i]);
+            if (i < array.length - 1) content.append(' ');
+        }
+        content.append("] ").append(phase).append(" d").append_i(separator);
+    }
+
+    /**
      * Changes the <VAR>Line join style</VAR>.
      * <P>
      * The <VAR>line join style</VAR> specifies the shape to be used at the corners of paths
      * that are stroked.<BR>
-     * Allowed values are 0 (Miter joins), 1 (Round joins) and 2 (Bevel joins).<BR>
+     * Allowed values are LINE_JOIN_MITER (Miter joins), LINE_JOIN_ROUND (Round joins) and LINE_JOIN_BEVEL (Bevel joins).<BR>
      *
      * @param		style		a value
      */
@@ -662,6 +726,97 @@ public class PdfContentByte {
         content.append(x).append(' ').append(y).append(' ').append(w).append(' ').append(h).append(" re").append_i(separator);
     }
     
+
+    // Contribution by Barry Richards and Prabhakar Chaganti
+    /**
+     * Adds a variable width border to the current path.
+     * Only use if {@link com.lowagie.text.Rectangle#isUseVariableBorders() Rectangle.isUseVariableBorders}
+     * = true.
+     * @param		rect		a <CODE>Rectangle</CODE>
+     */
+    public void variableRectangle(Rectangle rect) {
+        float limit = 0f;
+        float startX = rect.left();
+        float startY = rect.bottom();
+        
+        // start at the origin
+        // draw bottom
+        if (rect.getBorderWidthBottom() > limit) {
+            moveTo(startX, startY);
+            if (rect.getBorderColorBottom() == null)
+                resetRGBColorFill();
+            else
+                setColorFill(rect.getBorderColorBottom());
+            // DRAW BOTTOM EDGE.
+            lineTo(startX + rect.width(), startY);
+            // DRAW RIGHT EDGE.
+            lineTo((startX + rect.width()) - rect.getBorderWidthRight(), startY + rect.getBorderWidthBottom());
+            //DRAW TOP EDGE.
+            lineTo((startX + rect.getBorderWidthLeft()), startY + rect.getBorderWidthBottom());
+            lineTo(startX, startY);
+            fill();
+        }
+
+        // Draw left
+        if (rect.getBorderWidthLeft() > limit) {
+            moveTo(startX, startY);
+            if (rect.getBorderColorLeft() == null)
+                resetRGBColorFill();
+            else
+                setColorFill(rect.getBorderColorLeft());
+            // DRAW BOTTOM EDGE.
+            lineTo(startX, startY + rect.height());
+            // DRAW RIGHT EDGE.
+            lineTo(startX + rect.getBorderWidthLeft(), (startY + rect.height()) - rect.getBorderWidthTop());
+            //DRAW TOP EDGE.
+            lineTo(startX + rect.getBorderWidthLeft(), startY + rect.getBorderWidthBottom());
+
+            lineTo(startX, startY);
+            fill();
+        }
+
+
+        startX = startX + rect.width();
+        startY = startY + rect.height();
+
+        // Draw top
+        if (rect.getBorderWidthTop() > limit) {
+            moveTo(startX, startY);
+            if (rect.getBorderColorTop() == null)
+                resetRGBColorFill();
+            else
+                setColorFill(rect.getBorderColorTop());
+            // DRAW LONG EDGE.
+            lineTo(startX - rect.width(), startY);
+            // DRAW LEFT EDGE.
+            lineTo(startX - rect.width() + rect.getBorderWidthLeft(), startY - rect.getBorderWidthTop());
+            //DRAW SHORT EDGE.
+            lineTo(startX - rect.getBorderWidthRight(), startY - rect.getBorderWidthTop());
+
+            lineTo(startX, startY);
+            fill();
+        }
+
+        // Draw Right
+        if (rect.getBorderWidthRight() > limit) {
+            moveTo(startX, startY);
+            if (rect.getBorderColorRight() == null)
+                resetRGBColorFill();
+            else
+                setColorFill(rect.getBorderColorRight());
+            // DRAW LONG EDGE.
+            lineTo(startX, startY - rect.height());
+            // DRAW LEFT EDGE.
+            lineTo(startX - rect.getBorderWidthRight(), startY - rect.height() + rect.getBorderWidthBottom());
+            //DRAW SHORT EDGE.
+            lineTo(startX - rect.getBorderWidthRight(), startY - rect.getBorderWidthTop());
+
+            lineTo(startX, startY);
+            fill();
+        }
+        resetRGBColorFill();
+    }
+
     /**
      * Adds a border (complete or partially) to the current path..
      *
@@ -669,13 +824,12 @@ public class PdfContentByte {
      */
     
     public void rectangle(Rectangle rectangle) {
-        
         // the coordinates of the border are retrieved
         float x1 = rectangle.left();
         float y1 = rectangle.bottom();
         float x2 = rectangle.right();
         float y2 = rectangle.top();
-        
+
         // the backgroundcolor is set
         Color background = rectangle.backgroundColor();
         if (background != null) {
@@ -690,55 +844,63 @@ public class PdfContentByte {
             fill();
             resetGrayFill();
         }
-        
-        
+
+
         // if the element hasn't got any borders, nothing is added
         if (! rectangle.hasBorders()) {
             return;
         }
-        
-        // the width is set to the width of the element
-        if (rectangle.borderWidth() != Rectangle.UNDEFINED) {
-            setLineWidth((float)rectangle.borderWidth());
+
+        // if any of the individual border colors are set
+        // we draw the borders all around using the
+        // different colors
+        if (rectangle.isUseVariableBorders()) {
+            variableRectangle(rectangle);
         }
-        
-        // the color is set to the color of the element
-        Color color = rectangle.borderColor();
-        if (color != null) {
-            setColorStroke(color);
-        }
-        
-        // if the box is a rectangle, it is added as a rectangle
-        if (rectangle.hasBorder(Rectangle.BOX)) {
-            rectangle(x1, y1, x2 - x1, y2 - y1);
-        }
-        // if the border isn't a rectangle, the different sides are added apart
         else {
-            if (rectangle.hasBorder(Rectangle.RIGHT)) {
-                moveTo(x2, y1);
-                lineTo(x2, y2);
+            // the width is set to the width of the element
+            if (rectangle.borderWidth() != Rectangle.UNDEFINED) {
+                setLineWidth((float)rectangle.borderWidth());
             }
-            if (rectangle.hasBorder(Rectangle.LEFT)) {
-                moveTo(x1, y1);
-                lineTo(x1, y2);
+
+            // the color is set to the color of the element
+            Color color = rectangle.borderColor();
+            if (color != null) {
+                setColorStroke(color);
             }
-            if (rectangle.hasBorder(Rectangle.BOTTOM)) {
-                moveTo(x1, y1);
-                lineTo(x2, y1);
+
+            // if the box is a rectangle, it is added as a rectangle
+            if (rectangle.hasBorder(Rectangle.BOX)) {
+               rectangle(x1, y1, x2 - x1, y2 - y1);
             }
-            if (rectangle.hasBorder(Rectangle.TOP)) {
-                moveTo(x1, y2);
-                lineTo(x2, y2);
+            // if the border isn't a rectangle, the different sides are added apart
+            else {
+                if (rectangle.hasBorder(Rectangle.RIGHT)) {
+                    moveTo(x2, y1);
+                    lineTo(x2, y2);
+                }
+                if (rectangle.hasBorder(Rectangle.LEFT)) {
+                    moveTo(x1, y1);
+                    lineTo(x1, y2);
+                }
+                if (rectangle.hasBorder(Rectangle.BOTTOM)) {
+                    moveTo(x1, y1);
+                    lineTo(x2, y1);
+                }
+                if (rectangle.hasBorder(Rectangle.TOP)) {
+                    moveTo(x1, y2);
+                    lineTo(x2, y2);
+                }
             }
-        }
-        
-        stroke();
-        
-        if (color != null) {
-            resetRGBColorStroke();
+
+            stroke();
+
+            if (color != null) {
+                resetRGBColorStroke();
+            }
         }
     }
-    
+
     /**
      * Closes the current subpath by appending a straight line segment from the current point
      * to the starting point of the subpath.
@@ -827,12 +989,23 @@ public class PdfContentByte {
      * @throws DocumentException if the <CODE>Image</CODE> does not have absolute positioning
      */
     public void addImage(Image image) throws DocumentException {
+        addImage(image, false);
+    }
+    
+    /**
+     * Adds an <CODE>Image</CODE> to the page. The <CODE>Image</CODE> must have
+     * absolute positioning. The image can be placed inline.
+     * @param image the <CODE>Image</CODE> object
+     * @param inlineImage <CODE>true</CODE> to place this image inline, <CODE>false</CODE> otherwise
+     * @throws DocumentException if the <CODE>Image</CODE> does not have absolute positioning
+     */
+    public void addImage(Image image, boolean inlineImage) throws DocumentException {
         if (!image.hasAbsolutePosition())
             throw new DocumentException("The image must have absolute positioning.");
         float matrix[] = image.matrix();
         matrix[Image.CX] = image.absoluteX() - matrix[Image.CX];
         matrix[Image.CY] = image.absoluteY() - matrix[Image.CY];
-        addImage(image, matrix[0], matrix[1], matrix[2], matrix[3], matrix[4], matrix[5]);
+        addImage(image, matrix[0], matrix[1], matrix[2], matrix[3], matrix[4], matrix[5], inlineImage);
     }
     
     /**
@@ -849,8 +1022,27 @@ public class PdfContentByte {
      * @throws DocumentException on error
      */
     public void addImage(Image image, float a, float b, float c, float d, float e, float f) throws DocumentException {
+        addImage(image, a, b, c, d, e, f, false);
+    }
+    
+    /**
+     * Adds an <CODE>Image</CODE> to the page. The positioning of the <CODE>Image</CODE>
+     * is done with the transformation matrix. To position an <CODE>image</CODE> at (x,y)
+     * use addImage(image, image_width, 0, 0, image_height, x, y). The image can be placed inline.
+     * @param image the <CODE>Image</CODE> object
+     * @param a an element of the transformation matrix
+     * @param b an element of the transformation matrix
+     * @param c an element of the transformation matrix
+     * @param d an element of the transformation matrix
+     * @param e an element of the transformation matrix
+     * @param f an element of the transformation matrix
+     * @param inlineImage <CODE>true</CODE> to place this image inline, <CODE>false</CODE> otherwise
+     * @throws DocumentException on error
+     */
+    public void addImage(Image image, float a, float b, float c, float d, float e, float f, boolean inlineImage) throws DocumentException {
         try {
-            
+            if (image.getLayer() != null)
+                beginLayer(image.getLayer());
             if (image.isImgTemplate()) {
                 writer.addDirectImageSimple(image);
                 PdfTemplate template = image.templateData();
@@ -859,24 +1051,96 @@ public class PdfContentByte {
                 addTemplate(template, a / w, b / w, c / h, d / h, e, f);
             }
             else {
-                PdfName name;
-                PageResources prs = getPageResources();
-                Image maskImage = image.getImageMask();
-                if (maskImage != null) {
-                    name = writer.addDirectImageSimple(maskImage);
-                    prs.addXObject(name, writer.getImageReference(name));
-                }
-                name = writer.addDirectImageSimple(image);
-                name = prs.addXObject(name, writer.getImageReference(name));
                 content.append("q ");
                 content.append(a).append(' ');
                 content.append(b).append(' ');
                 content.append(c).append(' ');
                 content.append(d).append(' ');
                 content.append(e).append(' ');
-                content.append(f).append(" cm ");
-                content.append(name.getBytes()).append(" Do Q").append_i(separator);
+                content.append(f).append(" cm");
+                if (inlineImage) {
+                    content.append("\nBI\n");
+                    PdfImage pimage = new PdfImage(image, "", null);
+                    for (Iterator it = pimage.getKeys().iterator(); it.hasNext();) {
+                        PdfName key = (PdfName)it.next();
+                        PdfObject value = pimage.get(key);
+                        String s = (String)abrev.get(key);
+                        if (s == null)
+                            continue;
+                        content.append(s);
+                        boolean check = true;
+                        if (key.equals(PdfName.COLORSPACE) && value.isArray()) {
+                            ArrayList ar = ((PdfArray)value).getArrayList();
+                            if (ar.size() == 4 
+                                && PdfName.INDEXED.equals(ar.get(0)) 
+                                && ((PdfObject)ar.get(1)).isName()
+                                && ((PdfObject)ar.get(2)).isNumber()
+                                && ((PdfObject)ar.get(3)).isString()
+                            ) {
+                                check = false;
+                            }
+                            
+                        }
+                        if (check && key.equals(PdfName.COLORSPACE) && !value.isName()) {
+                            PdfName cs = writer.getColorspaceName();
+                            PageResources prs = getPageResources();
+                            prs.addColor(cs, writer.addToBody(value).getIndirectReference());
+                            value = cs;
+                        }
+                        value.toPdf(null, content);
+                        content.append('\n');
+                    }
+                    content.append("ID\n");
+                    pimage.writeContent(content);
+                    content.append("\nEI\nQ").append_i(separator);
+                }
+                else {
+                    PdfName name;
+                    PageResources prs = getPageResources();
+                    Image maskImage = image.getImageMask();
+                    if (maskImage != null) {
+                        name = writer.addDirectImageSimple(maskImage);
+                        prs.addXObject(name, writer.getImageReference(name));
+                    }
+                    name = writer.addDirectImageSimple(image);
+                    name = prs.addXObject(name, writer.getImageReference(name));
+                    content.append(' ').append(name.getBytes()).append(" Do Q").append_i(separator);
+                }
             }
+            if (image.hasBorders()) {
+                saveState();
+                float w = image.width();
+                float h = image.height();
+                concatCTM(a / w, b / w, c / h, d / h, e, f);
+                rectangle(image);
+                restoreState();
+            }
+            if (image.getLayer() != null)
+                endLayer();
+            Annotation annot = image.annotation();
+            if (annot == null)
+                return;
+            float[] r = new float[unitRect.length];
+            for (int k = 0; k < unitRect.length; k += 2) {
+                r[k] = a * unitRect[k] + c * unitRect[k + 1] + e;
+                r[k + 1] = b * unitRect[k] + d * unitRect[k + 1] + f;
+            }
+            float llx = r[0];
+            float lly = r[1];
+            float urx = llx;
+            float ury = lly;
+            for (int k = 2; k < r.length; k += 2) {
+                llx = Math.min(llx, r[k]);
+                lly = Math.min(lly, r[k + 1]);
+                urx = Math.max(urx, r[k]);
+                ury = Math.max(ury, r[k + 1]);
+            }
+            annot = new Annotation(annot);
+            annot.setDimensions(llx, lly, urx, ury);
+            PdfAnnotation an = PdfDocument.convertAnnotation(writer, annot);
+            if (an == null)
+                return;
+            addAnnotation(an);
         }
         catch (Exception ee) {
             throw new DocumentException(ee);
@@ -1029,6 +1293,12 @@ public class PdfContentByte {
         content.append("Tj").append_i(separator);
     }
     
+    /**
+     * Constructs a kern array for a text in a certain font
+     * @param text the text
+     * @param font the font
+     * @return a PdfTextArray
+     */
     public static PdfTextArray getKernArray(String text, BaseFont font) {
         PdfTextArray pa = new PdfTextArray();
         StringBuffer acc = new StringBuffer();
@@ -1185,6 +1455,7 @@ public class PdfContentByte {
      * Escapes a <CODE>byte</CODE> array according to the PDF conventions.
      *
      * @param b the <CODE>byte</CODE> array to escape
+     * @param content the content
      */
     static void escapeString(byte b[], ByteBuffer content) {
         content.append_i('(');
@@ -1563,11 +1834,15 @@ public class PdfContentByte {
      * @return the templated created
      */
     public PdfTemplate createTemplate(float width, float height) {
+        return createTemplate(width, height, null);
+    }
+    
+    PdfTemplate createTemplate(float width, float height, PdfName forcedName) {
         checkWriter();
         PdfTemplate template = new PdfTemplate(writer);
         template.setWidth(width);
         template.setHeight(height);
-        writer.addDirectTemplateSimple(template);
+        writer.addDirectTemplateSimple(template, forcedName);
         return template;
     }
     
@@ -1579,12 +1854,29 @@ public class PdfContentByte {
      * @return the appearance created
      */
     public PdfAppearance createAppearance(float width, float height) {
+        return createAppearance(width, height, null);
+    }
+    
+    PdfAppearance createAppearance(float width, float height, PdfName forcedName) {
         checkWriter();
         PdfAppearance template = new PdfAppearance(writer);
         template.setWidth(width);
         template.setHeight(height);
-        writer.addDirectTemplateSimple(template);
+        writer.addDirectTemplateSimple(template, forcedName);
         return template;
+    }
+    
+    /**
+     * Adds a PostScript XObject to this content.
+     *
+     * @param psobject the object
+     */
+    public void addPSXObject(PdfPSXObject psobject) {
+        checkWriter();
+        PdfName name = writer.addDirectTemplateSimple(psobject, null);
+        PageResources prs = getPageResources();
+        name = prs.addXObject(name, psobject.getIndirectReference());
+        content.append(name.getBytes()).append(" Do").append_i(separator);
     }
     
     /**
@@ -1601,7 +1893,7 @@ public class PdfContentByte {
     public void addTemplate(PdfTemplate template, float a, float b, float c, float d, float e, float f) {
         checkWriter();
         checkNoPattern(template);
-        PdfName name = writer.addDirectTemplateSimple(template);
+        PdfName name = writer.addDirectTemplateSimple(template, null);
         PageResources prs = getPageResources();
         name = prs.addXObject(name, template.getIndirectReference());
         content.append("q ");
@@ -1950,6 +2242,10 @@ public class PdfContentByte {
         content.append(PdfName.PATTERN.getBytes()).append(" CS ").append(name.getBytes()).append(" SCN").append_i(separator);
     }
     
+    /**
+     * Paints using a shading object. 
+     * @param shading the shading object
+     */
     public void paintShading(PdfShading shading) {
         writer.addSimpleShading(shading);
         PageResources prs = getPageResources();
@@ -1960,10 +2256,18 @@ public class PdfContentByte {
             prs.addColor(details.getColorName(), details.getIndirectReference());
     }
     
+    /**
+     * Paints using a shading pattern. 
+     * @param shading the shading pattern
+     */
     public void paintShading(PdfShadingPattern shading) {
         paintShading(shading.getShading());
     }
     
+    /**
+     * Sets the shading fill pattern.
+     * @param shading the shading pattern
+     */
     public void setShadingFill(PdfShadingPattern shading) {
         writer.addSimpleShadingPattern(shading);
         PageResources prs = getPageResources();
@@ -1974,6 +2278,10 @@ public class PdfContentByte {
             prs.addColor(details.getColorName(), details.getIndirectReference());
     }
     
+    /**
+     * Sets the shading stroke pattern
+     * @param shading the shading pattern
+     */
     public void setShadingStroke(PdfShadingPattern shading) {
         writer.addSimpleShadingPattern(shading);
         PageResources prs = getPageResources();
@@ -2170,8 +2478,12 @@ public class PdfContentByte {
     
     /**
      * Draws a TextField.
+     * @param llx
+     * @param lly
+     * @param urx
+     * @param ury
+     * @param on
      */
-    
     public void drawRadioField(float llx, float lly, float urx, float ury, boolean on) {
         if (llx > urx) { float x = llx; llx = urx; urx = x; }
         if (lly > ury) { float y = lly; lly = ury; ury = y; }
@@ -2205,8 +2517,11 @@ public class PdfContentByte {
     
     /**
      * Draws a TextField.
-     */
-    
+     * @param llx
+     * @param lly
+     * @param urx
+     * @param ury
+     */   
     public void drawTextField(float llx, float lly, float urx, float ury) {
         if (llx > urx) { float x = llx; llx = urx; urx = x; }
         if (lly > ury) { float y = lly; lly = ury; ury = y; }
@@ -2250,8 +2565,14 @@ public class PdfContentByte {
     
     /**
      * Draws a button.
+     * @param llx
+     * @param lly
+     * @param urx
+     * @param ury
+     * @param text
+     * @param bf
+     * @param size
      */
-    
     public void drawButton(float llx, float lly, float urx, float ury, String text, BaseFont bf, float size) {
         if (llx > urx) { float x = llx; llx = urx; urx = x; }
         if (lly > ury) { float y = lly; lly = ury; ury = y; }
@@ -2297,15 +2618,91 @@ public class PdfContentByte {
      * @param height the height of the panel
      * @return a <CODE>Graphics2D</CODE>
      */
-    /* Not available in JDK 1.1.x */
+    public java.awt.Graphics2D createGraphicsShapes(float width, float height) {
+        return new PdfGraphics2D(this, width, height, null, true, false, 0);
+    }
     
+    /** Gets a <CODE>Graphics2D</CODE> to print on. The graphics
+     * are translated to PDF commands as shapes. No PDF fonts will appear.
+     * @param width the width of the panel
+     * @param height the height of the panel
+     * @param printerJob a printer job
+     * @return a <CODE>Graphics2D</CODE>
+     */
+    public java.awt.Graphics2D createPrinterGraphicsShapes(float width, float height, PrinterJob printerJob) {
+        return new PdfPrinterGraphics2D(this, width, height, null, true, false, 0, printerJob);
+    }
+
     /** Gets a <CODE>Graphics2D</CODE> to write on. The graphics
      * are translated to PDF commands.
      * @param width the width of the panel
      * @param height the height of the panel
      * @return a <CODE>Graphics2D</CODE>
      */
-    /* Not available in JDK 1.1.x */
+    public java.awt.Graphics2D createGraphics(float width, float height) {
+        return new PdfGraphics2D(this, width, height, null, false, false, 0);
+    }
+    
+    /** Gets a <CODE>Graphics2D</CODE> to print on. The graphics
+     * are translated to PDF commands.
+     * @param width the width of the panel
+     * @param height the height of the panel
+     * @param printerJob
+     * @return a <CODE>Graphics2D</CODE>
+     */
+    public java.awt.Graphics2D createPrinterGraphics(float width, float height, PrinterJob printerJob) {
+        return new PdfPrinterGraphics2D(this, width, height, null, false, false, 0, printerJob);
+    }
+
+    /** Gets a <CODE>Graphics2D</CODE> to write on. The graphics
+     * are translated to PDF commands.
+     * @param width the width of the panel
+     * @param height the height of the panel
+     * @param convertImagesToJPEG
+     * @param quality
+     * @return a <CODE>Graphics2D</CODE>
+     */
+    public java.awt.Graphics2D createGraphics(float width, float height, boolean convertImagesToJPEG, float quality) {
+        return new PdfGraphics2D(this, width, height, null, false, convertImagesToJPEG, quality);
+    }
+
+    /** Gets a <CODE>Graphics2D</CODE> to print on. The graphics
+     * are translated to PDF commands.
+     * @param width the width of the panel
+     * @param height the height of the panel
+     * @param convertImagesToJPEG
+     * @param quality
+     * @param printerJob
+     * @return a <CODE>Graphics2D</CODE>
+     */
+    public java.awt.Graphics2D createPrinterGraphics(float width, float height, boolean convertImagesToJPEG, float quality, PrinterJob printerJob) {
+        return new PdfPrinterGraphics2D(this, width, height, null, false, convertImagesToJPEG, quality, printerJob);
+    }
+
+    /** Gets a <CODE>Graphics2D</CODE> to print on. The graphics
+     * are translated to PDF commands.
+     * @param width
+     * @param height
+     * @param convertImagesToJPEG
+     * @param quality
+     * @return A Graphics2D object
+     */
+    public java.awt.Graphics2D createGraphicsShapes(float width, float height, boolean convertImagesToJPEG, float quality) {
+        return new PdfGraphics2D(this, width, height, null, true, convertImagesToJPEG, quality);
+    }
+
+    /** Gets a <CODE>Graphics2D</CODE> to print on. The graphics
+     * are translated to PDF commands.
+     * @param width
+     * @param height
+     * @param convertImagesToJPEG
+     * @param quality
+     * @param printerJob
+     * @return a Graphics2D object
+     */
+    public java.awt.Graphics2D createPrinterGraphicsShapes(float width, float height, boolean convertImagesToJPEG, float quality, PrinterJob printerJob) {
+        return new PdfPrinterGraphics2D(this, width, height, null, true, convertImagesToJPEG, quality, printerJob);
+    }
     
     /** Gets a <CODE>Graphics2D</CODE> to write on. The graphics
      * are translated to PDF commands.
@@ -2314,8 +2711,49 @@ public class PdfContentByte {
      * @param fontMapper the mapping from awt fonts to <CODE>BaseFont</CODE>
      * @return a <CODE>Graphics2D</CODE>
      */
-    /* Not available in JDK 1.1.x */
+    public java.awt.Graphics2D createGraphics(float width, float height, FontMapper fontMapper) {
+        return new PdfGraphics2D(this, width, height, fontMapper, false, false, 0);
+    }
     
+    /** Gets a <CODE>Graphics2D</CODE> to print on. The graphics
+     * are translated to PDF commands.
+     * @param width the width of the panel
+     * @param height the height of the panel
+     * @param fontMapper the mapping from awt fonts to <CODE>BaseFont</CODE>
+     * @param printerJob a printer job
+     * @return a <CODE>Graphics2D</CODE>
+     */
+    public java.awt.Graphics2D createPrinterGraphics(float width, float height, FontMapper fontMapper, PrinterJob printerJob) {
+        return new PdfPrinterGraphics2D(this, width, height, fontMapper, false, false, 0, printerJob);
+    }
+    
+    /** Gets a <CODE>Graphics2D</CODE> to write on. The graphics
+     * are translated to PDF commands.
+     * @param width the width of the panel
+     * @param height the height of the panel
+     * @param fontMapper the mapping from awt fonts to <CODE>BaseFont</CODE>
+     * @param convertImagesToJPEG converts awt images to jpeg before inserting in pdf
+     * @param quality the quality of the jpeg
+     * @return a <CODE>Graphics2D</CODE>
+     */
+    public java.awt.Graphics2D createGraphics(float width, float height, FontMapper fontMapper, boolean convertImagesToJPEG, float quality) {
+        return new PdfGraphics2D(this, width, height, fontMapper, false, convertImagesToJPEG, quality);
+    }
+
+    /** Gets a <CODE>Graphics2D</CODE> to print on. The graphics
+     * are translated to PDF commands.
+     * @param width the width of the panel
+     * @param height the height of the panel
+     * @param fontMapper the mapping from awt fonts to <CODE>BaseFont</CODE>
+     * @param convertImagesToJPEG converts awt images to jpeg before inserting in pdf
+     * @param quality the quality of the jpeg
+     * @param printerJob a printer job
+     * @return a <CODE>Graphics2D</CODE>
+     */
+    public java.awt.Graphics2D createPrinterGraphics(float width, float height, FontMapper fontMapper, boolean convertImagesToJPEG, float quality, PrinterJob printerJob) {
+        return new PdfPrinterGraphics2D(this, width, height, fontMapper, false, convertImagesToJPEG, quality, printerJob);
+    }
+
     PageResources getPageResources() {
         return pdf.getPageResources();
     }
@@ -2330,11 +2768,66 @@ public class PdfContentByte {
         content.append(name.getBytes()).append(" gs").append_i(separator);
     }
     
+    /**
+     * Begins a graphic block whose visibility is controled by the <CODE>layer</CODE>.
+     * Blocks can be nested. Each block must be terminated by an {@link #endLayer()}.<p>
+     * Note that nested layers with {@link PdfLayer#addChild(PdfLayer)} only require a single
+     * call to this method and a single call to {@link #endLayer()}; all the nesting control
+     * is built in.
+     * @param layer the layer
+     */    
+    public void beginLayer(PdfOCG layer) {
+        if ((layer instanceof PdfLayer) && ((PdfLayer)layer).getTitle() != null)
+            throw new IllegalArgumentException("A title is not a layer");
+        if (layerDepth == null)
+            layerDepth = new ArrayList();
+        if (layer instanceof PdfLayerMembership) {
+            layerDepth.add(new Integer(1));
+            beginLayer2(layer);
+            return;
+        }
+        int n = 0;
+        PdfLayer la = (PdfLayer)layer;
+        while (la != null) {
+            if (la.getTitle() == null) {
+                beginLayer2(la);
+                ++n;
+            }
+            la = la.getParent();
+        }
+        layerDepth.add(new Integer(n));
+    }
+    
+    private void beginLayer2(PdfOCG layer) {
+        PdfName name = (PdfName)writer.addSimpleProperty(layer, layer.getRef())[0];
+        PageResources prs = getPageResources();
+        name = prs.addProperty(name, layer.getRef());
+        content.append("/OC ").append(name.getBytes()).append(" BDC").append_i(separator);
+    }
+    
+    /**
+     * Ends a layer controled graphic block. It will end the most recent open block.
+     */    
+    public void endLayer() {
+        int n = 1;
+        if (layerDepth != null && layerDepth.size() > 0) {
+            n = ((Integer)layerDepth.get(layerDepth.size() - 1)).intValue();
+            layerDepth.remove(layerDepth.size() - 1);
+        }
+        while (n-- > 0)
+            content.append("EMC").append_i(separator);
+    }
+    
     /** Concatenates a transformation to the current transformation
      * matrix.
      * @param af the transformation
      */    
-    /* Not available in JDK 1.1.x */
+    public void transform(AffineTransform af) {
+        double arr[] = new double[6];
+        af.getMatrix(arr);
+        content.append(arr[0]).append(' ').append(arr[1]).append(' ').append(arr[2]).append(' ');
+        content.append(arr[3]).append(' ').append(arr[4]).append(' ').append(arr[5]).append(" cm").append_i(separator);
+    }
     
     void addAnnotation(PdfAnnotation annot) {
         writer.addAnnotation(annot);
@@ -2349,5 +2842,92 @@ public class PdfContentByte {
     public void setDefaultColorspace(PdfName name, PdfObject obj) {
         PageResources prs = getPageResources();
         prs.addDefaultColor(name, obj);
+    }
+    
+    /**
+     * Begins a marked content sequence. This sequence will be tagged with the structure <CODE>struc</CODE>.
+     * The same structure can be used several times to connect text that belongs to the same logical segment
+     * but is in a different location, like the same paragraph crossing to another page, for example.
+     * @param struc the tagging structure
+     */    
+    public void beginMarkedContentSequence(PdfStructureElement struc) {
+        PdfObject obj = struc.get(PdfName.K);
+        int mark = pdf.getMarkPoint();
+        if (obj != null) {
+            PdfArray ar = null;
+            if (obj.isNumber()) {
+                ar = new PdfArray();
+                ar.add(obj);
+                struc.put(PdfName.K, ar);
+            }
+            else if (obj.isArray()) {
+                ar = (PdfArray)obj;
+                if (!((PdfObject)ar.getArrayList().get(0)).isNumber())
+                    throw new IllegalArgumentException("The structure has kids.");
+            }
+            else
+                throw new IllegalArgumentException("Unknown object at /K " + obj.getClass().toString());
+            PdfDictionary dic = new PdfDictionary(PdfName.MCR);
+            dic.put(PdfName.PG, writer.getCurrentPage());
+            dic.put(PdfName.MCID, new PdfNumber(mark));
+            ar.add(dic);
+            struc.setPageMark(writer.getPageNumber() - 1, -1);
+        }
+        else {
+            struc.setPageMark(writer.getPageNumber() - 1, mark);
+            struc.put(PdfName.PG, writer.getCurrentPage());
+        }
+        pdf.incMarkPoint();
+        content.append(struc.get(PdfName.S).getBytes()).append(" <</MCID ").append(mark).append(">> BDC").append_i(separator);
+    }
+    
+    /**
+     * Ends a marked content sequence
+     */    
+    public void endMarkedContentSequence() {
+        content.append("EMC").append_i(separator);
+    }
+    
+    /**
+     * Begins a marked content sequence. If property is <CODE>null</CODE> the mark will be of the type
+     * <CODE>BMC</CODE> otherwise it will be <CODE>BDC</CODE>.
+     * @param tag the tag
+     * @param property the property
+     * @param inline <CODE>true</CODE> to include the property in the content or <CODE>false</CODE>
+     * to include the property in the resource dictionary with the possibility of reusing
+     */    
+    public void beginMarkedContentSequence(PdfName tag, PdfDictionary property, boolean inline) {
+        if (property == null) {
+            content.append(tag.getBytes()).append(" BMC").append_i(separator);
+            return;
+        }
+        content.append(tag.getBytes()).append(' ');
+        if (inline)
+            try {
+                property.toPdf(writer, content);
+            }
+            catch (Exception e) {
+                throw new ExceptionConverter(e);
+            }
+        else {
+            PdfObject[] objs;
+            if (writer.propertyExists(property))
+                objs = writer.addSimpleProperty(property, null);
+            else
+                objs = writer.addSimpleProperty(property, writer.getPdfIndirectReference());
+            PdfName name = (PdfName)objs[0];
+            PageResources prs = getPageResources();
+            name = prs.addProperty(name, (PdfIndirectReference)objs[1]);
+            content.append(name.getBytes());
+        }
+        content.append(" BDC").append_i(separator);
+    }
+    
+    /**
+     * This is just a shorthand to <CODE>beginMarkedContentSequence(tag, null, false)</CODE>.
+     * @param tag the tag
+     */    
+    public void beginMarkedContentSequence(PdfName tag) {
+        beginMarkedContentSequence(tag, null, false);
     }
 }
