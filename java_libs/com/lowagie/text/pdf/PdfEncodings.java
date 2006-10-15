@@ -62,7 +62,7 @@ import java.util.StringTokenizer;
  */
 public class PdfEncodings {
 
-    // pdftk-0.95:
+    // ssteward
     protected static Class c1= gnu.gcj.convert.Input_UnicodeBig.class;
 
     protected static final int CIDNONE = 0;

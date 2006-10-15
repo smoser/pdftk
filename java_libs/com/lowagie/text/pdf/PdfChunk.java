@@ -1,5 +1,5 @@
 /*
- * $Id: PdfChunk.java,v 1.41 2002/07/15 11:32:30 blowagie Exp $
+ * $Id: PdfChunk.java,v 1.70 2004/12/20 11:39:08 blowagie Exp $
  * $Name:  $
  *
  * Copyright 1999, 2000, 2001, 2002 Bruno Lowagie
@@ -72,8 +72,10 @@ import com.lowagie.text.ExceptionConverter;
  * @see		com.lowagie.text.Font
  */
 
-class PdfChunk implements SplitCharacter{
+public class PdfChunk implements SplitCharacter{
 
+    private static final char singleSpace[] = {' '};
+    private static final PdfChunk thisChunk[] = new PdfChunk[1];
     private static final float ITALIC_ANGLE = 0.21256f;
 /** The allowed attributes in variable <CODE>attributes</CODE>. */
     private static final HashMap keysAttributes = new HashMap();
@@ -93,6 +95,7 @@ class PdfChunk implements SplitCharacter{
         keysAttributes.put(Chunk.BACKGROUND, null);
         keysAttributes.put(Chunk.PDFANNOTATION, null);
         keysAttributes.put(Chunk.SKEW, null);
+        keysAttributes.put(Chunk.HSCALE, null);
         keysNoStroke.put(Chunk.SUBSUPSCRIPT, null);
         keysNoStroke.put(Chunk.SPLITCHARACTER, null);
         keysNoStroke.put(Chunk.HYPHENATION, null);
@@ -151,9 +154,11 @@ class PdfChunk implements SplitCharacter{
  * Constructs a <CODE>PdfChunk</CODE>-object.
  *
  * @param string the content of the <CODE>PdfChunk</CODE>-object
+ * @param other Chunk with the same style you want for the new Chunk
  */
     
     PdfChunk(String string, PdfChunk other) {
+        thisChunk[0] = this;
         value = string;
         this.font = other.font;
         this.attributes = other.attributes;
@@ -182,6 +187,7 @@ class PdfChunk implements SplitCharacter{
  */
     
     PdfChunk(Chunk chunk, PdfAction action) {
+        thisChunk[0] = this;
         value = chunk.content();
         
         Font f = chunk.font();
@@ -238,15 +244,20 @@ class PdfChunk implements SplitCharacter{
         noStroke.put(Chunk.COLOR, f.color());
         noStroke.put(Chunk.ENCODING, font.getFont().getEncoding());
         Object obj[] = (Object[])attributes.get(Chunk.IMAGE);
-        if (obj == null)
+        if (obj == null) {
             image = null;
+        }
         else {
+            attributes.remove(Chunk.HSCALE); // images are scaled in other ways
             image = (Image)obj[0];
             offsetX = ((Float)obj[1]).floatValue();
             offsetY = ((Float)obj[2]).floatValue();
             changeLeading = ((Boolean)obj[3]).booleanValue();
         }
         font.setImage(image);
+        Float hs = (Float)attributes.get(Chunk.HSCALE);
+        if (hs != null)
+            font.setHorizontalScaling(hs.floatValue());
         encoding = font.getFont().getEncoding();
         splitCharacter = (SplitCharacter)noStroke.get(Chunk.SPLITCHARACTER);
         if (splitCharacter == null)
@@ -255,6 +266,12 @@ class PdfChunk implements SplitCharacter{
     
     // methods
     
+    /** Gets the Unicode equivalent to a CID.
+     * The (inexistent) CID <FF00> is translated as '\n'. 
+     * It has only meaning with CJK fonts with Identity encoding.
+     * @param c the CID code
+     * @return the Unicode equivalent
+     */    
     public char getUnicodeEquivalent(char c) {
         return baseFont.getUnicodeEquivalent(c);
     }
@@ -302,12 +319,13 @@ class PdfChunk implements SplitCharacter{
         int lastSpace = -1;
         float lastSpaceWidth = 0;
         int length = value.length();
+        char valueArray[] = value.toCharArray();
         char character = 0;
         BaseFont ft = font.getFont();
         if (ft.getFontType() == BaseFont.FONT_TYPE_CJK && ft.getUnicodeEquivalent(' ') != ' ') {
             while (currentPosition < length) {
                 // the width of every character is added to the currentWidth
-                char cidChar = value.charAt(currentPosition);
+                char cidChar = valueArray[currentPosition];
                 character = ft.getUnicodeEquivalent(cidChar);
                 // if a newLine or carriageReturn is encountered
                 if (character == '\n') {
@@ -328,7 +346,7 @@ class PdfChunk implements SplitCharacter{
                 if (currentWidth > width)
                     break;
                 // if a split-character is encountered, the splitPosition is altered
-                if (splitCharacter.isSplitCharacter(character))
+                if (splitCharacter.isSplitCharacter(0, currentPosition, length, valueArray, thisChunk))
                     splitPosition = currentPosition + 1;
                 currentPosition++;
             }
@@ -336,12 +354,12 @@ class PdfChunk implements SplitCharacter{
         else {
             while (currentPosition < length) {
                 // the width of every character is added to the currentWidth
-                character = value.charAt(currentPosition);
+                character = valueArray[currentPosition];
                 // if a newLine or carriageReturn is encountered
                 if (character == '\r' || character == '\n') {
                     newlineSplit = true;
                     int inc = 1;
-                    if (character == '\r' && currentPosition + 1 < length && value.charAt(currentPosition + 1) == '\n')
+                    if (character == '\r' && currentPosition + 1 < length && valueArray[currentPosition + 1] == '\n')
                         inc = 2;
                     String returnValue = value.substring(currentPosition + inc);
                     value = value.substring(0, currentPosition);
@@ -359,7 +377,7 @@ class PdfChunk implements SplitCharacter{
                 if (currentWidth > width)
                     break;
                 // if a split-character is encountered, the splitPosition is altered
-                if (splitCharacter.isSplitCharacter(character))
+                if (splitCharacter.isSplitCharacter(0, currentPosition, length, valueArray, null))
                     splitPosition = currentPosition + 1;
                 currentPosition++;
             }
@@ -376,7 +394,7 @@ class PdfChunk implements SplitCharacter{
             PdfChunk pc = new PdfChunk(returnValue, this);
             return pc;
         }
-        if (lastSpace > splitPosition && splitCharacter.isSplitCharacter(' '))
+        if (lastSpace > splitPosition && splitCharacter.isSplitCharacter(0, 0, 1, singleSpace, null))
             splitPosition = lastSpace;
         if (hyphenationEvent != null && lastSpace < currentPosition) {
             int wordIdx = getWord(value, lastSpace);
@@ -490,9 +508,7 @@ class PdfChunk implements SplitCharacter{
  */
     
     float width() {
-        if (image != null)
-            return image.scaledWidth();
-        return font.getFont().getWidthPoint(value, font.size());
+        return font.width(value);
     }
     
 /**
@@ -522,7 +538,19 @@ class PdfChunk implements SplitCharacter{
         int idx = -1;
         while ((idx = value.indexOf(' ', idx + 1)) >= 0)
             ++numberOfSpaces;
-        return font.getFont().getWidthPoint(value, font.size()) + value.length() * charSpacing + numberOfSpaces * wordSpacing;
+        return width() + (value.length() * charSpacing + numberOfSpaces * wordSpacing);
+    }
+    
+    /**
+     * Gets the text displacement relatiev to the baseline.
+     * @return a displacement in points
+     */
+    public float getTextRise() {
+    	Float f = (Float) getAttribute(Chunk.SUBSUPSCRIPT);
+    	if (f != null) {
+    		return f.floatValue();
+    	}
+    	return 0.0f;
     }
     
 /**
@@ -647,6 +675,7 @@ class PdfChunk implements SplitCharacter{
     
 /**
  * sets the value.
+ * @param value content of the Chunk
  */
     
     void setValue(String value)
@@ -654,12 +683,16 @@ class PdfChunk implements SplitCharacter{
         this.value = value;
     }
 
+    /**
+     * @see java.lang.Object#toString()
+     */
     public String toString() {
         return value;
     }
 
     /**
      * Tells you if this string is in Chinese, Japanese, Korean or Identity-H.
+     * @return true if the Chunk has a special encoding
      */
     
     boolean isSpecialEncoding() {
@@ -683,12 +716,20 @@ class PdfChunk implements SplitCharacter{
  * Checks if a character can be used to split a <CODE>PdfString</CODE>.
  * <P>
  * for the moment every character less than or equal to SPACE and the character '-' are 'splitCharacters'.
- *
- * @param	c		the character that has to be checked
+ * 
+ * @param start start position in the array
+ * @param current current position in the array
+ * @param end end position in the array
+ * @param	cc		the character array that has to be checked
+ * @param ck chunk array
  * @return	<CODE>true</CODE> if the character can be used to split a string, <CODE>false</CODE> otherwise
  */
-    public boolean isSplitCharacter(char c)
-    {
+    public boolean isSplitCharacter(int start, int current, int end, char[] cc, PdfChunk[] ck) {
+        char c;
+        if (ck == null)
+            c = cc[current];
+        else
+            c = ck[Math.min(current, ck.length - 1)].getUnicodeEquivalent(cc[current]);
         if (c <= ' ' || c == '-') {
             return true;
         }
@@ -700,8 +741,8 @@ class PdfChunk implements SplitCharacter{
         || (c >= 0xff61 && c < 0xffa0));
     }
     
-    boolean isExtSplitCharacter(char c) {
-        return splitCharacter.isSplitCharacter(c);
+    boolean isExtSplitCharacter(int start, int current, int end, char[] cc, PdfChunk[] ck) {
+        return splitCharacter.isSplitCharacter(start, current, end, cc, ck);
     }
     
 /**
@@ -737,5 +778,6 @@ class PdfChunk implements SplitCharacter{
     
     public static boolean noPrint(char c) {
         return ((c >= 0x200b && c <= 0x200f) || (c >= 0x202a && c <= 0x202e));
-    }    
+    }
+    
 }

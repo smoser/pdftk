@@ -1,5 +1,5 @@
 /*
- * $Id: PdfDate.java,v 1.23 2002/07/09 11:28:22 blowagie Exp $
+ * $Id: PdfDate.java,v 1.63 2005/09/04 16:20:01 psoares33 Exp $
  * $Name:  $
  *
  * Copyright 1999, 2000, 2001, 2002 Bruno Lowagie
@@ -50,7 +50,10 @@
 
 package com.lowagie.text.pdf;
 
+import java.text.SimpleDateFormat;
 import java.util.GregorianCalendar;
+import java.util.Calendar;
+import java.util.SimpleTimeZone;
 
 /**
  * <CODE>PdfDate</CODE> is the PDF date object.
@@ -68,13 +71,16 @@ import java.util.GregorianCalendar;
  * @see		java.util.GregorianCalendar
  */
 
-class PdfDate extends PdfString {
-
-    // pdftk-0.94; static builds (Windows, gcc 3.3.1) would
+public class PdfDate extends PdfString {
+    
+    // ssteward; static builds of pdftk (Windows, gcc 3.3.1) would
     // omit this class because of its reference by reflection;
     // this treatment ensures that ld will include it
     private static Class c1= gnu.java.locale.Calendar.class;
 
+    private static final int dateSpace[] = {Calendar.YEAR, 4, 0, Calendar.MONTH, 2, -1, Calendar.DAY_OF_MONTH, 2, 0,
+        Calendar.HOUR_OF_DAY, 2, 0, Calendar.MINUTE, 2, 0, Calendar.SECOND, 2, 0};
+    
     // constructors
     
 /**
@@ -83,16 +89,16 @@ class PdfDate extends PdfString {
  * @param		d			the date that has to be turned into a <CODE>PdfDate</CODE>-object
  */
     
-    PdfDate(GregorianCalendar d) {
+    public PdfDate(Calendar d) {
         super();
         StringBuffer date = new StringBuffer("D:");
-        date.append(setLength(d.get(GregorianCalendar.YEAR), 4));
-        date.append(setLength(d.get(GregorianCalendar.MONTH) + 1, 2));
-        date.append(setLength(d.get(GregorianCalendar.DATE), 2));
-        date.append(setLength(d.get(GregorianCalendar.HOUR_OF_DAY), 2));
-        date.append(setLength(d.get(GregorianCalendar.MINUTE), 2));
-        date.append(setLength(d.get(GregorianCalendar.SECOND), 2));
-        int timezone = d.get(GregorianCalendar.ZONE_OFFSET) / (60 * 60 * 1000);
+        date.append(setLength(d.get(Calendar.YEAR), 4));
+        date.append(setLength(d.get(Calendar.MONTH) + 1, 2));
+        date.append(setLength(d.get(Calendar.DATE), 2));
+        date.append(setLength(d.get(Calendar.HOUR_OF_DAY), 2));
+        date.append(setLength(d.get(Calendar.MINUTE), 2));
+        date.append(setLength(d.get(Calendar.SECOND), 2));
+        int timezone = (d.get(Calendar.ZONE_OFFSET) + d.get(Calendar.DST_OFFSET)) / (60 * 60 * 1000);
         if (timezone == 0) {
             date.append("Z");
         }
@@ -105,7 +111,7 @@ class PdfDate extends PdfString {
         }
         if (timezone != 0) {
             date.append(setLength(timezone, 2)).append("'");
-            int zone = Math.abs(d.get(GregorianCalendar.ZONE_OFFSET) / (60 * 1000)) - (timezone * 60);
+            int zone = Math.abs((d.get(Calendar.ZONE_OFFSET) + d.get(Calendar.DST_OFFSET)) / (60 * 1000)) - (timezone * 60);
             date.append(setLength(zone, 2)).append("'");
         }
         value = date.toString();
@@ -115,7 +121,7 @@ class PdfDate extends PdfString {
  * Constructs a <CODE>PdfDate</CODE>-object, representing the current day and time.
  */
     
-    PdfDate() {
+    public PdfDate() {
         this(new GregorianCalendar());
     }
     
@@ -136,5 +142,74 @@ class PdfDate extends PdfString {
         }
         tmp.setLength(length);
         return tmp.toString();
+    }
+    
+    /**
+     * Gives the W3C format of the PdfDate.
+     * @return a formatted date
+     */
+    public String getW3CDate() {
+        return getW3CDate(value);
+    }
+    
+    /**
+     * Gives the W3C format of the PdfDate.
+     * @param d
+     * @return a formatted date
+     */
+    public static String getW3CDate(String d) {
+    	SimpleDateFormat w3c = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+    	Calendar c = decode(d);
+		return w3c.format(c.getTime());
+    }
+    
+    /**
+     * Converts a PDF string representing a date into a Calendar.
+     * @param s the PDF string representing a date
+     * @return a <CODE>Calendar</CODE> representing the date or <CODE>null</CODE> if the string
+     * was not a date
+     */    
+    public static Calendar decode(String s) {
+        try {
+            if (s.startsWith("D:"))
+                s = s.substring(2);
+            GregorianCalendar calendar;
+            int slen = s.length();
+            int idx = s.indexOf('Z');
+            if (idx >= 0) {
+                slen = idx;
+                calendar = new GregorianCalendar(new SimpleTimeZone(0, "ZPDF"));
+            }
+            else {
+                int sign = 1;
+                idx = s.indexOf('+');
+                if (idx < 0) {
+                    idx = s.indexOf('-');
+                    if (idx >= 0)
+                        sign = -1;
+                }
+                if (idx < 0)
+                    calendar = new GregorianCalendar();
+                else {
+                    int offset = Integer.parseInt(s.substring(idx + 1, idx + 3)) * 60;
+                    if (idx + 5 < s.length())
+                        offset += Integer.parseInt(s.substring(idx + 4, idx + 6));
+                    calendar = new GregorianCalendar(new SimpleTimeZone(offset * sign * 60000, "ZPDF"));
+                    slen = idx;
+                }
+            }
+            calendar.clear();
+            idx = 0;
+            for (int k = 0; k < dateSpace.length; k += 3) {
+                if (idx >= slen)
+                    break;
+                calendar.set(dateSpace[k], Integer.parseInt(s.substring(idx, idx + dateSpace[k + 1])) + dateSpace[k + 2]);
+                idx += dateSpace[k + 1];
+            }
+            return calendar;
+        }
+        catch (Exception e) {
+            return null;
+        }
     }
 }

@@ -1,5 +1,5 @@
 /*
- * $Id: DocListener.java,v 1.27 2002/07/09 10:41:33 blowagie Exp $
+ * $Id: DocListener.java,v 1.52 2004/12/14 11:52:47 blowagie Exp $
  * $Name:  $
  *
  * Copyright (c) 1999, 2000, 2001, 2002 Bruno Lowagie.
@@ -81,7 +81,8 @@ public interface DocListener extends ElementListener {
     
 /**
  * Signals that a <CODE>Watermark</CODE> was added to the <CODE>Document</CODE>.
- *
+ * 
+ * @param watermark the Watermark object
  * @return	<CODE>true</CODE> if the element was added, <CODE>false</CODE> if not.
  */
     
@@ -105,6 +106,11 @@ public interface DocListener extends ElementListener {
     
     public boolean setMargins(float marginLeft, float marginRight, float marginTop, float marginBottom);
     
+    /**
+     * Parameter that allows you to do margin mirroring (odd/even pages)
+     * @param marginMirroring
+     * @return true if succesfull
+     */
     public boolean setMarginMirroring(boolean marginMirroring);
     
 /**
@@ -161,6 +167,7 @@ public interface DocListener extends ElementListener {
 /**
  * Clears text wrapping around images (if applicable).
  * Method suggested by Pelikan Stephan
+ * @throws DocumentException
  */
 	public void clearTextWrap() throws DocumentException;
     

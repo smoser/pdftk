@@ -50,6 +50,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Iterator;
 import java.util.StringTokenizer;
 
@@ -60,9 +61,8 @@ import com.lowagie.text.DocumentException;
  * @author Paulo Soares (psoares@consiste.pt)
  */
 public class FdfWriter {
-    static byte[] HEADER_FDF = DocWriter.getISOBytes("%FDF-1.2\n%\u00e2\u00e3\u00cf\u00d3\n");
+    static byte[] HEADER_FDF = DocWriter.getISOBytes("%FDF-1.2\n%\u00e2\u00e3\u00cf\u00d3"); // ssteward
     HashMap fields = new HashMap();
-    PdfArray verbfields = null;
 
     /** The PDF file associated with the FDF. */
     private String file;
@@ -80,11 +80,7 @@ public class FdfWriter {
         Wrt wrt = new Wrt(os, this);
         wrt.writeTo();
     }
-
-    void setVerbField(PdfArray array) {
-        verbfields = array;
-    }
-
+    
     boolean setField(String field, PdfObject value) {
         HashMap map = fields;
         StringTokenizer tk = new StringTokenizer(field, ".");
@@ -252,29 +248,25 @@ public class FdfWriter {
      * @param pdf the <CODE>PdfReader</CODE>
      */    
     public void setFields(PdfReader pdf) {
-        PRAcroForm acro = pdf.getAcroForm();
-        ArrayList f = acro.getFields();
-        for (int k = 0; k < f.size(); ++k) {
-            PRAcroForm.FieldInformation inf = (PRAcroForm.FieldInformation)f.get(k);
-            PdfObject obj = inf.getInfo().get(PdfName.V);
-            if (obj == null)
-                continue;
-            setField(inf.name, obj);
-        }
+        setFields(pdf.getAcroFields());
     }
     
     /** Sets all the fields from this <CODE>AcroFields</CODE>
-     * @param acro the <CODE>AcroFields</CODE>
+     * @param af the <CODE>AcroFields</CODE>
      */    
-    public void setFields(AcroFields acro) {
-        HashMap map = acro.getFields();
-        for (Iterator it = map.keySet().iterator(); it.hasNext();) {
-            String key = (String)it.next();
-            AcroFields.Item item = (AcroFields.Item)map.get(key);
-            PdfObject obj = ((PdfDictionary)item.merged.get(0)).get(PdfName.V);
-            if (obj == null)
+    public void setFields(AcroFields af) {
+        for (Iterator it = af.getFields().entrySet().iterator(); it.hasNext();) {
+            Map.Entry entry = (Map.Entry)it.next();
+            String fn = (String)entry.getKey();
+            AcroFields.Item item = (AcroFields.Item)entry.getValue();
+            PdfDictionary dic = (PdfDictionary)item.merged.get(0);
+            PdfObject v = PdfReader.getPdfObjectRelease(dic.get(PdfName.V));
+            if (v == null)
                 continue;
-            setField(key, obj);
+            PdfObject ft = PdfReader.getPdfObjectRelease(dic.get(PdfName.FT));
+            if (ft == null || PdfName.SIG.equals(ft))
+                continue;
+            setField(fn, v);
         }
     }
     
@@ -305,16 +297,13 @@ public class FdfWriter {
         
         void writeTo() throws DocumentException, IOException {
             PdfDictionary dic = new PdfDictionary();
-	    if( fdf.verbfields != null )
-	        dic.put(PdfName.FIELDS, fdf.verbfields);
-	    else
-	        dic.put(PdfName.FIELDS, calculate(fdf.fields));
+            dic.put(PdfName.FIELDS, calculate(fdf.fields));
             if (fdf.file != null)
                 dic.put(PdfName.F, new PdfString(fdf.file, PdfObject.TEXT_UNICODE));
             PdfDictionary fd = new PdfDictionary();
             fd.put(PdfName.FDF, dic);
             PdfIndirectReference ref = addToBody(fd).getIndirectReference();
-            os.write(getISOBytes("trailer\n"));
+            os.write(getISOBytes("\ntrailer\n")); // ssteward
             PdfDictionary trailer = new PdfDictionary();
             trailer.put(PdfName.ROOT, ref);
             trailer.toPdf(null, os);

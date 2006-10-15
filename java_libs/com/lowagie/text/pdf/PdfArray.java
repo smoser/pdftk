@@ -54,6 +54,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.ListIterator;
 
 /**
  * <CODE>PdfArray</CODE> is the PDF Array object.
@@ -133,13 +134,17 @@ public class PdfArray extends PdfObject {
 
         Iterator i = arrayList.iterator();
         PdfObject object;
+        // int type = 0; // ssteward
         if (i.hasNext()) {
             object = (PdfObject) i.next();
             object.toPdf(writer, os);
         }
         while (i.hasNext()) {
             object = (PdfObject) i.next();
-            os.write(' ');
+	    // ssteward
+            //type = object.type();
+            //if (type != PdfObject.ARRAY && type != PdfObject.DICTIONARY && type != PdfObject.NAME && type != PdfObject.STRING)
+	    os.write(' ');
             object.toPdf(writer, os);
         }
         os.write(']');
@@ -211,5 +216,9 @@ public class PdfArray extends PdfObject {
     
     public boolean contains(PdfObject object) {
         return arrayList.contains(object);
+    }
+    
+    public ListIterator listIterator() {
+        return arrayList.listIterator();
     }
 }

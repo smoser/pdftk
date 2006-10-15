@@ -1,5 +1,5 @@
 /* Security.java --- Java base security class implementation
-   Copyright (C) 1999, 2001, 2002, 2003, Free Software Foundation, Inc.
+   Copyright (C) 1999, 2001, 2002, 2003, 2004, 2005  Free Software Foundation, Inc.
 
 This file is part of GNU Classpath.
 
@@ -15,8 +15,8 @@ General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with GNU Classpath; see the file COPYING.  If not, write to the
-Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
-02111-1307 USA.
+Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+02110-1301 USA.
 
 Linking this library statically or dynamically with other modules is
 making a combined work based on this library.  Thus, the terms and
@@ -57,9 +57,9 @@ import java.util.Vector;
  * This class centralizes all security properties and common security methods.
  * One of its primary uses is to manage providers.
  *
- * @author Mark Benvenuto <ivymccough@worldnet.att.net>
+ * @author Mark Benvenuto (ivymccough@worldnet.att.net)
  */
-public final class Security extends Object
+public final class Security
 {
   private static final String ALG_ALIAS = "Alg.Alias.";
 
@@ -80,24 +80,32 @@ public final class Security extends Object
       if (!loadProviders (base, "classpath")
 	  && !loaded
 	  && providers.size() == 0)
-        {
-	  // No providers found and both security files failed to load properly.
-	  System.err.println
-	    ("WARNING: could not properly read security provider files:");
-	  System.err.println
-	    ("         " + base + "/security/" + vendor + ".security");
-	  System.err.println
-	    ("         " + base + "/security/" + "classpath" + ".security");
-	  System.err.println
-	    ("         Falling back to standard GNU security provider");
-	  providers.addElement (new gnu_local.java.security.provider.Gnu());
-        }
+	  {
+	      if (Configuration.DEBUG)
+		  {
+		      // No providers found and both security files failed to
+		      // load properly. Give a warning in case of DEBUG is
+		      // enabled. Could be done with java.util.logging later.
+		      //
+		      System.err.println
+			  ("WARNING: could not properly read security provider files:");
+		      System.err.println
+			  ("         " + base + "/security/" + vendor
+			   + ".security");
+		      System.err.println
+			  ("         " + base + "/security/" + "classpath"
+			   + ".security");
+		      System.err.println
+			  ("         Falling back to standard GNU security provider");
+		  }
+	      providers.addElement (new gnu_local.java.security.provider.Gnu());
+	  }
 	*/
 
 	// SID: add our provider
 	providers.addElement (new gnu_local.java.security.provider.Gnu());
-  }
 
+    }
   // This class can't be instantiated.
   private Security()
   {
@@ -127,7 +135,8 @@ public final class Security extends Object
 	    Exception exception = null;
 	    try
 	      {
-		providers.addElement(Class.forName(name).newInstance());
+            ClassLoader sys = ClassLoader.getSystemClassLoader();
+		providers.addElement(Class.forName(name, true, sys).newInstance());
 	      }
 	    catch (ClassNotFoundException x)
 	      {
@@ -156,7 +165,7 @@ public final class Security extends Object
 	result = false;
       }
 
-    return false;
+    return result;
   }
 
   /**
@@ -240,10 +249,10 @@ public final class Security extends Object
       sm.checkSecurityAccess("insertProvider." + provider.getName());
 
     position--;
-    int max = providers.size();
+    int max = providers.size ();
     for (int i = 0; i < max; i++)
       {
-	if (((Provider) providers.elementAt(i)).getName() == provider.getName())
+	if (((Provider) providers.elementAt(i)).getName().equals(provider.getName()))
 	  return -1;
       }
 
@@ -282,7 +291,7 @@ public final class Security extends Object
    */
   public static int addProvider(Provider provider)
   {
-    return insertProviderAt (provider, providers.size() + 1);
+    return insertProviderAt (provider, providers.size () + 1);
   }
 
   /**
@@ -315,10 +324,10 @@ public final class Security extends Object
     if (sm != null)
       sm.checkSecurityAccess("removeProvider." + name);
 
-    int max = providers.size();
+    int max = providers.size ();
     for (int i = 0; i < max; i++)
       {
-	if (((Provider) providers.elementAt(i)).getName() == name)
+	if (((Provider) providers.elementAt(i)).getName().equals(name))
 	  {
 	    providers.remove(i);
 	    break;
@@ -334,7 +343,7 @@ public final class Security extends Object
    */
   public static Provider[] getProviders()
   {
-    Provider array[] = new Provider[providers.size()];
+    Provider[] array = new Provider[providers.size ()];
     providers.copyInto (array);
     return array;
   }
@@ -351,11 +360,11 @@ public final class Security extends Object
   public static Provider getProvider(String name)
   {
     Provider p;
-    int max = providers.size();
+    int max = providers.size ();
     for (int i = 0; i < max; i++)
       {
 	p = (Provider) providers.elementAt(i);
-	if (p.getName() == name)
+	if (p.getName().equals(name))
 	  return p;
       }
     return null;
@@ -417,7 +426,7 @@ public final class Security extends Object
    * MessageDigest, Cipher, Mac, KeyStore). Returns an empty Set if there is no
    * provider that supports the specified service. For a complete list of Java
    * cryptographic services, please see the Java Cryptography Architecture API
-   * Specification & Reference. Note: the returned set is immutable.
+   * Specification &amp; Reference. Note: the returned set is immutable.
    *
    * @param serviceName the name of the Java cryptographic service (e.g.,
    * Signature, MessageDigest, Cipher, Mac, KeyStore). Note: this parameter is
@@ -472,7 +481,7 @@ public final class Security extends Object
    * formats:</p>
    *
    * <ul>
-   *    <li><p>&lt;crypto_service>.&lt;algorithm_or_type></p>
+   *    <li><p>&lt;crypto_service&gt;.&lt;algorithm_or_type&gt;</p>
    *    <p>The cryptographic service name must not contain any dots.</p>
    *    <p>A provider satisfies the specified selection criterion iff the
    *    provider implements the specified algorithm or type for the specified
@@ -481,10 +490,10 @@ public final class Security extends Object
    *    provider that supplied a CertificateFactory implementation for X.509
    *    certificates.</p></li>
    *
-   *    <li><p>&lt;crypto_service>.&lt;algorithm_or_type> &lt;attribute_name>:&lt;attribute_value></p>
+   *    <li><p>&lt;crypto_service&gt;.&lt;algorithm_or_type&gt; &lt;attribute_name&gt;:&lt;attribute_value&gt;</p>
    *    <p>The cryptographic service name must not contain any dots. There must
-   *    be one or more space charaters between the the &lt;algorithm_or_type>
-   *    and the &lt;attribute_name>.</p>
+   *    be one or more space charaters between the the &lt;algorithm_or_type&gt;
+   *    and the &lt;attribute_name&gt;.</p>
    *    <p>A provider satisfies this selection criterion iff the provider
    *    implements the specified algorithm or type for the specified
    *    cryptographic service and its implementation meets the constraint
@@ -536,17 +545,17 @@ public final class Security extends Object
   * of the following two formats:</p>
   *
   * <ul>
-  *    <li><p>&lt;crypto_service>.&lt;algorithm_or_type></p>
+  *    <li><p>&lt;crypto_service&gt;.&lt;algorithm_or_type&gt;</p>
   *    <p>The cryptographic service name must not contain any dots.</p>
   *    <p>The value associated with the key must be an empty string.</p>
   *    <p>A provider satisfies this selection criterion iff the provider
   *    implements the specified algorithm or type for the specified
   *    cryptographic service.</p></li>
   *
-  *    <li><p>&lt;crypto_service>.&lt;algorithm_or_type> &lt;attribute_name></p>
+  *    <li><p>&lt;crypto_service&gt;.&lt;algorithm_or_type&gt; &lt;attribute_name&gt;</p>
   *    <p>The cryptographic service name must not contain any dots. There must
-  *    be one or more space charaters between the &lt;algorithm_or_type> and
-  *    the &lt;attribute_name>.</p>
+  *    be one or more space charaters between the &lt;algorithm_or_type&gt; and
+  *    the &lt;attribute_name&gt;.</p>
   *    <p>The value associated with the key must be a non-empty string. A
   *    provider satisfies this selection criterion iff the provider implements
   *    the specified algorithm or type for the specified cryptographic service
@@ -647,7 +656,7 @@ public final class Security extends Object
     if (result.isEmpty())
       return null;
 
-    return (Provider[]) result.toArray(new Provider[0]);
+    return (Provider[]) result.toArray(new Provider[result.size()]);
   }
 
   private static void selectProviders(String svc, String algo, String attr,
@@ -676,7 +685,7 @@ public final class Security extends Object
     outer: for (int r = 0; r < 3; r++) // guard against circularity
       {
         serviceDotAlgorithm = (svc+"."+String.valueOf(algo)).trim();
-        inner: for (it = p.keySet().iterator(); it.hasNext(); )
+        for (it = p.keySet().iterator(); it.hasNext(); )
           {
             key = (String) it.next();
             if (key.equalsIgnoreCase(serviceDotAlgorithm)) // eureka

@@ -1,5 +1,5 @@
 /*
- * $Id: ElementTags.java,v 1.52 2002/07/09 10:41:33 blowagie Exp $
+ * $Id: ElementTags.java,v 1.84 2005/04/06 07:01:18 blowagie Exp $
  * $Name:  $
  *
  * Copyright (c) 2001, 2002 Bruno Lowagie.
@@ -418,6 +418,12 @@ public class ElementTags {
     
 /** the possible value of a tag */
     public static final String HORIZONTALRULE = "horizontalrule";
+
+    /** the possible value of a tag */
+    public static final String PAGE_SIZE  = "pagesize";
+
+    /** the possible value of a tag */
+    public static final String ORIENTATION  = "orientation";
     
     // methods
     

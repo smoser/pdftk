@@ -1,5 +1,5 @@
 /*
- * $Id: Cell.java,v 1.81 2003/06/26 11:34:24 blowagie Exp $
+ * $Id: Cell.java,v 1.105 2005/05/11 11:48:55 blowagie Exp $
  * $Name:  $
  *
  * Copyright 1999, 2000, 2001, 2002 by Bruno Lowagie.
@@ -55,7 +55,8 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Properties;
 
-import com.lowagie.text.markup.*;
+import com.lowagie.text.markup.MarkupParser;
+import com.lowagie.text.pdf.PdfPCell;
 
 /**
  * A <CODE>Cell</CODE> is a <CODE>Rectangle</CODE> containing other
@@ -96,14 +97,16 @@ public class Cell extends Rectangle implements TextElementArray {
 
 	// static final membervariable
 
-/** This constant can be used as empty cell. */
-	public static final Cell EMPTY_CELL = new Cell(true);
-
-/** This constant can be used as empty cell. */
-	public static final Cell DUMMY_CELL = new Cell(true);
-	static {
-		DUMMY_CELL.setColspan(3);
-		DUMMY_CELL.setBorder(NO_BORDER);
+    // This accessor replaces the dangerous static member DUMMY_CELL
+    /**
+     * Get dummy cell used when merging inner tables. 
+     * @return a cell with colspan 3 and no border
+     */
+    public static Cell getDummyCell() {
+        Cell cell = new Cell(true);
+        cell.setColspan(3);
+        cell.setBorder(NO_BORDER);
+        return cell;
 	}
 
 	// membervariables
@@ -131,6 +134,22 @@ public class Cell extends Rectangle implements TextElementArray {
 
 /** Is this <CODE>Cell</CODE> a header? */
 	protected boolean header;
+
+    /** Indicates that the largest ascender height should be used to determine the
+     * height of the first line.  Note that this only has an effect when rendered
+     * to PDF.  Setting this to true can help with vertical alignment problems. */
+    protected boolean useAscender = false;
+
+    /** Indicates that the largest descender height should be added to the height of
+     * the last line (so characters like y don't dip into the border).   Note that
+     * this only has an effect when rendered to PDF. */
+    protected boolean useDescender = false;
+
+    /**
+     * Adjusts the cell contents to compensate for border widths.  Note that
+     * this only has an effect when rendered to PDF.
+     */
+    protected boolean useBorderPadding;
 
 	// constructors
 
@@ -198,12 +217,10 @@ public class Cell extends Rectangle implements TextElementArray {
 		setBorder(UNDEFINED);
 		setBorderWidth(0.5f);
 
-		try {
+ 		// Update by Benoit WIART <b.wiart@proxiad.com>
+ 		if(element instanceof Phrase) {
 			Phrase p = (Phrase)element;
 			leading = p.leading();
-		}
-		catch(Exception e) {
-			// empty on purpose
 		}
 
 		// initializes the arraylist and adds an element
@@ -367,11 +384,6 @@ public class Cell extends Rectangle implements TextElementArray {
 			case Element.ROW:
 			case Element.CELL:
 				throw new BadElementException("You can't add listitems, rows or cells to a cell.");
-			case Element.JPEG:
-			case Element.IMGRAW:
-			case Element.IMGTEMPLATE:
-				arrayList.add(element);
-				break;
 			case Element.LIST:
 				if (Float.isNaN(leading)) {
 					leading = ((List) element).leading();
@@ -413,7 +425,7 @@ public class Cell extends Rectangle implements TextElementArray {
 				table.setWidths(widths);
 				Cell tmp;
 				if (arrayList.size() == 0) {
-					table.addCell(DUMMY_CELL);
+					table.addCell(getDummyCell());
 				}
 				else {
 					tmp = new Cell();
@@ -429,7 +441,7 @@ public class Cell extends Rectangle implements TextElementArray {
 				table.addCell(tmp);
 				table.insertTable((Table)element);
 				table.addCell(tmp);
-				table.addCell(DUMMY_CELL);
+				table.addCell(getDummyCell());
 				clear();
 				arrayList.add(table);
 				return;
@@ -747,87 +759,103 @@ public class Cell extends Rectangle implements TextElementArray {
 	}
 
 /**
- * This method throws an <CODE>RuntimeException</CODE>.
+ * This method throws an <CODE>UnsupportedOperationException</CODE>.
+ * @return NA
  */
 	public float top() {
-		throw new RuntimeException("Dimensions of a Cell can't be calculated. See the FAQ.");
+		throw new UnsupportedOperationException("Dimensions of a Cell can't be calculated. See the FAQ.");
 	}
 
 /**
- * This method throws an <CODE>RuntimeException</CODE>.
+ * This method throws an <CODE>UnsupportedOperationException</CODE>.
+ * @return NA
  */
 	public float bottom() {
-		throw new RuntimeException("Dimensions of a Cell can't be calculated. See the FAQ.");
+		throw new UnsupportedOperationException("Dimensions of a Cell can't be calculated. See the FAQ.");
 	}
 
 /**
- * This method throws an <CODE>RuntimeException</CODE>.
+ * This method throws an <CODE>UnsupportedOperationException</CODE>.
+ * @return NA
  */
 	public float left() {
-		throw new RuntimeException("Dimensions of a Cell can't be calculated. See the FAQ.");
+		throw new UnsupportedOperationException("Dimensions of a Cell can't be calculated. See the FAQ.");
 	}
 
 /**
- * This method throws an <CODE>RuntimeException</CODE>.
+ * This method throws an <CODE>UnsupportedOperationException</CODE>.
+ * @return NA
  */
 	public float right() {
-		throw new RuntimeException("Dimensions of a Cell can't be calculated. See the FAQ.");
+		throw new UnsupportedOperationException("Dimensions of a Cell can't be calculated. See the FAQ.");
 	}
 
 /**
- * This method throws an <CODE>RuntimeException</CODE>.
+ * This method throws an <CODE>UnsupportedOperationException</CODE>.
+ * @param margin
+ * @return NA
  */
 	public float top(int margin) {
-		throw new RuntimeException("Dimensions of a Cell can't be calculated. See the FAQ.");
+		throw new UnsupportedOperationException("Dimensions of a Cell can't be calculated. See the FAQ.");
 	}
 
 /**
- * This method throws an <CODE>RuntimeException</CODE>.
+ * This method throws an <CODE>UnsupportedOperationException</CODE>.
+ * @param margin
+ * @return NA
  */
 	public float bottom(int margin) {
-		throw new RuntimeException("Dimensions of a Cell can't be calculated. See the FAQ.");
+		throw new UnsupportedOperationException("Dimensions of a Cell can't be calculated. See the FAQ.");
 	}
 
 /**
- * This method throws an <CODE>RuntimeException</CODE>.
+ * This method throws an <CODE>UnsupportedOperationException</CODE>.
+ * @param margin
+ * @return NA
  */
 	public float left(int margin) {
-		throw new RuntimeException("Dimensions of a Cell can't be calculated. See the FAQ.");
+		throw new UnsupportedOperationException("Dimensions of a Cell can't be calculated. See the FAQ.");
 	}
 
 /**
- * This method throws an <CODE>RuntimeException</CODE>.
+ * This method throws an <CODE>UnsupportedOperationException</CODE>.
+ * @param margin NA
+ * @return NA
  */
 	public float right(int margin) {
-		throw new RuntimeException("Dimensions of a Cell can't be calculated. See the FAQ.");
+		throw new UnsupportedOperationException("Dimensions of a Cell can't be calculated. See the FAQ.");
 	}
 
 /**
- * This method throws an <CODE>RuntimeException</CODE>.
+ * This method throws an <CODE>UnsupportedOperationException</CODE>.
+ * @param value NA
  */
 	public void setTop(int value) {
-		throw new RuntimeException("Dimensions of a Cell are attributed automagically. See the FAQ.");
+		throw new UnsupportedOperationException("Dimensions of a Cell are attributed automagically. See the FAQ.");
 	}
 
 /**
- * This method throws an <CODE>RuntimeException</CODE>.
+ * This method throws an <CODE>UnsupportedOperationException</CODE>.
+ * @param value NA
  */
 	public void setBottom(int value) {
-		throw new RuntimeException("Dimensions of a Cell are attributed automagically. See the FAQ.");
+		throw new UnsupportedOperationException("Dimensions of a Cell are attributed automagically. See the FAQ.");
 	}
 
 /**
- * This method throws an <CODE>RuntimeException</CODE>.
+ * This method throws an <CODE>UnsupportedOperationException</CODE>.
+ * @param value NA
  */
 	public void setLeft(int value) {
-		throw new RuntimeException("Dimensions of a Cell are attributed automagically. See the FAQ.");
+		throw new UnsupportedOperationException("Dimensions of a Cell are attributed automagically. See the FAQ.");
 	}
 
 /**
- * This method throws an <CODE>RuntimeException</CODE>.
+ * This method throws an <CODE>UnsupportedOperationException</CODE>.
+ * @param value NA
  */
 	public void setRight(int value) {
-		throw new RuntimeException("Dimensions of a Cell are attributed automagically. See the FAQ.");
+		throw new UnsupportedOperationException("Dimensions of a Cell are attributed automagically. See the FAQ.");
 	}
 
 /**
@@ -864,31 +892,116 @@ public class Cell extends Rectangle implements TextElementArray {
 		groupChange = value;
 	}
 	
-	/**Getter for {@link #maxLines}*/
+	/**
+	 * Getter for {@link #maxLines}
+	 * @return the maxLines value
+	 */
 	public int getMaxLines() {
 		return maxLines;
 	}
-	/**Setter for {@link #maxLines}*/
+	/**
+	 * Setter for {@link #maxLines}
+	 * @param value the maximum number of lines
+	 */
 	public void setMaxLines(int value) {
 		maxLines = value;
 	}
-	/**Maximum number of lines allowed in the cell.  
+	/**
+	 * Maximum number of lines allowed in the cell.  
 	 * The default value of this property is not to limit the maximum number of lines
-	 * @author dperezcar@fcc.es*/
+	 * (contributed by dperezcar@fcc.es)
+	 */
 	protected int maxLines = Integer.MAX_VALUE;
 	/**Setter for {@link #showTruncation}
 	 * @param value	Can be null for avoiding marking the truncation.*/
 	public void setShowTruncation(String value) {
 		showTruncation = value;
 	}
-	/**Getter for {@link #showTruncation}*/
+	/**
+	 * Getter for {@link #showTruncation}
+	 * @return the showTruncation value
+	 */
 	public String getShowTruncation() {
 		return showTruncation;
 	}
-	/**If a truncation happens due to the {@link #maxLines} property, then this text will 
+	/**
+	 * If a truncation happens due to the {@link #maxLines} property, then this text will 
 	 * be added to indicate a truncation has happened.
 	 * Default value is null, and means avoiding marking the truncation.  
 	 * A useful value of this property could be e.g. "..."
-	 * @author dperezcar@fcc.es*/
+	 * (contributed by dperezcar@fcc.es)
+	 */
 	String showTruncation;
+
+
+    /**
+     * Sets the value of {@link #useAscender}.
+     * @param use use ascender height if true
+     */
+    public void setUseAscender(boolean use) {
+        useAscender = use;
+    }
+
+    /**
+     * Gets the value of {@link #useAscender}
+     * @return useAscender
+     */
+    public boolean isUseAscender() {
+        return useAscender;
+    }
+
+    /**
+     * Sets the value of {@link #useDescender}.
+     * @param use use descender height if true
+     */
+    public void setUseDescender(boolean use) {
+        useDescender = use;
+    }
+
+    /**
+     * gets the value of {@link #useDescender }
+     * @return useDescender
+     */
+    public boolean isUseDescender() {
+        return useDescender;
+    }
+
+    /**
+     * Sets the value of {@link #useBorderPadding}.
+     * @param use adjust layour for borders if true
+     */
+    public void setUseBorderPadding(boolean use) {
+        useBorderPadding = use;
+    }
+
+    /**
+     * Gets the value of {@link #useBorderPadding}.
+     * @return useBorderPadding
+     */
+    public boolean isUseBorderPadding() {
+        return useBorderPadding;
+    }
+
+	/**
+	 * Creates a PdfPCell based on this Cell object.
+	 * @return a PdfPCell
+	 * @throws BadElementException
+	 */
+	public PdfPCell createPdfPCell() throws BadElementException {
+		if (rowspan > 1) throw new BadElementException("PdfPCells can't have a rowspan > 1");
+		if (isTable()) return new PdfPCell(((Table)arrayList.get(0)).createPdfPTable());
+		PdfPCell cell = new PdfPCell();
+		cell.setVerticalAlignment(verticalAlignment);
+		cell.setHorizontalAlignment(horizontalAlignment);
+		cell.setColspan(colspan);
+		cell.setUseBorderPadding(useBorderPadding);
+		cell.setUseDescender(useDescender);
+		cell.setLeading(leading(), 0);
+		cell.cloneNonPositionParameters(this);
+		cell.setNoWrap(noWrap());
+		for (Iterator i = getElements(); i.hasNext(); ) {
+			cell.addElement((Element)i.next());
+		}
+		return cell;
+	}
 }

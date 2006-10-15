@@ -1,5 +1,5 @@
 /*
- * $Id: PdfPage.java,v 1.24 2002/07/09 11:28:23 blowagie Exp $
+ * $Id: PdfPage.java,v 1.47 2004/11/29 14:07:03 blowagie Exp $
  * $Name:  $
  *
  * Copyright 1999, 2000, 2001, 2002 Bruno Lowagie
@@ -49,7 +49,6 @@
  */
 
 package com.lowagie.text.pdf;
-import com.lowagie.text.Rectangle;
 import java.util.HashMap;
 /**
  * <CODE>PdfPage</CODE> is the PDF Page-object.

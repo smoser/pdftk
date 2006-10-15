@@ -81,7 +81,7 @@
 
 package com.lowagie.text.pdf.codec;
 
-import com.lowagie.text.pdf.ICC_Profile;
+import java.awt.color.ICC_Profile;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
@@ -421,7 +421,7 @@ public class PngImage {
                 byte iccp[] = PdfReader.FlateDecode(icccom, true);
                 icccom = null;
                 try {
-                    icc_profile = ICC_Profile.getInstance(iccp, (colorType & 2) == 0 ? 1 : 3);
+                    icc_profile = ICC_Profile.getInstance(iccp);
                 }
                 catch (Exception e) {
                     icc_profile = null;

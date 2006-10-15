@@ -104,7 +104,7 @@ public class PRStream extends PdfStream {
                 zip.close();
                 bytes = stream.toByteArray();
             }
-            catch(IOException ioe) {
+            catch (IOException ioe) {
                 throw new ExceptionConverter(ioe);
             }
             put(PdfName.FILTER, PdfName.FLATEDECODE);
@@ -114,6 +114,30 @@ public class PRStream extends PdfStream {
         setLength(bytes.length);
     }
     
+    /**Sets the data associated with the stream
+     * @param data raw data, decrypted and uncompressed.
+     */
+    public void setData(byte[] data) {
+        remove(PdfName.FILTER);
+        this.offset = -1;
+        if (Document.compress) {
+            try {
+                ByteArrayOutputStream stream = new ByteArrayOutputStream();
+                DeflaterOutputStream zip = new DeflaterOutputStream(stream);
+                zip.write(data);
+                zip.close();
+                bytes = stream.toByteArray();
+            }
+            catch (IOException ioe) {
+                throw new ExceptionConverter(ioe);
+            }
+            put(PdfName.FILTER, PdfName.FLATEDECODE);
+        }
+        else
+            bytes = data;
+        setLength(bytes.length);
+    }
+
     public void setLength(int length) {
         this.length = length;
         put(PdfName.LENGTH, new PdfNumber(length));
@@ -155,64 +179,66 @@ public class PRStream extends PdfStream {
     //
     public void toPdf(PdfWriter writer, OutputStream os) throws IOException {
 
-	// the filters to apply to this, if any
-	ArrayList filters= new ArrayList(); {
-	    PdfObject filter= this.reader.getPdfObject(this.get(PdfName.FILTER));
-	    if (filter != null) {
-		if (filter.type() == PdfObject.NAME) {
-		    filters.add(filter);
-		}
-		else if (filter.type() == PdfObject.ARRAY) {
-		    filters = ((PdfArray)filter).getArrayList();
+	{ // ssteward (right?)
+	    // the filters to apply to this, if any
+	    ArrayList filters= new ArrayList(); {
+		PdfObject filter= this.reader.getPdfObject(this.get(PdfName.FILTER));
+		if (filter != null) {
+		    if (filter.type() == PdfObject.NAME) {
+			filters.add(filter);
+		    }
+		    else if (filter.type() == PdfObject.ARRAY) {
+			filters = ((PdfArray)filter).getArrayList();
+		    }
 		}
 	    }
-	}
 
-	// apply filters to our stream data before streaming?
-	boolean filterStream_b= 
-	    ( writer.filterStreams &&
-	      0< this.offset && // our stream data must be stored in a file, not in this.bytes
-	      this.reader.getPdfObject( this.get(PdfName.DECODEPARMS) )== null && 
-	      !filters.isEmpty() && allKnownFilters( this.reader, filters ) );
+	    // apply filters to our stream data before streaming?
+	    boolean filterStream_b= 
+		( writer.filterStreams &&
+		  0< this.offset && // our stream data must be stored in a file, not in this.bytes
+		  this.reader.getPdfObject( this.get(PdfName.DECODEPARMS) )== null && 
+		  !filters.isEmpty() && allKnownFilters( this.reader, filters ) );
 
-	if( filterStream_b ) { // apply filters
-	    RandomAccessFileOrArray file= writer.getReaderFile( this.reader );
-	    this.bytes= PdfReader.getStreamBytes( this, file ); // decrypts, too
-
-	    this.remove(PdfName.FILTER);
-	    this.setLength( this.bytes.length );
-	    this.offset= -1; // indicate that we have read the stream into this.bytes
-	}
-
-	// apply compression to our stream data before streaming?
-	// our stream data may be in this.bytes or in a file
-	boolean compressStream_b=
-	    ( writer.compressStreams &&
-	      this.reader.getPdfObject( this.get(PdfName.DECODEPARMS) )== null && 
-	      filters.isEmpty() );
-
-	if( compressStream_b ) { // apply compression
-	    if( 0< this.offset ) { // our data is in file; pull into this.bytes
+	    if( filterStream_b ) { // apply filters
 		RandomAccessFileOrArray file= writer.getReaderFile( this.reader );
 		this.bytes= PdfReader.getStreamBytes( this, file ); // decrypts, too
+
+		this.remove(PdfName.FILTER);
+		this.setLength( this.bytes.length );
+		this.offset= -1; // indicate that we have read the stream into this.bytes
 	    }
 
-	    ByteArrayOutputStream stream= new ByteArrayOutputStream();
-	    DeflaterOutputStream zip= new DeflaterOutputStream( stream );
-	    zip.write( this.bytes );
-	    zip.close();
-	    this.bytes= stream.toByteArray();
+	    // apply compression to our stream data before streaming?
+	    // our stream data may be in this.bytes or in a file
+	    boolean compressStream_b=
+		( writer.compressStreams &&
+		  this.reader.getPdfObject( this.get(PdfName.DECODEPARMS) )== null && 
+		  filters.isEmpty() );
 
-            this.put( PdfName.FILTER, PdfName.FLATEDECODE );
-	    this.setLength( this.bytes.length );
-	    this.offset= -1; // indicate that we have read the stream into this.bytes
+	    if( compressStream_b ) { // apply compression
+		if( 0< this.offset ) { // our data is in file; pull into this.bytes
+		    RandomAccessFileOrArray file= writer.getReaderFile( this.reader );
+		    this.bytes= PdfReader.getStreamBytes( this, file ); // decrypts, too
+		}
+
+		ByteArrayOutputStream stream= new ByteArrayOutputStream();
+		DeflaterOutputStream zip= new DeflaterOutputStream( stream );
+		zip.write( this.bytes );
+		zip.close();
+		this.bytes= stream.toByteArray();
+
+		this.put( PdfName.FILTER, PdfName.FLATEDECODE );
+		this.setLength( this.bytes.length );
+		this.offset= -1; // indicate that we have read the stream into this.bytes
+	    }
 	}
 
         superToPdf(writer, os); // PdfDictionary.toPdf(), outputs FILTER, LENGTH, etc.
         os.write(STARTSTREAM);
         if (length > 0) {
             PdfEncryption crypto = null;
-            if (writer != null) { // ss
+            if (writer != null) { // ssteward
                 crypto = writer.getEncryption();
 	    }
             if (offset < 0) { // our stream data is stored in this.bytes
@@ -230,36 +256,42 @@ public class PRStream extends PdfStream {
             else { // our stream data is stored in a file
                 byte buf[] = new byte[Math.min(length, 4092)];
                 RandomAccessFileOrArray file = writer.getReaderFile(reader);
-                file.seek(offset);
-                int size = length;
-                
-		//added by ujihara for decryption
-		PdfEncryption decrypt = reader.getDecrypt();
-		if (decrypt != null) {
-		    decrypt.setHashKey(objNum, objGen);
-		    decrypt.prepareKey();
-		}
+                boolean isOpen = file.isOpen();
+                try {
+                    file.seek(offset);
+                    int size = length;
 
-		if (crypto != null) {
-		    crypto.prepareKey();
-		}
-		while (size > 0) {
-		    int r = file.read(buf, 0, Math.min(size, buf.length));
-		    size -= r;
-                    
-		    if (decrypt != null) // decrypt
-			decrypt.encryptRC4(buf, 0, r); //added by ujihara for decryption
-                    
-		    if (crypto != null) // encrypt
-			crypto.encryptRC4(buf, 0, r);
+                    //added by ujihara for decryption
+                    PdfEncryption decrypt = reader.getDecrypt();
+                    if (decrypt != null) {
+                        decrypt.setHashKey(objNum, objGen);
+                        decrypt.prepareKey();
+                    }
 
-		    os.write(buf, 0, r);
-		}
+                    if (crypto != null)
+                        crypto.prepareKey();
+                    while (size > 0) {
+                        int r = file.read(buf, 0, Math.min(size, buf.length));
+                        size -= r;
+
+                        if (decrypt != null)
+                            decrypt.encryptRC4(buf, 0, r); //added by ujihara for decryption
+
+                        if (crypto != null)
+                            crypto.encryptRC4(buf, 0, r);
+                        os.write(buf, 0, r);
+                    }
+                }
+                finally {
+                    if (!isOpen)
+                        try{file.close();}catch(Exception e){}
+                }
             }
         }
-        os.write(this.ENDSTREAM);
+        os.write(ENDSTREAM);
     }
 
+    // ssteward
     // do we know how to apply all of the filters in (ArrayList filters)?
     public static boolean allKnownFilters( PdfReader reader, ArrayList filters ) {
 	boolean retVal= true;

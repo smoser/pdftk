@@ -1,5 +1,5 @@
 /*
- * $Id: PdfFormXObject.java,v 1.25 2002/07/09 11:28:23 blowagie Exp $
+ * $Id: PdfFormXObject.java,v 1.58 2005/07/16 16:49:22 blowagie Exp $
  * $Name:  $
  *
  * Copyright 1999, 2000, 2001, 2002 Bruno Lowagie
@@ -50,7 +50,6 @@
 
 package com.lowagie.text.pdf;
 
-import com.lowagie.text.ExceptionConverter;
 /**
  * <CODE>PdfFormObject</CODE> is a type of XObject containing a template-object.
  */
@@ -87,6 +86,8 @@ public class PdfFormXObject extends PdfStream {
         put(PdfName.RESOURCES, template.getResources());
         put(PdfName.BBOX, new PdfRectangle(template.getBoundingBox()));
         put(PdfName.FORMTYPE, ONE);
+        if (template.getLayer() != null)
+            put(PdfName.OC, template.getLayer().getRef());
         if (template.getGroup() != null)
             put(PdfName.GROUP, template.getGroup());
         PdfArray matrix = template.getMatrix();
@@ -96,13 +97,7 @@ public class PdfFormXObject extends PdfStream {
             put(PdfName.MATRIX, matrix);
         bytes = template.toPdf(null);
         put(PdfName.LENGTH, new PdfNumber(bytes.length));
-        try {
-            flateCompress();
-        }
-        catch (Exception e) {
-            throw new ExceptionConverter(e);
-        }
-        //compress()
+        flateCompress();
     }
     
 }

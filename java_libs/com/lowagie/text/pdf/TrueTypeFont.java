@@ -1,5 +1,5 @@
 /*
- * $Id: TrueTypeFont.java,v 1.29 2002/08/05 12:40:37 blowagie Exp $
+ * $Id: TrueTypeFont.java,v 1.55 2004/12/14 15:15:59 blowagie Exp $
  * $Name:  $
  *
  * Copyright 2001, 2002 Paulo Soares
@@ -172,6 +172,8 @@ class TrueTypeFont extends BaseFont {
      * 'hmtx' normalized to 1000 units.
      */
     protected int GlyphWidths[];
+    
+    protected int bboxes[][];
     /** The map containing the code information for the table 'cmap', encoding 1.0.
      * The key is the code and the value is an <CODE>int[2]</CODE> where position 0
      * is the glyph number and position 1 is the glyph width normalized to 1000
@@ -612,6 +614,8 @@ class TrueTypeFont extends BaseFont {
                 readGlyphWidths();
                 readCMaps();
                 readKerning();
+                readBbox();
+                GlyphWidths = null;
             }
         }
         finally {
@@ -678,10 +682,52 @@ class TrueTypeFont extends BaseFont {
      * @param glyph the glyph to get the width of
      * @return the width of the glyph in normalized 1000 units
      */
-    public int getGlyphWidth(int glyph) {
+    protected int getGlyphWidth(int glyph) {
         if (glyph >= GlyphWidths.length)
             glyph = GlyphWidths.length - 1;
         return GlyphWidths[glyph];
+    }
+    
+    private void readBbox() throws DocumentException, IOException {
+        int tableLocation[];
+        tableLocation = (int[])tables.get("head");
+        if (tableLocation == null)
+            throw new DocumentException("Table 'head' does not exist in " + fileName + style);
+        rf.seek(tableLocation[0] + TrueTypeFontSubSet.HEAD_LOCA_FORMAT_OFFSET);
+        boolean locaShortTable = (rf.readUnsignedShort() == 0);
+        tableLocation = (int[])tables.get("loca");
+        if (tableLocation == null)
+            return;
+        rf.seek(tableLocation[0]);
+        int locaTable[];
+        if (locaShortTable) {
+            int entries = tableLocation[1] / 2;
+            locaTable = new int[entries];
+            for (int k = 0; k < entries; ++k)
+                locaTable[k] = rf.readUnsignedShort() * 2;
+        }
+        else {
+            int entries = tableLocation[1] / 4;
+            locaTable = new int[entries];
+            for (int k = 0; k < entries; ++k)
+                locaTable[k] = rf.readInt();
+        }
+        tableLocation = (int[])tables.get("glyf");
+        if (tableLocation == null)
+            throw new DocumentException("Table 'glyf' does not exist in " + fileName + style);
+        int tableGlyphOffset = tableLocation[0];
+        bboxes = new int[locaTable.length - 1][];
+        for (int glyph = 0; glyph < locaTable.length - 1; ++glyph) {
+            int start = locaTable[glyph];
+            if (start != locaTable[glyph + 1]) {
+                rf.seek(tableGlyphOffset + start + 2);
+                bboxes[glyph] = new int[]{
+                    (rf.readShort() * 1000) / head.unitsPerEm,
+                    (rf.readShort() * 1000) / head.unitsPerEm,
+                    (rf.readShort() * 1000) / head.unitsPerEm,
+                    (rf.readShort() * 1000) / head.unitsPerEm};
+            }
+        }
     }
     
     /** Reads the several maps from the table 'cmap'. The maps of interest are 1.0 for symbolic
@@ -770,7 +816,6 @@ class TrueTypeFont extends BaseFont {
      * @throws IOException the font file could not be read
      */
     HashMap readFormat4() throws IOException {
-        int mask = (fontSpecific ? 0xff : 0xffff);
         HashMap h = new HashMap();
         int table_lenght = rf.readUnsignedShort();
         rf.skipBytes(2);
@@ -812,7 +857,7 @@ class TrueTypeFont extends BaseFont {
                 int r[] = new int[2];
                 r[0] = glyph;
                 r[1] = getGlyphWidth(r[0]);
-                h.put(new Integer(j & mask), r);
+                h.put(new Integer(fontSpecific ? ((j & 0xff00) == 0xf000 ? j & 0xff : j) : j), r);
             }
         }
         return h;
@@ -893,7 +938,7 @@ class TrueTypeFont extends BaseFont {
      */
     int getRawWidth(int c, String name) {
         HashMap map = null;
-        if (name == null)
+        if (name == null || cmap31 == null)
             map = cmap10;
         else
             map = cmap31;
@@ -923,9 +968,9 @@ class TrueTypeFont extends BaseFont {
         (int)head.yMax * 1000 / head.unitsPerEm));
         if (cff) {
             if (encoding.startsWith("Identity-"))
-                dic.put(PdfName.FONTNAME, new PdfName(fontName+"-"+encoding));
+                dic.put(PdfName.FONTNAME, new PdfName(subsetPrefix + fontName+"-"+encoding));
             else
-                dic.put(PdfName.FONTNAME, new PdfName(fontName + style));
+                dic.put(PdfName.FONTNAME, new PdfName(subsetPrefix + fontName + style));
         }
         else
             dic.put(PdfName.FONTNAME, new PdfName(subsetPrefix + fontName + style));
@@ -1142,6 +1187,10 @@ class TrueTypeFont extends BaseFont {
             return (int[])cmap31.get(new Integer(c));
         if (fontSpecific && cmap10 != null) 
             return (int[])cmap10.get(new Integer(c));
+        if (cmap31 != null) 
+            return (int[])cmap31.get(new Integer(c));
+        if (cmap10 != null) 
+            return (int[])cmap10.get(new Integer(c));
         return null;
     }
 
@@ -1219,7 +1268,7 @@ class TrueTypeFont extends BaseFont {
      * Sets the kerning between two Unicode chars.
      * @param char1 the first char
      * @param char2 the second char
-     * @paran kern the kerning to apply in normalized 1000 units
+     * @param kern the kerning to apply in normalized 1000 units
      * @return <code>true</code> if the kerning was applied, <code>false</code> otherwise
      */
     public boolean setKerning(char char1, char char2, int kern) {
@@ -1233,5 +1282,19 @@ class TrueTypeFont extends BaseFont {
         int c2 = metrics[0];
         kerning.put((c1 << 16) + c2, kern);
         return true;
+    }
+    
+    protected int[] getRawCharBBox(int c, String name) {
+        HashMap map = null;
+        if (name == null || cmap31 == null)
+            map = cmap10;
+        else
+            map = cmap31;
+        if (map == null)
+            return null;
+        int metric[] = (int[])map.get(new Integer(c));
+        if (metric == null || bboxes == null)
+            return null;
+        return bboxes[metric[0]];
     }
 }

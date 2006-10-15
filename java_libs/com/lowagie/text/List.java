@@ -1,5 +1,5 @@
 /*
- * $Id: List.java,v 1.48 2002/07/09 10:41:34 blowagie Exp $
+ * $Id: List.java,v 1.74 2005/04/13 09:17:14 blowagie Exp $
  * $Name:  $
  *
  * Copyright 1999, 2000, 2001, 2002 by Bruno Lowagie.
@@ -103,6 +103,15 @@ import java.util.Set;
 public class List implements TextElementArray, MarkupAttributes {
     
     // membervariables
+	/** a possible value for the numbered parameter */
+	public static final boolean ORDERED = true;
+	/** a possible value for the numbered parameter */
+	public static final boolean UNORDERED = false;
+	/** a possible value for the lettered parameter */
+	public static final boolean NUMBERICAL = false;
+	/** a possible value for the lettered parameter */
+	public static final boolean ALPHABETICAL = true;
+	
     
 /** This is the <CODE>ArrayList</CODE> containing the different <CODE>ListItem</CODE>s. */
     protected ArrayList list = new ArrayList();
@@ -126,7 +135,7 @@ public class List implements TextElementArray, MarkupAttributes {
     protected float indentationRight = 0;
     
 /** The indentation of the listitems. */
-    protected int symbolIndent;
+    protected float symbolIndent;
 
 /** Contains extra markupAttributes */
     protected Properties markupAttributes;
@@ -144,13 +153,19 @@ public class List implements TextElementArray, MarkupAttributes {
  * @param	symbolIndent	the indentation that has to be used for the listsymbol
  */
     
-    public List(boolean numbered, int symbolIndent) {
+    public List(boolean numbered, float symbolIndent) {
         this.numbered = numbered;
         this.lettered = false;
         this.symbolIndent = symbolIndent;
     }
     
-    public List(boolean numbered, boolean lettered, int symbolIndent ) {
+    /**
+     * Creates a list
+     * @param numbered has the list to be numbered?
+     * @param lettered has the list to be 'numbered' with letters
+     * @param symbolIndent the indentation of the symbol
+     */
+    public List(boolean numbered, boolean lettered, float symbolIndent ) {
         this.numbered = numbered;
         this.lettered = lettered;
         this.symbolIndent = symbolIndent;
@@ -183,7 +198,7 @@ public class List implements TextElementArray, MarkupAttributes {
         }
         this.symbolIndent = 0;
         if ((value = (String)attributes.remove(ElementTags.SYMBOLINDENT)) != null) {
-            this.symbolIndent = Integer.parseInt(value);
+            this.symbolIndent = Float.parseFloat(value);
         }
         
         if ((value = (String)attributes.remove(ElementTags.FIRST)) != null) {
@@ -256,6 +271,7 @@ public class List implements TextElementArray, MarkupAttributes {
  * Adds an <CODE>Object</CODE> to the <CODE>List</CODE>.
  *
  * @param	o		the object to add.
+ * @return true if adding the object succeeded
  */
     
     public boolean add(Object o) {
@@ -263,10 +279,10 @@ public class List implements TextElementArray, MarkupAttributes {
             ListItem item = (ListItem) o;
             if (numbered || lettered) {
                 Chunk chunk;
-                if ( numbered )
-                    chunk = new Chunk(String.valueOf(first + list.size()), symbol.font());
-                else
+                if ( lettered )
                     chunk = new Chunk(nextLetter(), symbol.font());
+                else
+                    chunk = new Chunk(String.valueOf(first + list.size()), symbol.font());
                 chunk.append(".");
                 item.setListSymbol(chunk);
             }
@@ -406,14 +422,16 @@ public class List implements TextElementArray, MarkupAttributes {
     
 /**
  * Gets the symbol indentation.
+ * @return the symbol indentation
  */
     
-    public int symbolIndent() {
+    public float symbolIndent() {
         return symbolIndent;
     }
     
 /**
- * Gets the symbol indentation.
+ * Gets the Chunk containing the symbol.
+ * @return a Chunk with a symbol
  */
     
     public Chunk symbol() {
@@ -422,6 +440,7 @@ public class List implements TextElementArray, MarkupAttributes {
     
 /**
  * Gets the first number        .
+ * @return a number
  */
     
     public int first() {
@@ -476,25 +495,36 @@ public class List implements TextElementArray, MarkupAttributes {
  * @return  String contains the next character (A-Z or a-z)
  */
     private String nextLetter() {
-
-         int num_in_list = list.size();
-         int max_ival = (lastCh + 0);
-         int ival = (firstCh + num_in_list);
-         while ( ival > max_ival ) {
-             ival -= 26;
-         }
-         char[] new_char = new char[1];
-         new_char[0] = (char) ival;
-         String ret = new String( new_char );
-         return ret;
+        int num_in_list = listItemsInList(); //list.size();
+        int max_ival = (lastCh + 0);
+        int ival = (firstCh + num_in_list);
+        while ( ival > max_ival ) {
+            ival -= 26;
+        }
+        char[] new_char = new char[1];
+        new_char[0] = (char) ival;
+        String ret = new String( new_char );
+        return ret;
     }
     
+    /**
+     * Counts the number of ListItems in the list ommiting nested lists
+     *
+     * @return  Integer number of ListItems in the list
+     */
+    private int listItemsInList() {
+        int result = 0;
+        for (Iterator i = list.iterator(); i.hasNext(); ) {
+            if (!(i.next() instanceof List)) result++;
+        }
+        return result;
+    }
     
 /**
  * @see com.lowagie.text.MarkupAttributes#setMarkupAttribute(java.lang.String, java.lang.String)
  */
     public void setMarkupAttribute(String name, String value) {
-        markupAttributes = (markupAttributes == null) ? new Properties() : markupAttributes;
+		if (markupAttributes == null) markupAttributes = new Properties();
         markupAttributes.put(name, value);
     }
     

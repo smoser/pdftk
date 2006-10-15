@@ -1,5 +1,5 @@
 /*
- * $Id: ImgWMF.java,v 1.19 2002/08/23 08:59:33 blowagie Exp $
+ * $Id: ImgWMF.java,v 1.45 2004/12/14 12:14:31 blowagie Exp $
  * $Name:  $
  *
  * Copyright 1999, 2000, 2001, 2002 by Paulo Soares.
@@ -54,8 +54,8 @@ import java.io.InputStream;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
-import com.lowagie.text.pdf.wmf.InputMeta;
-import com.lowagie.text.pdf.wmf.MetaDo;
+import com.lowagie.text.pdf.codec.wmf.InputMeta;
+import com.lowagie.text.pdf.codec.wmf.MetaDo;
 import com.lowagie.text.pdf.*;
 
 /**
@@ -117,6 +117,8 @@ public class ImgWMF extends Image implements Element {
     
 /**
  * This method checks if the image is a valid WMF and processes some parameters.
+ * @throws BadElementException
+ * @throws IOException
  */
     
     private void processParameters() throws BadElementException, IOException {

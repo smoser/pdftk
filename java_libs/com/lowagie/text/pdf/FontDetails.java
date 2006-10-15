@@ -1,5 +1,5 @@
 /*
- * $Id: FontDetails.java,v 1.12 2002/06/18 13:59:40 blowagie Exp $
+ * $Id: FontDetails.java,v 1.44 2005/05/04 14:32:23 blowagie Exp $
  * $Name:  $
  *
  * Copyright 2001, 2002 by Paulo Soares.
@@ -152,6 +152,8 @@ class FontDetails {
     byte[] convertToBytes(String text) {
         byte b[] = null;
         switch (fontType) {
+            case BaseFont.FONT_TYPE_T3:
+                return baseFont.convertToBytes(text);
             case BaseFont.FONT_TYPE_T1:
             case BaseFont.FONT_TYPE_TT: {
                 b = baseFont.convertToBytes(text);
@@ -219,6 +221,9 @@ class FontDetails {
     void writeFont(PdfWriter writer) {
         try {
             switch (fontType) {
+                case BaseFont.FONT_TYPE_T3:
+                    baseFont.writeFont(writer, indirectReference, null);
+                    break;
                 case BaseFont.FONT_TYPE_T1:
                 case BaseFont.FONT_TYPE_TT: {
                     int firstChar;

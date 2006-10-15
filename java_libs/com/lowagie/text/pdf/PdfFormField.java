@@ -49,7 +49,6 @@ package com.lowagie.text.pdf;
 import com.lowagie.text.Rectangle;
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.awt.Color;
 
 /** Implements form fields.
  *
@@ -71,6 +70,8 @@ public class PdfFormField extends PdfAnnotation {
     public static final int FF_MULTISELECT = 2097152;
     public static final int FF_DONOTSPELLCHECK = 4194304;
     public static final int FF_DONOTSCROLL = 8388608;
+    public static final int FF_COMB = 16777216;
+    public static final int FF_RADIOSINUNISON = 1 << 25;
     public static final int Q_LEFT = 0;
     public static final int Q_CENTER = 1;
     public static final int Q_RIGHT = 2;
@@ -121,7 +122,7 @@ public class PdfFormField extends PdfAnnotation {
         put(PdfName.SUBTYPE, PdfName.WIDGET);
         put(PdfName.RECT, new PdfRectangle(rect));
         annotation = true;
-        if (!highlight.equals(HIGHLIGHT_INVERT))
+        if (highlight != null && !highlight.equals(HIGHLIGHT_INVERT))
             put(PdfName.H, highlight);
     }
     
@@ -213,8 +214,6 @@ public class PdfFormField extends PdfAnnotation {
     public static PdfFormField createSignature(PdfWriter writer) {
         PdfFormField field = new PdfFormField(writer);
         field.put(PdfName.FT, PdfName.SIG);
-        field.put(PdfName.FF, new PdfNumber(0));
-        writer.setSigFlags(PdfWriter.SIGNATURE_EXISTS);
         return field;
     }
     
@@ -269,7 +268,8 @@ public class PdfFormField extends PdfAnnotation {
     }
     
     public void setFieldName(String s) {
-        put(PdfName.T, new PdfString(s, PdfObject.TEXT_UNICODE));
+        if (s != null)
+            put(PdfName.T, new PdfString(s, PdfObject.TEXT_UNICODE));
     }
     
     public void setUserName(String s) {
@@ -284,22 +284,29 @@ public class PdfFormField extends PdfAnnotation {
         put(PdfName.Q, new PdfNumber(v));
     }
     
-    static void mergeResources(PdfDictionary result, PdfDictionary source) {
+    static void mergeResources(PdfDictionary result, PdfDictionary source, PdfStamperImp writer) {
         PdfDictionary dic = null;
         PdfDictionary res = null;
         PdfName target = null;
         for (int k = 0; k < mergeTarget.length; ++k) {
             target = mergeTarget[k];
-            if ((dic = (PdfDictionary)source.get(target)) != null) {
-                if ((res = (PdfDictionary)result.get(target)) == null) {
+            PdfDictionary pdfDict = (PdfDictionary)PdfReader.getPdfObject(source.get(target));
+            if ((dic = pdfDict) != null) {
+                if ((res = (PdfDictionary)PdfReader.getPdfObject(result.get(target), result)) == null) {
                     res = new PdfDictionary();
                 }
                 res.mergeDifferent(dic);
                 result.put(target, res);
+                if (writer != null)
+                    writer.markUsed(res);
             }
         }
     }
-    
+
+    static void mergeResources(PdfDictionary result, PdfDictionary source) {
+        mergeResources(result, source, null);
+    }
+
     void setUsed() {
         used = true;
         if (parent != null)
@@ -320,103 +327,6 @@ public class PdfFormField extends PdfAnnotation {
         put(PdfName.DR, dic);
     }
 
-    PdfDictionary getMK() {
-        PdfDictionary mk = (PdfDictionary)get(PdfName.MK);
-        if (mk == null) {
-            mk = new PdfDictionary();
-            put(PdfName.MK, mk);
-        }
-        return mk;
-    }
-    
-    public void setMKRotation(int rotation) {
-        getMK().put(PdfName.R, new PdfNumber(rotation));
-    }
-    
-    PdfArray getMKColor(Color color) {
-        PdfArray array = new PdfArray();
-        int type = ExtendedColor.getType(color);
-        switch (type) {
-            case ExtendedColor.TYPE_GRAY: {
-                array.add(new PdfNumber(((GrayColor)color).getGray()));
-                break;
-            }
-            case ExtendedColor.TYPE_CMYK: {
-                CMYKColor cmyk = (CMYKColor)color;
-                array.add(new PdfNumber(cmyk.getCyan()));
-                array.add(new PdfNumber(cmyk.getMagenta()));
-                array.add(new PdfNumber(cmyk.getYellow()));
-                array.add(new PdfNumber(cmyk.getBlack()));
-                break;
-            }
-            case ExtendedColor.TYPE_SEPARATION:
-            case ExtendedColor.TYPE_PATTERN:
-            case ExtendedColor.TYPE_SHADING:
-                throw new RuntimeException("Separations, patterns and shadings are not allowed in MK dictionary.");
-            default:
-                array.add(new PdfNumber(color.getRed() / 255f));
-                array.add(new PdfNumber(color.getGreen() / 255f));
-                array.add(new PdfNumber(color.getBlue() / 255f));
-        }
-        return array;
-    }
-    
-    public void setMKBorderColor(Color color) {
-        if (color == null)
-            getMK().remove(PdfName.BC);
-        else
-            getMK().put(PdfName.BC, getMKColor(color));
-    }
-    
-    public void setMKBackgroundColor(Color color) {
-        if (color == null)
-            getMK().remove(PdfName.BG);
-        else
-            getMK().put(PdfName.BG, getMKColor(color));
-    }
-    
-    public void setMKNormalCaption(String caption) {
-        getMK().put(PdfName.CA, new PdfString(caption, PdfObject.TEXT_UNICODE));
-    }
-    
-    public void setMKRolloverCaption(String caption) {
-        getMK().put(PdfName.RC, new PdfString(caption, PdfObject.TEXT_UNICODE));
-    }
-    
-    public void setMKAlternateCaption(String caption) {
-        getMK().put(PdfName.AC, new PdfString(caption, PdfObject.TEXT_UNICODE));
-    }
-    
-    public void setMKNormalIcon(PdfTemplate template) {
-        getMK().put(PdfName.I, template.getIndirectReference());
-    }
-    
-    public void setMKRolloverIcon(PdfTemplate template) {
-        getMK().put(PdfName.RI, template.getIndirectReference());
-    }
-    
-    public void setMKAlternateIcon(PdfTemplate template) {
-        getMK().put(PdfName.IX, template.getIndirectReference());
-    }
-    
-    public void setMKIconFit(PdfName scale, PdfName scalingType, float leftoverLeft, float leftoverBottom) {
-        PdfDictionary dic = new PdfDictionary();
-        if (!scale.equals(PdfName.A))
-            dic.put(PdfName.SW, scale);
-        if (!scalingType.equals(PdfName.P))
-            dic.put(PdfName.S, scalingType);
-        if (leftoverLeft != 0.5f || leftoverBottom != 0.5f) {
-            PdfArray array = new PdfArray(new PdfNumber(leftoverLeft));
-            array.add(new PdfNumber(leftoverBottom));
-            dic.put(PdfName.A, array);
-        }
-        getMK().put(PdfName.IF, dic);
-    }
-    
-    public void setMKTextPosition(int tp) {
-        getMK().put(PdfName.TP, new PdfNumber(tp));
-    }
-    
     public static PdfAnnotation shallowDuplicate(PdfAnnotation annot) {
         PdfAnnotation dup;
         if (annot.isForm()) {

@@ -26,11 +26,12 @@ export RM= rm
 # if you want pdftk to ask before overwriting a file, set
 # ASK_ABOUT_WARNINGS to true; otherwise: false; override this default
 # with the dont_ask or do_ask command-line options
-CPPFLAGS= -O2 -DPATH_DELIM=0x2f -DASK_ABOUT_WARNINGS=false
+CPPFLAGS= -O2 -DPATH_DELIM=0x2f -DASK_ABOUT_WARNINGS=false -fdollars-in-identifiers
 CXXFLAGS= -lgcj
 
 # itext compiler flags
-export GCJFLAGS=
+# -O3 might cause pdftk to segfault on cat operation (gcc 3.4.4)
+export GCJFLAGS= -O2
 
 #
 export ARFLAGS= rs

@@ -1,5 +1,5 @@
 /*
- * $Id: Table.java,v 1.94 2002/07/10 07:22:39 blowagie Exp $
+ * $Id: Table.java,v 1.136 2005/05/11 10:39:01 blowagie Exp $
  * $Name:  $
  *
  * Copyright 1999, 2000, 2001, 2002 by Bruno Lowagie.
@@ -56,14 +56,16 @@ package com.lowagie.text;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Point;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.Properties;
 import java.util.StringTokenizer;
 
-import com.lowagie.text.markup.*;
-import java.text.DecimalFormat;
+import com.lowagie.text.markup.MarkupParser;
+import com.lowagie.text.pdf.PdfPCell;
+import com.lowagie.text.pdf.PdfPTable;
 /**
  * A <CODE>Table</CODE> is a <CODE>Rectangle</CODE> that contains <CODE>Cell</CODE>s,
  * ordered in some kind of matrix.
@@ -219,6 +221,9 @@ public class Table extends Rectangle implements Element, MarkupAttributes {
     
     /** contains the attributes that are added to each odd (or even) row */
     protected Hashtable alternatingRowAttributes = null;
+    
+    /** if you want to generate tables the old way, set this value to false. */
+    protected boolean convert2pdfptable = false;
     
     // constructors
     
@@ -412,6 +417,7 @@ public class Table extends Rectangle implements Element, MarkupAttributes {
     
     /**
      * Performs extra checks when executing table code (currently only when cells are added).
+     * @param aDebug
      */
     public void setDebug(boolean aDebug) {
         mDebug = aDebug;
@@ -420,6 +426,7 @@ public class Table extends Rectangle implements Element, MarkupAttributes {
     /**
      * Sets the default layout of the Table to
      * the provided Cell
+     * @param value a cell with all the defaults
      */
     public void setDefaultLayout(Cell value) {
         defaultLayout = value;
@@ -538,6 +545,7 @@ public class Table extends Rectangle implements Element, MarkupAttributes {
      * @param       aCell    The <CODE>Cell</CODE> to add
      * @param       row     The row where the <CODE>Cell</CODE> will be added
      * @param       column  The column where the <CODE>Cell</CODE> will be added
+     * @throws BadElementException
      */
     
     public void addCell(Cell aCell, int row, int column) throws BadElementException {
@@ -549,6 +557,7 @@ public class Table extends Rectangle implements Element, MarkupAttributes {
      *
      * @param       aCell        The <CODE>Cell</CODE> to add
      * @param       aLocation    The location where the <CODE>Cell</CODE> will be added
+     * @throws BadElementException
      */
     
     public void addCell(Cell aCell, Point aLocation) throws BadElementException {
@@ -705,7 +714,7 @@ public class Table extends Rectangle implements Element, MarkupAttributes {
         setCurrentLocationToNextValidPosition(aLocation);
     }
     
-/*
+/**
  * Will fill empty cells with valid blank <CODE>Cell</CODE>s
  */
     
@@ -722,11 +731,11 @@ public class Table extends Rectangle implements Element, MarkupAttributes {
             Properties odd = new Properties();
             String name;
             String[] value;
-            for (Iterator iterator = Chunk.getKeySet(alternatingRowAttributes).iterator(); iterator.hasNext(); ) {
+            for (Iterator iterator = alternatingRowAttributes.keySet().iterator(); iterator.hasNext(); ) {
                 name = String.valueOf(iterator.next());
                 value = (String[])alternatingRowAttributes.get(name);
-                even.put(name, value[0]);
-                odd.put(name, value[1]);
+                even.setProperty(name, value[0]);
+                odd.setProperty(name, value[1]);
             }
             Row row;
             for (int i = lastHeaderRow + 1; i < rows.size(); i++) {
@@ -874,6 +883,7 @@ public class Table extends Rectangle implements Element, MarkupAttributes {
      * Deletes a column in this table.
      *
      * @param       column  the number of the column that has to be deleted
+     * @throws BadElementException
      */
     
     public void deleteColumn(int column) throws BadElementException {
@@ -900,8 +910,8 @@ public class Table extends Rectangle implements Element, MarkupAttributes {
             curPosition.setLocation(curPosition.x+1, 0);
         }
     }
-    
-    /**
+
+	/**
      * Deletes a row.
      *
      * @param       row             the number of the row to delete
@@ -919,7 +929,7 @@ public class Table extends Rectangle implements Element, MarkupAttributes {
     
     /**
      * Deletes all rows in this table.
-     * @author dperezcar
+	 * (contributed by dperezcar@fcc.es)
      */
     
     public void deleteAllRows() {
@@ -1089,6 +1099,7 @@ public class Table extends Rectangle implements Element, MarkupAttributes {
      * 25% for the second and third column.
      *
      * @param       widths  an array with values
+     * @throws BadElementException
      */
     
     public void setWidths(float[] widths) throws BadElementException {
@@ -1120,6 +1131,7 @@ public class Table extends Rectangle implements Element, MarkupAttributes {
      * The values will be recalculated as percentages of this sum.
      *
      * @param       widths  an array with values
+     * @throws DocumentException
      */
     
     public void setWidths(int[] widths) throws DocumentException {
@@ -1231,6 +1243,15 @@ public class Table extends Rectangle implements Element, MarkupAttributes {
     }
     
     /**
+     * Gets the last number of the rows that contain headers.
+     *  
+     * @return a rownumber
+     */
+    public int lastHeaderRow() {
+        return this.lastHeaderRow;
+    }
+    
+    /**
      * Gets the dimension of this table
      *
      * @return  dimension
@@ -1243,7 +1264,9 @@ public class Table extends Rectangle implements Element, MarkupAttributes {
     /**
      * returns the element at the position row, column
      *          (Cast to Cell or Table)
-     *
+     * 
+     * @param row
+     * @param column
      * @return  dimension
      */
     
@@ -1300,7 +1323,7 @@ public class Table extends Rectangle implements Element, MarkupAttributes {
                             else {
                                 tmpWidthsN[totI] = btW-totW;
                                 btI++;
-                                if( btW == tpW) {
+                                if(Math.abs(btW - tpW) < 0.0001) {
                                     tpI++;
                                     if(tpI<tmpWidths.length) {
                                         tpW+=tmpWidths[tpI];
@@ -1408,23 +1431,14 @@ public class Table extends Rectangle implements Element, MarkupAttributes {
                             float wt=0;
                             while( ct<lDummyWidths[j]) {
                                 wt+=lDummyColumnWidths[j][ct++];
-                                if(convertWidth(wb)==convertWidth(wt)) break;
-                            }
-                            
-                            if(convertWidth(wb)==convertWidth(wt) == false) {
-                                System.out.println( "error w !=w2");
+                                if(Math.abs(convertWidth(wb) - convertWidth(wt)) < 0.0001) break;
                             }
                         }
                         colMap[cb] = lDummyColumn+ct;
                         
                         // need to change this to work out how many cols to span
                         for (int k=0; k < lDummyTable.getDimension().height; k++) {
-                            if(lNewWidths.length==23 && i==2 && k==3) {
-                                System.out.println( "1");
-                            }
-                            
                             for (int l=0; l < lDummyTable.getDimension().width; l++) {
-                                
                                 int yy=l;
                                 lDummyElement = lDummyTable.getElement(k,l);
                                 if (lDummyElement != null) {
@@ -1497,6 +1511,7 @@ public class Table extends Rectangle implements Element, MarkupAttributes {
      *
      * @param   aCell       the cell that has to be checked
      * @param   aLocation   the location where the cell has to be placed
+     * @return true if the location was valid
      */
     private boolean isValidLocation(Cell aCell, Point aLocation) {
         // rowspan not beyond last column
@@ -1636,6 +1651,7 @@ public class Table extends Rectangle implements Element, MarkupAttributes {
     
     /**
      *  Sets current col/row to valid(empty) pos after addCell/Table
+     * @param aLocation a location in the Table
      */
     private void setCurrentLocationToNextValidPosition(Point aLocation)    {
         // set latest location to next valid position
@@ -1683,103 +1699,120 @@ public class Table extends Rectangle implements Element, MarkupAttributes {
         if (value0 == null || value1 == null) {
             throw new NullPointerException("MarkupTable#setAlternatingRowAttribute(): null values are not permitted.");
         }
-        alternatingRowAttributes = (alternatingRowAttributes == null) ?  new Hashtable() : alternatingRowAttributes;
+        if (alternatingRowAttributes == null) alternatingRowAttributes = new Hashtable();
         
         // we could always use new Arrays but this is big enough
         String[] value = (String[])(alternatingRowAttributes.get(name));
-        value = (value == null) ? new String[2] : value;
+        if (value == null) value = new String[2];
         value[0] = value0;
         value[1] = value1;
         alternatingRowAttributes.put(name, value);
     }
     
     /**
-     * This method throws an <CODE>RuntimeException</CODE>.
+     * This method throws an <CODE>UnsupportedOperationException</CODE>.
+     * @return NA
      */
     public float top() {
-        throw new RuntimeException("Dimensions of a Table can't be calculated. See the FAQ.");
+        throw new UnsupportedOperationException("Dimensions of a Table can't be calculated. See the FAQ.");
     }
     
     /**
-     * This method throws an <CODE>RuntimeException</CODE>.
+     * This method throws an <CODE>UnsupportedOperationException</CODE>.
+     * @return NA
      */
     public float bottom() {
-        throw new RuntimeException("Dimensions of a Table can't be calculated. See the FAQ.");
+        throw new UnsupportedOperationException("Dimensions of a Table can't be calculated. See the FAQ.");
     }
     
     /**
-     * This method throws an <CODE>RuntimeException</CODE>.
+     * This method throws an <CODE>UnsupportedOperationException</CODE>.
+     * @return NA
      */
     public float left() {
-        throw new RuntimeException("Dimensions of a Table can't be calculated. See the FAQ.");
+        throw new UnsupportedOperationException("Dimensions of a Table can't be calculated. See the FAQ.");
     }
     
     /**
-     * This method throws an <CODE>RuntimeException</CODE>.
+     * This method throws an <CODE>UnsupportedOperationException</CODE>.
+     * @return NA
      */
     public float right() {
-        throw new RuntimeException("Dimensions of a Table can't be calculated. See the FAQ.");
+        throw new UnsupportedOperationException("Dimensions of a Table can't be calculated. See the FAQ.");
     }
     
     /**
-     * This method throws an <CODE>RuntimeException</CODE>.
+     * This method throws an <CODE>UnsupportedOperationException</CODE>.
+     * @param margin NA
+     * @return NA
      */
     public float top(int margin) {
-        throw new RuntimeException("Dimensions of a Table can't be calculated. See the FAQ.");
+        throw new UnsupportedOperationException("Dimensions of a Table can't be calculated. See the FAQ.");
     }
     
     /**
-     * This method throws an <CODE>RuntimeException</CODE>.
+     * This method throws an <CODE>UnsupportedOperationException</CODE>.
+     * @param margin NA
+     * @return NA
      */
     public float bottom(int margin) {
-        throw new RuntimeException("Dimensions of a Table can't be calculated. See the FAQ.");
+        throw new UnsupportedOperationException("Dimensions of a Table can't be calculated. See the FAQ.");
     }
     
     /**
-     * This method throws an <CODE>RuntimeException</CODE>.
+     * This method throws an <CODE>UnsupportedOperationException</CODE>.
+     * @param margin NA
+     * @return NA
      */
     public float left(int margin) {
-        throw new RuntimeException("Dimensions of a Table can't be calculated. See the FAQ.");
+        throw new UnsupportedOperationException("Dimensions of a Table can't be calculated. See the FAQ.");
     }
     
     /**
-     * This method throws an <CODE>RuntimeException</CODE>.
+     * This method throws an <CODE>UnsupportedOperationException</CODE>.
+     * @param margin NA
+     * @return NA
      */
     public float right(int margin) {
-        throw new RuntimeException("Dimensions of a Table can't be calculated. See the FAQ.");
+        throw new UnsupportedOperationException("Dimensions of a Table can't be calculated. See the FAQ.");
     }
     
     /**
-     * This method throws an <CODE>RuntimeException</CODE>.
+     * This method throws an <CODE>UnsupportedOperationException</CODE>.
+     * @param value NA
      */
     public void setTop(int value) {
-        throw new RuntimeException("Dimensions of a Table are attributed automagically. See the FAQ.");
+        throw new UnsupportedOperationException("Dimensions of a Table are attributed automagically. See the FAQ.");
     }
     
     /**
-     * This method throws an <CODE>RuntimeException</CODE>.
+     * This method throws an <CODE>UnsupportedOperationException</CODE>.
+     * @param value NA
      */
     public void setBottom(int value) {
-        throw new RuntimeException("Dimensions of a Table are attributed automagically. See the FAQ.");
+        throw new UnsupportedOperationException("Dimensions of a Table are attributed automagically. See the FAQ.");
     }
     
     /**
-     * This method throws an <CODE>RuntimeException</CODE>.
+     * This method throws an <CODE>UnsupportedOperationException</CODE>.
+     * @param value NA
      */
     public void setLeft(int value) {
-        throw new RuntimeException("Dimensions of a Table are attributed automagically. See the FAQ.");
+        throw new UnsupportedOperationException("Dimensions of a Table are attributed automagically. See the FAQ.");
     }
     
     /**
-     * This method throws an <CODE>RuntimeException</CODE>.
+     * This method throws an <CODE>UnsupportedOperationException</CODE>.
+     * @param value NA
      */
     public void setRight(int value) {
-        throw new RuntimeException("Dimensions of a Table are attributed automagically. See the FAQ.");
+        throw new UnsupportedOperationException("Dimensions of a Table are attributed automagically. See the FAQ.");
     }
     
     /**
      * Returns the next row 0-based index where a new cell would be added.
-     * @author dperezcar
+	 * (contributed by dperezcar@fcc.es)
+     * @return x coordinate for the next row
      */
     public int getNextRow() {
         return curPosition.x;
@@ -1787,7 +1820,8 @@ public class Table extends Rectangle implements Element, MarkupAttributes {
     
     /**
      * Returns the next column 0-based index where a new cell would be added.
-     * @author dperezcar
+	 * (contributed by dperezcar@fcc.es)
+     * @return y coordinate for the next row
      */
     public int getNextColumn() {
         return curPosition.y;
@@ -1809,4 +1843,79 @@ public class Table extends Rectangle implements Element, MarkupAttributes {
     }
     
     private static DecimalFormat widthFormat = new DecimalFormat( "0.00");
+
+    /**
+     * Create a PdfPTable based on this Table object.
+     * @return a PdfPTable object
+     * @throws BadElementException
+     */
+    public PdfPTable createPdfPTable() throws BadElementException {
+    	if (!convert2pdfptable) {
+    		throw new BadElementException("No error, just an old style table");
+    	}
+        setAutoFillEmptyCells(true);
+    	complete();
+    	PdfPTable pdfptable = new PdfPTable(widths);
+    	pdfptable.setTableEvent(SimpleTable.getDimensionlessInstance(this, cellspacing));
+    	pdfptable.setHeaderRows(lastHeaderRow + 1);
+    	pdfptable.setSplitLate(cellsFitPage);
+    	if (!Float.isNaN(offset)) {
+    		pdfptable.setSpacingBefore(offset);
+    	}
+    	pdfptable.setHorizontalAlignment(alignment);
+    	if (absWidth.length() > 0) {
+    		try {
+    			pdfptable.setTotalWidth(Float.parseFloat(absWidth));
+    		}
+    		catch(Exception e1) {
+    			try {
+    				pdfptable.setTotalWidth((float)Integer.parseInt(absWidth));
+    			}
+    			catch(Exception e2) {
+    				pdfptable.setWidthPercentage(widthPercentage);
+    			}
+    		}
+    	}
+    	else {
+    		pdfptable.setWidthPercentage(widthPercentage);
+    	}
+    	Row row;
+        for (Iterator iterator = iterator(); iterator.hasNext(); ) {
+            row = (Row) iterator.next();
+            Element cell;
+            PdfPCell pcell;
+            for (int i = 0; i < row.columns(); i++) {
+                if ((cell = (Element)row.getCell(i)) != null) {
+                	if (cell instanceof Table) {
+                		pcell = new PdfPCell(((Table)cell).createPdfPTable());
+                	}
+                	else if (cell instanceof Cell) {
+                		pcell = ((Cell)cell).createPdfPCell();
+                		 pcell.setPadding(cellpadding + cellspacing / 2f);
+                         pcell.setCellEvent(SimpleCell.getDimensionlessInstance((Cell)cell, cellspacing));
+                	}
+                	else {
+                		pcell = new PdfPCell();
+                	}
+                	pdfptable.addCell(pcell);
+                }
+            }
+        }
+    	return pdfptable;
+    }
+    
+	/**
+	 * Method to check if the Table should be converted to a PdfPTable or not.
+	 * @return false if the table should be handled the oldfashioned way.
+	 */
+	public boolean isConvert2pdfptable() {
+		return convert2pdfptable;
+	}
+	/**
+	 * If set to true, iText will try to convert the Table to a PdfPTable.
+	 * @param convert2pdfptable true if you want iText to try to convert the Table to a PdfPTable
+	 */
+	public void setConvert2pdfptable(boolean convert2pdfptable) {
+		this.convert2pdfptable = convert2pdfptable;
+	}
 }

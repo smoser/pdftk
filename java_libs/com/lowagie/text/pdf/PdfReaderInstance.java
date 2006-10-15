@@ -61,8 +61,6 @@ import java.io.*;
 class PdfReaderInstance {
     static final PdfLiteral IDENTITYMATRIX = new PdfLiteral("[1 0 0 1 0 0]");
     static final PdfNumber ONE = new PdfNumber(1);
-    PdfObject xrefObj[];
-    PdfDictionary pages[];
     int myXref[];
     PdfReader reader;
     RandomAccessFileOrArray file;
@@ -71,13 +69,11 @@ class PdfReaderInstance {
     HashMap visited = new HashMap();
     ArrayList nextRound = new ArrayList();
     
-    PdfReaderInstance(PdfReader reader, PdfWriter writer, PdfObject xrefObj[], PdfDictionary pages[]) {
+    PdfReaderInstance(PdfReader reader, PdfWriter writer) {
         this.reader = reader;
-        this.xrefObj = xrefObj;
-        this.pages = pages;
         this.writer = writer;
         file = reader.getSafeFile();
-        myXref = new int[xrefObj.length];
+        myXref = new int[reader.getXrefSize()];
     }
     
     PdfReader getReader() {
@@ -85,7 +81,7 @@ class PdfReaderInstance {
     }
     
     PdfImportedPage getImportedPage(int pageNumber) {
-        if (pageNumber < 1 || pageNumber > pages.length)
+        if (pageNumber < 1 || pageNumber > reader.getNumberOfPages())
             throw new IllegalArgumentException("Invalid page number");
         Integer i = new Integer(pageNumber);
         PdfImportedPage pageT = (PdfImportedPage)importedPages.get(i);
@@ -109,25 +105,26 @@ class PdfReaderInstance {
     }
     
     PdfObject getResources(int pageNumber) {
-        return PdfReader.getPdfObject(pages[pageNumber - 1].get(PdfName.RESOURCES));
+        PdfObject obj = PdfReader.getPdfObjectRelease(reader.getPageNRelease(pageNumber).get(PdfName.RESOURCES));
+        return obj;
     }
     
     
     PdfStream getFormXObject(int pageNumber) throws IOException {
-        PdfDictionary page = pages[pageNumber - 1];
-        PdfObject contents = PdfReader.getPdfObject(page.get(PdfName.CONTENTS));
+        PdfDictionary page = reader.getPageNRelease(pageNumber);
+        PdfObject contents = PdfReader.getPdfObjectRelease(page.get(PdfName.CONTENTS));
         PdfDictionary dic = new PdfDictionary();
         byte bout[] = null;
         ArrayList filters = null;
         if (contents != null) {
-            if (contents.isStream()) {
+            if (contents.isStream())
                 dic.putAll((PRStream)contents);
-            }
-            else {
+            else
                 bout = reader.getPageContent(pageNumber, file);
-            }
         }
-        dic.put(PdfName.RESOURCES, PdfReader.getPdfObject(page.get(PdfName.RESOURCES)));
+        else
+            bout = new byte[0];
+        dic.put(PdfName.RESOURCES, PdfReader.getPdfObjectRelease(page.get(PdfName.RESOURCES)));
         dic.put(PdfName.TYPE, PdfName.XOBJECT);
         dic.put(PdfName.SUBTYPE, PdfName.FORM);
         PdfImportedPage impPage = (PdfImportedPage)importedPages.get(new Integer(pageNumber));
@@ -158,7 +155,7 @@ class PdfReaderInstance {
                 if (!visited.containsKey(i)) {
                     visited.put(i, null);
                     int n = i.intValue();
-                    writer.addToBody(xrefObj[n], myXref[n]);
+                    writer.addToBody(reader.getPdfObjectRelease(n), myXref[n]);
                 }
             }
         }
@@ -175,6 +172,7 @@ class PdfReaderInstance {
         }
         finally {
             try {
+                reader.close();
                 file.close();
             }
             catch (Exception e) {

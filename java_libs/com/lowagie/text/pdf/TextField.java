@@ -1,5 +1,5 @@
 /*
- * Copyright 2003 by Paulo Soares.
+ * Copyright 2003-2005 by Paulo Soares.
  *
  * The contents of this file are subject to the Mozilla Public License Version 1.1
  * (the "License"); you may not use this file except in compliance with the License.
@@ -58,86 +58,10 @@ import java.util.ArrayList;
  * All the option in the Acrobat GUI are supported in an easy to use API.
  * @author Paulo Soares (psoares@consiste.pt)
  */
-public class TextField {
-    
-    /** A thin border with 1 point width. */    
-    public static final float BORDER_WIDTH_THIN = 1;
-    /** A medium border with 2 point width. */    
-    public static final float BORDER_WIDTH_MEDIUM = 2;
-    /** A thick border with 3 point width. */    
-    public static final float BORDER_WIDTH_THICK = 3;
-    /** The field is visible. */    
-    public static final int VISIBLE = 0;
-    /** The field is hidden. */    
-    public static final int HIDDEN = 1;
-    /** The field is visible but does not print. */    
-    public static final int VISIBLE_BUT_DOES_NOT_PRINT = 2;
-    /** The field is hidden but is printable. */    
-    public static final int HIDDEN_BUT_PRINTABLE = 3;
-    /** The user may not change the value of the field. */    
-    public static final int READ_ONLY = 1;
-    /** The field must have a value at the time it is exported by a submit-form
-     * action.
-     */    
-    public static final int REQUIRED = 2;
-    /** The field may contain multiple lines of text.
-     * This flag is only meaningful with text fields.
-     */    
-    public static final int MULTILINE = 4;
-    /** The field will not scroll (horizontally for single-line
-     * fields, vertically for multiple-line fields) to accommodate more text
-     * than will fit within its annotation rectangle. Once the field is full, no
-     * further text will be accepted.
-     */    
-    public static final int DO_NOT_SCROLL = 8;
-    /** The field is intended for entering a secure password that should
-     * not be echoed visibly to the screen.
-     */    
-    public static final int PASSWORD = 16;
-    /** The text entered in the field represents the pathname of
-     * a file whose contents are to be submitted as the value of the field.
-     */    
-    public static final int FILE_SELECTION = 32;
-    /** The text entered in the field will not be spell-checked.
-     * This flag is meaningful only in text fields and in combo
-     * fields with the <CODE>EDIT</CODE> flag set.
-     */    
-    public static final int DO_NOT_SPELL_CHECK = 64;
-    /** If set the combo box includes an editable text box as well as a drop list; if
-     * clear, it includes only a drop list.
-     * This flag is only meaningful with combo fields.
-     */    
-    public static final int EDIT = 128;
-
-    protected float borderWidth = BORDER_WIDTH_THIN;
-    protected int borderStyle = PdfBorderDictionary.STYLE_SOLID;
-    protected Color borderColor;
-    protected Color backgroundColor;
-    protected Color textColor;
-    protected BaseFont font;
-    protected float fontSize = 0;
-    protected int alignment = Element.ALIGN_LEFT;
-    protected PdfWriter writer;
-    protected String text;
-    protected Rectangle box;
-    
-    /** Holds value of property rotation. */
-    protected int rotation = 0;
-    
-    /** Holds value of property visibility. */
-    private int visibility;
-    
-    /** Holds value of property fieldName. */
-    private String fieldName;
+public class TextField extends BaseField {
     
     /** Holds value of property defaultText. */
     private String defaultText;
-    
-    /** Holds value of property options. */
-    private int options;
-    
-    /** Holds value of property maxCharacterLength. */
-    private int maxCharacterLength;
     
     /** Holds value of property choices. */
     private String[] choices;
@@ -149,102 +73,26 @@ public class TextField {
     private int choiceSelection;
     
     private int topFirst;
+    
+    private float extraMarginLeft;
+    private float extraMarginTop;
+    
     /** Creates a new <CODE>TextField</CODE>.
      * @param writer the document <CODE>PdfWriter</CODE>
      * @param box the field location and dimensions
-     * @param fieldName the field name
+     * @param fieldName the field name. If <CODE>null</CODE> only the widget keys
+     * will be included in the field allowing it to be used as a kid field.
      */
     public TextField(PdfWriter writer, Rectangle box, String fieldName) {
-        this.writer = writer;
-        this.box = box;
-        this.fieldName = fieldName;
+        super(writer, box, fieldName);
     }
     
-    protected BaseFont getRealFont() throws IOException, DocumentException {
-        if (font == null)
-            return BaseFont.createFont(BaseFont.HELVETICA, BaseFont.WINANSI, false);
-        else
-            return font;
-    }
-    
-    protected PdfAppearance getBorderAppearance() throws IOException, DocumentException {
-        PdfAppearance app = writer.getDirectContent().createAppearance(box.width(), box.height());
-        switch (rotation) {
-            case 90:
-                app.setMatrix(0, 1, -1, 0, box.height(), 0);
-                break;
-            case 180:
-                app.setMatrix(-1, 0, 0, -1, box.width(), box.height());
-                break;
-            case 270:
-                app.setMatrix(0, -1, 1, 0, 0, box.width());
-                break;
-        }
-        // background
-        if (backgroundColor != null) {
-            app.setColorFill(backgroundColor);
-            app.rectangle(0, 0, box.width(), box.height());
-            app.fill();
-        }
-        // border
-        if (borderStyle == PdfBorderDictionary.STYLE_DASHED) {
-            if (borderWidth != 0 && borderColor != null) {
-                app.setLineDash(3, 0);
-                app.setColorStroke(borderColor);
-                app.setLineWidth(borderWidth);
-                app.rectangle(borderWidth / 2, borderWidth / 2, box.width() - borderWidth, box.height() - borderWidth);
-                app.stroke();
-            }
-        }
-        else if (borderStyle == PdfBorderDictionary.STYLE_UNDERLINE) {
-            if (borderWidth != 0 && borderColor != null) {
-                app.setColorStroke(borderColor);
-                app.setLineWidth(borderWidth);
-                app.moveTo(0, borderWidth / 2);
-                app.lineTo(box.width(), borderWidth / 2);
-                app.stroke();
-            }
-        }
-        else if (borderStyle == PdfBorderDictionary.STYLE_BEVELED) {
-            if (borderWidth != 0 && borderColor != null) {
-                app.setColorStroke(borderColor);
-                app.setLineWidth(borderWidth);
-                app.rectangle(borderWidth / 2, borderWidth / 2, box.width() - borderWidth, box.height() - borderWidth);
-                app.stroke();
-            }
-            // beveled
-            Color actual = backgroundColor;
-            if (actual == null)
-                actual = Color.white;
-            app.setGrayFill(1);
-            drawTopFrame(app);
-            app.setColorFill(actual.darker());
-            drawBottomFrame(app);
-        }
-        else if (borderStyle == PdfBorderDictionary.STYLE_INSET) {
-            if (borderWidth != 0 && borderColor != null) {
-                app.setColorStroke(borderColor);
-                app.setLineWidth(borderWidth);
-                app.rectangle(borderWidth / 2, borderWidth / 2, box.width() - borderWidth, box.height() - borderWidth);
-                app.stroke();
-            }
-            // inset
-            app.setGrayFill(0.5f);
-            drawTopFrame(app);
-            app.setGrayFill(0.75f);
-            drawBottomFrame(app);
-        }
-        else {
-            if (borderWidth != 0 && borderColor != null) {
-                app.setColorStroke(borderColor);
-                app.setLineWidth(borderWidth);
-                app.rectangle(borderWidth / 2, borderWidth / 2, box.width() - borderWidth, box.height() - borderWidth);
-                app.stroke();
-            }
-        }
-        return app;
-    }
-    
+    /**
+     * Gets the appearance for this TextField.
+     * @return the appearance object for this TextField
+     * @throws IOException
+     * @throws DocumentException
+     */
     public PdfAppearance getAppearance() throws IOException, DocumentException {
         PdfAppearance app = getBorderAppearance();
         app.beginVariableText();
@@ -255,11 +103,17 @@ public class TextField {
         BaseFont ufont = getRealFont();
         boolean borderExtra = borderStyle == PdfBorderDictionary.STYLE_BEVELED || borderStyle == PdfBorderDictionary.STYLE_INSET;
         float h = box.height() - borderWidth * 2;
-        if (borderExtra)
+        float bw2 = borderWidth;
+        if (borderExtra) {
             h -= borderWidth * 2;
+            bw2 *= 2;
+        }
+        h -= extraMarginTop;
         float offsetX = (borderExtra ? 2 * borderWidth : borderWidth);
+        offsetX = Math.max(offsetX, 1);
+        float offX = Math.min(bw2, offsetX);
         app.saveState();
-        app.rectangle(offsetX, offsetX, box.width() - 2 * offsetX, box.height() - 2 * offsetX);
+        app.rectangle(offX, offX, box.width() - 2 * offX, box.height() - 2 * offX);
         app.clip();
         app.newPath();
         if (textColor == null)
@@ -267,10 +121,17 @@ public class TextField {
         else
             app.setColorFill(textColor);
         app.beginText();
+        String ptext = text; //fixed by Kazuya Ujihara (ujihara.jp)
+        if ((options & PASSWORD) != 0) { 
+            char[] pchar = new char[text.length()];
+            for (int i = 0; i < text.length(); i++)
+                pchar[i] = '*';
+            ptext = new String(pchar);
+        }
         if ((options & MULTILINE) != 0) {
             float usize = fontSize;
-            float width = box.width() - 3 * offsetX;
-            ArrayList breaks = getHardBreaks(text);
+            float width = box.width() - 3 * offsetX - extraMarginLeft;
+            ArrayList breaks = getHardBreaks(ptext);
             ArrayList lines = breaks;
             float factor = ufont.getFontDescriptor(BaseFont.BBOXURY, 1) - ufont.getFontDescriptor(BaseFont.BBOXLLY, 1);
             if (usize == 0) {
@@ -298,15 +159,15 @@ public class TextField {
             String nt = (String)lines.get(0);
             if (alignment == Element.ALIGN_RIGHT) {
                 float wd = ufont.getWidthPoint(nt, usize);
-                app.moveText(box.width() - 2 * offsetX - wd, offsetY);
+                app.moveText(extraMarginLeft + box.width() - 2 * offsetX - wd, offsetY);
             }
             else if (alignment == Element.ALIGN_CENTER) {
                 nt = nt.trim();
                 float wd = ufont.getWidthPoint(nt, usize);
-                app.moveText(box.width() / 2  - wd / 2, offsetY);
+                app.moveText(extraMarginLeft + box.width() / 2  - wd / 2, offsetY);
             }
             else
-                app.moveText(2 * offsetX, offsetY);
+                app.moveText(extraMarginLeft + 2 * offsetX, offsetY);
             app.showText(nt);
             int maxline = (int)(h / usize / factor) + 1;
             maxline = Math.min(maxline, lines.size());
@@ -314,12 +175,12 @@ public class TextField {
                 nt = (String)lines.get(k);
                 if (alignment == Element.ALIGN_RIGHT) {
                     float wd = ufont.getWidthPoint(nt, usize);
-                    app.moveText(box.width() - 2 * offsetX - wd - app.getXTLM(), 0);
+                    app.moveText(extraMarginLeft + box.width() - 2 * offsetX - wd - app.getXTLM(), 0);
                 }
                 else if (alignment == Element.ALIGN_CENTER) {
                     nt = nt.trim();
                     float wd = ufont.getWidthPoint(nt, usize);
-                    app.moveText(box.width() / 2  - wd / 2 - app.getXTLM(), 0);
+                    app.moveText(extraMarginLeft + box.width() / 2  - wd / 2 - app.getXTLM(), 0);
                 }
                 app.newlineShowText(nt);
             }
@@ -328,31 +189,57 @@ public class TextField {
             float usize = fontSize;
             if (usize == 0) {
                 float maxCalculatedSize = h / (ufont.getFontDescriptor(BaseFont.BBOXURX, 1) - ufont.getFontDescriptor(BaseFont.BBOXLLY, 1));
-                float wd = ufont.getWidthPoint(text, 1);
+                float wd = ufont.getWidthPoint(ptext, 1);
                 if (wd == 0)
                     usize = maxCalculatedSize;
                 else
-                    usize = (box.width() - 2 * offsetX) / wd;
+                    usize = (box.width() - extraMarginLeft - 2 * offsetX) / wd;
                 if (usize > maxCalculatedSize)
                     usize = maxCalculatedSize;
                 if (usize < 4)
                     usize = 4;
             }
             app.setFontAndSize(ufont, usize);
-            float offsetY = offsetX + (h - ufont.getFontDescriptor(BaseFont.ASCENT, usize)) / 2;
-            if (offsetY < offsetX)
-                offsetY = offsetX;
-            if (alignment == Element.ALIGN_RIGHT) {
-                float wd = ufont.getWidthPoint(text, usize);
-                app.moveText(box.width() - 2 * offsetX - wd, offsetY);
+            float offsetY = offX + ((box.height() - 2*offX) - ufont.getFontDescriptor(BaseFont.ASCENT, usize)) / 2;
+            if (offsetY < offX)
+                offsetY = offX;
+            if (offsetY - offX < -ufont.getFontDescriptor(BaseFont.DESCENT, usize)) {
+                float ny = -ufont.getFontDescriptor(BaseFont.DESCENT, usize) + offX;
+                float dy = box.height() - offX - ufont.getFontDescriptor(BaseFont.ASCENT, usize);
+                offsetY = Math.min(ny, Math.max(offsetY, dy));
             }
-            else if (alignment == Element.ALIGN_CENTER) {
-                float wd = ufont.getWidthPoint(text, usize);
-                app.moveText(box.width() / 2  - wd / 2, offsetY);
+            if ((options & COMB) != 0 && maxCharacterLength > 0) {
+                int textLen = Math.min(maxCharacterLength, ptext.length());
+                int position = 0;
+                if (alignment == Element.ALIGN_RIGHT) {
+                    position = maxCharacterLength - textLen;
+                }
+                else if (alignment == Element.ALIGN_CENTER) {
+                    position = (maxCharacterLength - textLen) / 2;
+                }
+                float step = (box.width() - extraMarginLeft) / maxCharacterLength;
+                float start = step / 2 + position * step;
+                for (int k = 0; k < textLen; ++k) {
+                    String c = ptext.substring(k, k + 1);
+                    float wd = ufont.getWidthPoint(c, usize);
+                    app.setTextMatrix(extraMarginLeft + start - wd / 2, offsetY - extraMarginTop);
+                    app.showText(c);
+                    start += step;
+                }
             }
-            else
-                app.moveText(2 * offsetX, offsetY);
-            app.showText(text);
+            else {
+                if (alignment == Element.ALIGN_RIGHT) {
+                    float wd = ufont.getWidthPoint(ptext, usize);
+                    app.moveText(extraMarginLeft + box.width() - 2 * offsetX - wd, offsetY - extraMarginTop);
+                }
+                else if (alignment == Element.ALIGN_CENTER) {
+                    float wd = ufont.getWidthPoint(ptext, usize);
+                    app.moveText(extraMarginLeft + box.width() / 2  - wd / 2, offsetY - extraMarginTop);
+                }
+                else
+                    app.moveText(extraMarginLeft + 2 * offsetX, offsetY - extraMarginTop);
+                app.showText(ptext);
+            }
         }
         app.endText();
         app.restoreState();
@@ -429,133 +316,18 @@ public class TextField {
         return app;
     }
 
-    protected static ArrayList getHardBreaks(String text) {
-        ArrayList arr = new ArrayList();
-        char cs[] = text.toCharArray();
-        int len = cs.length;
-        StringBuffer buf = new StringBuffer();
-        for (int k = 0; k < len; ++k) {
-            char c = cs[k];
-            if (c == '\r') {
-                if (k + 1 < len && cs[k + 1] == '\n')
-                    ++k;
-                arr.add(buf.toString());
-                buf = new StringBuffer();
-            }
-            else if (c == '\n') {
-                arr.add(buf.toString());
-                buf = new StringBuffer();
-            }
-            else
-                buf.append(c);
-        }
-        arr.add(buf.toString());
-        return arr;
-    }
-    
-    protected static void trimRight(StringBuffer buf) {
-        int len = buf.length();
-        while (true) {
-            if (len == 0)
-                return;
-            if (buf.charAt(--len) != ' ')
-                return;
-            buf.setLength(len);
-        }
-    }
-    
-    protected static ArrayList breakLines(ArrayList breaks, BaseFont font, float fontSize, float width) {
-        ArrayList lines = new ArrayList();
-        StringBuffer buf = new StringBuffer();
-        for (int ck = 0; ck < breaks.size(); ++ck) {
-            buf.setLength(0);
-            float w = 0;
-            char cs[] = ((String)breaks.get(ck)).toCharArray();
-            int len = cs.length;
-            // 0 inline first, 1 inline, 2 spaces
-            int state = 0;
-            int lastspace = -1;
-            char c = 0;
-            int refk = 0;
-            for (int k = 0; k < len; ++k) {
-                c = cs[k];
-                switch (state) {
-                    case 0:
-                        w += font.getWidthPoint(c, fontSize);
-                        buf.append(c);
-                        if (w > width) {
-                            w = 0;
-                            if (buf.length() > 1) {
-                                --k;
-                                buf.setLength(buf.length() - 1);
-                            }
-                            lines.add(buf.toString());
-                            buf.setLength(0);
-                            refk = k;
-                            if (c == ' ')
-                                state = 2;
-                            else
-                                state = 1;
-                        }
-                        else {
-                            if (c != ' ')
-                                state = 1;
-                        }
-                        break;
-                    case 1:
-                        w += font.getWidthPoint(c, fontSize);
-                        buf.append(c);
-                        if (c == ' ')
-                            lastspace = k;
-                        if (w > width) {
-                            w = 0;
-                            if (lastspace >= 0) {
-                                k = lastspace;
-                                buf.setLength(lastspace - refk);
-                                trimRight(buf);
-                                lines.add(buf.toString());
-                                buf.setLength(0);
-                                refk = k;
-                                lastspace = -1;
-                                state = 2;
-                            }
-                            else {
-                                if (buf.length() > 1) {
-                                    --k;
-                                    buf.setLength(buf.length() - 1);
-                                }
-                                lines.add(buf.toString());
-                                buf.setLength(0);
-                                refk = k;
-                                if (c == ' ')
-                                    state = 2;
-                            }
-                        }
-                        break;
-                    case 2:
-                        if (c != ' ') {
-                            w = 0;
-                            --k;
-                            state = 1;
-                        }
-                        break;
-                }
-            }
-            trimRight(buf);
-            lines.add(buf.toString());
-        }
-        return lines;
-    }
-        
     /** Gets a new text field.
      * @throws IOException on error
      * @throws DocumentException on error
      * @return a new text field
      */    
     public PdfFormField getTextField() throws IOException, DocumentException {
+        if (maxCharacterLength <= 0)
+            options &= ~COMB;
+        if ((options & COMB) != 0)
+            options &= ~MULTILINE;
         PdfFormField field = PdfFormField.createTextField(writer, false, false, maxCharacterLength);
         field.setWidget(box, PdfAnnotation.HIGHLIGHT_INVERT);
-        field.setFieldName(fieldName);
         switch (alignment) {
             case Element.ALIGN_CENTER:
                 field.setQuadding(PdfFormField.Q_CENTER);
@@ -566,9 +338,28 @@ public class TextField {
         }
         if (rotation != 0)
             field.setMKRotation(rotation);
-        field.setValueAsString(text);
-        if (defaultText != null)
-            field.setDefaultValueAsString(defaultText);
+        if (fieldName != null) {
+            field.setFieldName(fieldName);
+            field.setValueAsString(text);
+            if (defaultText != null)
+                field.setDefaultValueAsString(defaultText);
+            if ((options & READ_ONLY) != 0)
+                field.setFieldFlags(PdfFormField.FF_READ_ONLY);
+            if ((options & REQUIRED) != 0)
+                field.setFieldFlags(PdfFormField.FF_REQUIRED);
+            if ((options & MULTILINE) != 0)
+                field.setFieldFlags(PdfFormField.FF_MULTILINE);
+            if ((options & DO_NOT_SCROLL) != 0)
+                field.setFieldFlags(PdfFormField.FF_DONOTSCROLL);
+            if ((options & PASSWORD) != 0)
+                field.setFieldFlags(PdfFormField.FF_PASSWORD);
+            if ((options & FILE_SELECTION) != 0)
+                field.setFieldFlags(PdfFormField.FF_FILESELECT);
+            if ((options & DO_NOT_SPELL_CHECK) != 0)
+                field.setFieldFlags(PdfFormField.FF_DONOTSPELLCHECK);
+            if ((options & COMB) != 0)
+                field.setFieldFlags(PdfFormField.FF_COMB);
+        }
         field.setBorderStyle(new PdfBorderDictionary(borderWidth, borderStyle, new PdfDashPattern(3)));
         PdfAppearance tp = getAppearance();
         field.setAppearance(PdfAnnotation.APPEARANCE_NORMAL, tp);
@@ -596,20 +387,6 @@ public class TextField {
                 field.setFlags(PdfAnnotation.FLAGS_PRINT);
                 break;
         }
-        if ((options & READ_ONLY) != 0)
-            field.setFieldFlags(PdfFormField.FF_READ_ONLY);
-        if ((options & REQUIRED) != 0)
-            field.setFieldFlags(PdfFormField.FF_REQUIRED);
-        if ((options & MULTILINE) != 0)
-            field.setFieldFlags(PdfFormField.FF_MULTILINE);
-        if ((options & DO_NOT_SCROLL) != 0)
-            field.setFieldFlags(PdfFormField.FF_DONOTSCROLL);
-        if ((options & PASSWORD) != 0)
-            field.setFieldFlags(PdfFormField.FF_PASSWORD);
-        if ((options & FILE_SELECTION) != 0)
-            field.setFieldFlags(PdfFormField.FF_FILESELECT);
-        if ((options & DO_NOT_SPELL_CHECK) != 0)
-            field.setFieldFlags(PdfFormField.FF_DONOTSPELLCHECK);
         return field;
     }
     
@@ -632,14 +409,14 @@ public class TextField {
     }
 
     protected PdfFormField getChoiceField(boolean isList) throws IOException, DocumentException {
-        options &= ~MULTILINE;
+        options &= (~MULTILINE) & (~COMB);
         String uchoices[] = choices;
         if (uchoices == null)
             uchoices = new String[0];
         int topChoice = choiceSelection;
         if (topChoice >= uchoices.length)
             topChoice = uchoices.length - 1;
-        text = "";
+        if (text == null) text = ""; //fixed by Kazuya Ujihara (ujihara.jp)
         if (topChoice >= 0)
             text = uchoices[topChoice];
         if (topChoice < 0)
@@ -667,18 +444,26 @@ public class TextField {
                 field = PdfFormField.createCombo(writer, (options & EDIT) != 0, mix, topChoice);
         }
         field.setWidget(box, PdfAnnotation.HIGHLIGHT_INVERT);
-        field.setFieldName(fieldName);
         if (rotation != 0)
             field.setMKRotation(rotation);
-        if (uchoices.length > 0) {
-            if (mix != null) {
-                field.setValueAsString(mix[topChoice][0]);
-                field.setDefaultValueAsString(mix[topChoice][0]);
+        if (fieldName != null) {
+            field.setFieldName(fieldName);
+            if (uchoices.length > 0) {
+                if (mix != null) {
+                    field.setValueAsString(mix[topChoice][0]);
+                    field.setDefaultValueAsString(mix[topChoice][0]);
+                }
+                else {
+                    field.setValueAsString(text);
+                    field.setDefaultValueAsString(text);
+                }
             }
-            else {
-                field.setValueAsString(text);
-                field.setDefaultValueAsString(text);
-            }
+            if ((options & READ_ONLY) != 0)
+                field.setFieldFlags(PdfFormField.FF_READ_ONLY);
+            if ((options & REQUIRED) != 0)
+                field.setFieldFlags(PdfFormField.FF_REQUIRED);
+            if ((options & DO_NOT_SPELL_CHECK) != 0)
+                field.setFieldFlags(PdfFormField.FF_DONOTSPELLCHECK);
         }
         field.setBorderStyle(new PdfBorderDictionary(borderWidth, borderStyle, new PdfDashPattern(3)));
         PdfAppearance tp;
@@ -714,242 +499,7 @@ public class TextField {
                 field.setFlags(PdfAnnotation.FLAGS_PRINT);
                 break;
         }
-        if ((options & READ_ONLY) != 0)
-            field.setFieldFlags(PdfFormField.FF_READ_ONLY);
-        if ((options & REQUIRED) != 0)
-            field.setFieldFlags(PdfFormField.FF_REQUIRED);
-        if ((options & DO_NOT_SPELL_CHECK) != 0)
-            field.setFieldFlags(PdfFormField.FF_DONOTSPELLCHECK);
         return field;
-    }
-    
-    private void drawTopFrame(PdfAppearance app) {
-        app.moveTo(borderWidth, borderWidth);
-        app.lineTo(borderWidth, box.height() - borderWidth);
-        app.lineTo(box.width() - borderWidth, box.height() - borderWidth);
-        app.lineTo(box.width() - 2 * borderWidth, box.height() - 2 * borderWidth);
-        app.lineTo(2 * borderWidth, box.height() - 2 * borderWidth);
-        app.lineTo(2 * borderWidth, 2 * borderWidth);
-        app.lineTo(borderWidth, borderWidth);
-        app.fill();
-    }
-    
-    private void drawBottomFrame(PdfAppearance app) {
-        app.moveTo(borderWidth, borderWidth);
-        app.lineTo(box.width() - borderWidth, borderWidth);
-        app.lineTo(box.width() - borderWidth, box.height() - borderWidth);
-        app.lineTo(box.width() - 2 * borderWidth, box.height() - 2 * borderWidth);
-        app.lineTo(box.width() - 2 * borderWidth, 2 * borderWidth);
-        app.lineTo(2 * borderWidth, 2 * borderWidth);
-        app.lineTo(borderWidth, borderWidth);
-        app.fill();
-    }
-    /** Gets the border width in points.
-     * @return the border width in points
-     */
-    public float getBorderWidth() {
-        return this.borderWidth;
-    }
-    
-    /** Sets the border width in points. To eliminate the border
-     * set the border color to <CODE>null</CODE>.
-     * @param borderWidth the border width in points
-     */
-    public void setBorderWidth(float borderWidth) {
-        this.borderWidth = borderWidth;
-    }
-    
-    /** Gets the border style.
-     * @return the border style
-     */
-    public int getBorderStyle() {
-        return this.borderStyle;
-    }
-    
-    /** Sets the border style. The styles are found in <CODE>PdfBorderDictionary</CODE>
-     * and can be <CODE>STYLE_SOLID</CODE>, <CODE>STYLE_DASHED</CODE>,
-     * <CODE>STYLE_BEVELED</CODE>, <CODE>STYLE_INSET</CODE> and
-     * <CODE>STYLE_UNDERLINE</CODE>.
-     * @param borderStyle the border style
-     */
-    public void setBorderStyle(int borderStyle) {
-        this.borderStyle = borderStyle;
-    }
-    
-    /** Gets the border color.
-     * @return the border color
-     */
-    public Color getBorderColor() {
-        return this.borderColor;
-    }
-    
-    /** Sets the border color. Set to <CODE>null</CODE> to remove
-     * the border.
-     * @param borderColor the border color
-     */
-    public void setBorderColor(Color borderColor) {
-        this.borderColor = borderColor;
-    }
-    
-    /** Gets the background color.
-     * @return the background color
-     */
-    public Color getBackgroundColor() {
-        return this.backgroundColor;
-    }
-    
-    /** Sets the background color. set to <CODE>null</CODE> for
-     * transparent background.
-     * @param backgroundColor the background color
-     */
-    public void setBackgroundColor(Color backgroundColor) {
-        this.backgroundColor = backgroundColor;
-    }
-    
-    /** Gets the text color.
-     * @return the text color
-     */
-    public Color getTextColor() {
-        return this.textColor;
-    }
-    
-    /** Sets the text color. If <CODE>null</CODE> the color used
-     * will be black.
-     * @param textColor the text color
-     */
-    public void setTextColor(Color textColor) {
-        this.textColor = textColor;
-    }
-    
-    /** Gets the text font.
-     * @return the text font
-     */
-    public BaseFont getFont() {
-        return this.font;
-    }
-    
-    /** Sets the text font. if <CODE>null</CODE> then Helvetica
-     * will be used.
-     * @param font the text font
-     */
-    public void setFont(BaseFont font) {
-        this.font = font;
-    }
-    
-    /** Gets the font size.
-     * @return the font size
-     */
-    public float getFontSize() {
-        return this.fontSize;
-    }
-    
-    /** Sets the font size. If 0 then auto-sizing will be used but
-     * only for text fields.
-     * @param fontSize the font size
-     */
-    public void setFontSize(float fontSize) {
-        this.fontSize = fontSize;
-    }
-    
-    /** Gets the text horizontal alignment.
-     * @return the text horizontal alignment
-     */
-    public int getAlignment() {
-        return this.alignment;
-    }
-    
-    /** Sets the text horizontal alignment. It can be <CODE>Element.ALIGN_LEFT</CODE>,
-     * <CODE>Element.ALIGN_CENTER</CODE> and <CODE>Element.ALIGN_RIGHT</CODE>.
-     * @param alignment the text horizontal alignment
-     */
-    public void setAlignment(int alignment) {
-        this.alignment = alignment;
-    }
-    
-    /** Gets the text.
-     * @return the text
-     */
-    public String getText() {
-        return this.text;
-    }
-    
-    /** Sets the text for text fields.
-     * @param text the text
-     */
-    public void setText(String text) {
-        this.text = text;
-    }
-    
-    /** Gets the field dimension and position.
-     * @return the field dimension and position
-     */
-    public Rectangle getBox() {
-        return this.box;
-    }
-    
-    /** Sets the field dimension and position.
-     * @param box the field dimension and position
-     */
-    public void setBox(Rectangle box) {
-        this.box = box;
-    }
-    
-    /** Gets the field rotation.
-     * @return the field rotation
-     */
-    public int getRotation() {
-        return this.rotation;
-    }
-    
-    /** Sets the field rotation. This value should be the same as
-     * the page rotation where the field will be shown.
-     * @param rotation the field rotation
-     */
-    public void setRotation(int rotation) {
-        if (rotation % 90 != 0)
-            throw new IllegalArgumentException("Rotation must be a multiple of 90.");
-        rotation %= 360;
-        if (rotation < 0)
-            rotation += 360;
-        this.rotation = rotation;
-    }
-    
-    /** Convenience method to set the field rotation the same as the
-     * page rotation.
-     * @param page the page
-     */    
-    public void setRotationFromPage(Rectangle page) {
-        setRotation(page.getRotation());
-    }
-    
-    /** Gets the field visibility flag.
-     * @return the field visibility flag
-     */
-    public int getVisibility() {
-        return this.visibility;
-    }
-    
-    /** Sets the field visibility flag. This flags can be one of
-     * <CODE>VISIBLE</CODE>, <CODE>HIDDEN</CODE>, <CODE>VISIBLE_BUT_DOES_NOT_PRINT</CODE>
-     * and <CODE>HIDDEN_BUT_PRINTABLE</CODE>.
-     * @param visibility field visibility flag
-     */
-    public void setVisibility(int visibility) {
-        this.visibility = visibility;
-    }
-    
-    /** Gets the field name.
-     * @return the field name
-     */
-    public String getFieldName() {
-        return this.fieldName;
-    }
-    
-    /** Sets the field name.
-     * @param fieldName the field name
-     */
-    public void setFieldName(String fieldName) {
-        this.fieldName = fieldName;
     }
     
     /** Gets the default text.
@@ -964,39 +514,6 @@ public class TextField {
      */
     public void setDefaultText(String defaultText) {
         this.defaultText = defaultText;
-    }
-    
-    /** Gets the option flags.
-     * @return the option flags
-     */
-    public int getOptions() {
-        return this.options;
-    }
-    
-    /** Sets the option flags. The option flags can be a combination by oring of
-     * <CODE>READ_ONLY</CODE>, <CODE>REQUIRED</CODE>,
-     * <CODE>MULTILINE</CODE>, <CODE>DO_NOT_SCROLL</CODE>,
-     * <CODE>PASSWORD</CODE>, <CODE>FILE_SELECTION</CODE>,
-     * <CODE>DO_NOT_SPELL_CHECK</CODE> and <CODE>EDIT</CODE>.
-     * @param options the option flags
-     */
-    public void setOptions(int options) {
-        this.options = options;
-    }
-    
-    /** Gets the maximum length of the fields text, in characters.
-     * @return the maximum length of the fields text, in characters.
-     */
-    public int getMaxCharacterLength() {
-        return this.maxCharacterLength;
-    }
-    
-    /** Sets the maximum length of the fields text, in characters.
-     * It is only meaningful for text fields.
-     * @param maxCharacterLength the maximum length of the fields text, in characters
-     */
-    public void setMaxCharacterLength(int maxCharacterLength) {
-        this.maxCharacterLength = maxCharacterLength;
     }
     
     /** Gets the choices to be presented to the user in list/combo
@@ -1047,5 +564,15 @@ public class TextField {
     
     int getTopFirst() {
         return topFirst;
+    }
+    
+    /**
+     * Sets extra margins in text fields to better mimic the Acrobat layout.
+     * @param extraMarginLeft the extra marging left
+     * @param extraMarginTop the extra margin top
+     */    
+    public void setExtraMargin(float extraMarginLeft, float extraMarginTop) {
+        this.extraMarginLeft = extraMarginLeft;
+        this.extraMarginTop = extraMarginTop;
     }
 }

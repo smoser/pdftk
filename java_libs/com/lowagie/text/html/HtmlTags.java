@@ -1,5 +1,5 @@
 /*
- * $Id: HtmlTags.java,v 1.34 2002/06/20 12:47:04 blowagie Exp $
+ * $Id: HtmlTags.java,v 1.69 2005/05/03 14:43:58 blowagie Exp $
  * $Name:  $
  *
  * Copyright 2001, 2002 by Bruno Lowagie.
@@ -304,5 +304,28 @@ public class HtmlTags {
     
 /** the possible value of an alignment attribute */
     public static final String DEFAULT = "Default";
+	
+	/** The DIV tag. */
+	public static final String DIV = "div";
+
+	/** The SPAN tag. */
+	public static final String SPAN = "span";
+	/** The LINK tag. */
+	public static final String LINK = "link";
+	
+	/** This is a possible HTML attribute for the LINK tag. */
+	public static final String TEXT_CSS = "text/css";
+
+	/** This is a possible HTML attribute for the LINK tag. */
+	public static final String REL = "rel";
+
+	/** This is used for inline css style information */
+	public static final String STYLE = "style";
+
+	/** This is a possible HTML attribute for the LINK tag. */
+	public static final String TYPE = "type";
+
+	/** This is a possible HTML attribute. */
+	public static final String STYLESHEET = "stylesheet";
 
 }

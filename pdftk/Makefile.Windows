@@ -29,13 +29,16 @@ export RM= rm
 # if you want pdftk to ask before overwriting a file, set
 # ASK_ABOUT_WARNINGS to true; otherwise: false; override this default
 # with the dont_ask or do_ask command-line options
-CPPFLAGS= -O3 -DPATH_DELIM=0x5c -DASK_ABOUT_WARNINGS=true
-CXXFLAGS= -lgcj -lws2_32
+CPPFLAGS= -O3 -DPATH_DELIM=0x5c -DASK_ABOUT_WARNINGS=true -fdollars-in-identifiers
+CXXFLAGS= -lgcj -lws2_32 -liconv
 
 # gcj flags; these are relevant only to the ../java_libs/Makefile, yet it's
 # handy to configure them here
 #
-export GCJFLAGS=
+# -O3 might cause pdftk to segfault on cat operation (gcc 3.4.4) -- though it
+# works fine on my gcc 3.4.2
+#
+export GCJFLAGS= -O2
 
 #
 export ARFLAGS= rs

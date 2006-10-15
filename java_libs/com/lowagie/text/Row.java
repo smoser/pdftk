@@ -1,5 +1,5 @@
 /*
- * $Id: Row.java,v 1.38 2002/07/09 10:41:40 blowagie Exp $
+ * $Id: Row.java,v 1.63 2005/04/13 09:17:11 blowagie Exp $
  * $Name:  $
  *
  * Copyright 1999, 2000, 2001, 2002 by Bruno Lowagie.
@@ -322,6 +322,7 @@ public class Row implements Element, MarkupAttributes {
  * Returns the type-id of the element in a Row.
  *
  * @param       column  the column of which you'd like to know the type
+ * @return the type-id of the element in the row
  */
     
     int getElementID(int column) {
@@ -337,6 +338,7 @@ public class Row implements Element, MarkupAttributes {
  * Returns the type-id of an Object.
  *
  * @param       element the object of which you'd like to know the type-id, -1 if invalid
+ * @return the type-id of an object
  */
     
     int getObjectID(Object element) {
@@ -434,7 +436,7 @@ public class Row implements Element, MarkupAttributes {
  * @see com.lowagie.text.MarkupAttributes#setMarkupAttribute(java.lang.String, java.lang.String)
  */
     public void setMarkupAttribute(String name, String value) {
-        markupAttributes = (markupAttributes == null) ? new Properties() : markupAttributes;
+        if (markupAttributes == null) markupAttributes = new Properties();
         markupAttributes.put(name, value);
     }
     

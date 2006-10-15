@@ -1,5 +1,5 @@
 /*
- * $Id: ListItem.java,v 1.46 2002/07/09 10:41:35 blowagie Exp $
+ * $Id: ListItem.java,v 1.78 2005/05/03 13:03:48 blowagie Exp $
  * $Name:  $
  *
  * Copyright 1999, 2000, 2001, 2002 by Bruno Lowagie.
@@ -224,7 +224,7 @@ public class ListItem extends Paragraph implements TextElementArray, MarkupAttri
         if ((value = (String)attributes.remove(ElementTags.LEADING)) != null) {
             setLeading(Float.valueOf(value + "f").floatValue());
         }
-        else if ((value = (String)attributes.remove(MarkupTags.CSS_LINEHEIGHT)) != null) {
+        else if ((value = (String)attributes.remove(MarkupTags.CSS_KEY_LINEHEIGHT)) != null) {
             setLeading(MarkupParser.parseLength(value));
         }
         if ((value = (String)attributes.remove(ElementTags.INDENTATIONLEFT)) != null) {

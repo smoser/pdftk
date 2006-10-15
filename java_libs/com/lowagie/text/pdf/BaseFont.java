@@ -1,5 +1,5 @@
 /*
- * $Id: BaseFont.java,v 1.32 2002/06/20 13:18:18 blowagie Exp $
+ * $Id: BaseFont.java,v 1.67 2005/07/26 17:32:39 psoares33 Exp $
  * $Name:  $
  *
  * Copyright 2000, 2001, 2002 by Paulo Soares.
@@ -52,8 +52,8 @@ package com.lowagie.text.pdf;
 import java.io.*;
 import com.lowagie.text.DocumentException;
 import java.util.HashMap;
-import java.util.ArrayList; // ssteward
-import java.util.Iterator; // ssteward
+import java.util.ArrayList;
+import java.util.Iterator;
 
 /**
  * Base class for the several font types supported
@@ -135,9 +135,13 @@ public abstract class BaseFont {
      */    
     public static final int BBOXURY = 8;
     
+    /** java.awt.Font property */
     public static final int AWT_ASCENT = 9;
+    /** java.awt.Font property */
     public static final int AWT_DESCENT = 10;
+    /** java.awt.Font property */
     public static final int AWT_LEADING = 11;
+    /** java.awt.Font property */
     public static final int AWT_MAXADVANCE = 12;
     
     /** The font is Type 1.
@@ -155,6 +159,9 @@ public abstract class BaseFont {
     /** A font already inside the document.
      */    
     public static final int FONT_TYPE_DOCUMENT = 4;
+    /** A Type3 font.
+     */    
+    public static final int FONT_TYPE_T3 = 5;
     /** The Unicode encoding with horizontal writing.
      */    
     public static final String IDENTITY_H = "Identity-H";
@@ -207,6 +214,7 @@ public abstract class BaseFont {
 /** same as differences but with the unicode codes */
     protected char unicodeDifferences[] = new char[256];
     
+    protected int charBBoxes[][] = new int[256][];
 /** encoding used with this font */
     protected String encoding;
     
@@ -285,6 +293,12 @@ public abstract class BaseFont {
             }
         }
         
+        /**
+         * Generates the PDF stream for a font.
+         * @param contents the content of a stream
+         * @param subType the subtype of the font.
+         * @throws DocumentException
+         */
         public StreamFont(byte contents[], String subType) throws DocumentException {
             try {
                 bytes = contents;
@@ -347,7 +361,7 @@ public abstract class BaseFont {
      * @param encoding the encoding to be applied to this font
      * @param embedded true if the font is to be embedded in the PDF
      * @param cached true if the font comes from the cache or is added to
-     * the cache if new. false if the font is always created new
+     * the cache if new, false if the font is always created new
      * @param ttfAfm the true type font or the afm in a byte array
      * @param pfb the pfb in a byte array
      * @return returns a new font. This font may come from the cache but only if cached
@@ -374,7 +388,7 @@ public abstract class BaseFont {
             if (fontFound != null)
                 return fontFound;
         }
-        if (isBuiltinFonts14 || name.toLowerCase().endsWith(".afm")) {
+        if (isBuiltinFonts14 || name.toLowerCase().endsWith(".afm") || name.toLowerCase().endsWith(".pfm")) {
             fontBuilt = new Type1Font(name, encoding, embedded, ttfAfm, pfb);
             fontBuilt.fastWinansi = encoding.equals(CP1252);
         }
@@ -444,12 +458,13 @@ public abstract class BaseFont {
     
     /**
      * Creates the <CODE>widths</CODE> and the <CODE>differences</CODE> arrays
-     * @throws UnsupportedEncodingException the encoding is not supported
      */
     protected void createEncoding() {
         if (fontSpecific) {
-            for (int k = 0; k < 256; ++k)
+            for (int k = 0; k < 256; ++k) {
                 widths[k] = getRawWidth(k, null);
+                charBBoxes[k] = getRawCharBBox(k, null);
+            }
         }
         else {
             String s;
@@ -471,6 +486,7 @@ public abstract class BaseFont {
                 differences[k] = name;
                 unicodeDifferences[k] = c;
                 widths[k] = getRawWidth((int)c, name);
+                charBBoxes[k] = getRawCharBBox((int)c, name);
             }
         }
     }
@@ -496,7 +512,7 @@ public abstract class BaseFont {
      * Sets the kerning between two Unicode chars.
      * @param char1 the first char
      * @param char2 the second char
-     * @paran kern the kerning to apply in normalized 1000 units
+     * @param kern the kerning to apply in normalized 1000 units
      * @return <code>true</code> if the kerning was applied, <code>false</code> otherwise
      */
     public abstract boolean setKerning(char char1, char char2, int kern);
@@ -540,6 +556,65 @@ public abstract class BaseFont {
         }
         return total;
     }
+    
+/**
+ * Gets the descent of a <CODE>String</CODE> in normalized 1000 units. The descent will always be
+ * less than or equal to zero even if all the characters have an higher descent.
+ * @param text the <CODE>String</CODE> to get the descent of
+ * @return the dexcent in normalized 1000 units
+ */
+    public int getDescent(String text) {
+        int min = 0;
+        char chars[] = text.toCharArray();
+        for (int k = 0; k < chars.length; ++k) {
+            int bbox[] = getCharBBox(chars[k]);
+            if (bbox != null && bbox[1] < min)
+                min = bbox[1];
+        }
+        return min;
+    }
+    
+/**
+ * Gets the ascent of a <CODE>String</CODE> in normalized 1000 units. The ascent will always be
+ * greater than or equal to zero even if all the characters have a lower ascent.
+ * @param text the <CODE>String</CODE> to get the ascent of
+ * @return the ascent in normalized 1000 units
+ */
+    public int getAscent(String text) {
+        int max = 0;
+        char chars[] = text.toCharArray();
+        for (int k = 0; k < chars.length; ++k) {
+            int bbox[] = getCharBBox(chars[k]);
+            if (bbox != null && bbox[3] > max)
+                max = bbox[3];
+        }
+        return max;
+    }
+
+/**
+ * Gets the descent of a <CODE>String</CODE> in points. The descent will always be
+ * less than or equal to zero even if all the characters have an higher descent.
+ * @param text the <CODE>String</CODE> to get the descent of
+ * @param fontSize the size of the font
+ * @return the dexcent in points
+ */
+    public float getDescentPoint(String text, float fontSize)
+    {
+        return (float)getDescent(text) * 0.001f * fontSize;
+    }
+    
+/**
+ * Gets the ascent of a <CODE>String</CODE> in points. The ascent will always be
+ * greater than or equal to zero even if all the characters have a lower ascent.
+ * @param text the <CODE>String</CODE> to get the ascent of
+ * @param fontSize the size of the font
+ * @return the ascent in points
+ */
+    public float getAscentPoint(String text, float fontSize)
+    {
+        return (float)getAscent(text) * 0.001f * fontSize;
+    }
+// ia>    
     
     /**
      * Gets the width of a <CODE>String</CODE> in points taking kerning
@@ -610,7 +685,8 @@ public abstract class BaseFont {
     }
     
     /** Gets the font parameter identified by <CODE>key</CODE>. Valid values
-     * for <CODE>key</CODE> are <CODE>ASCENT</CODE>, <CODE>CAPHEIGHT</CODE>, <CODE>DESCENT</CODE>,
+     * for <CODE>key</CODE> are <CODE>ASCENT</CODE>, <CODE>AWT_ASCENT</CODE>, <CODE>CAPHEIGHT</CODE>, 
+     * <CODE>DESCENT</CODE>, <CODE>AWT_DESCENT</CODE>,
      * <CODE>ITALICANGLE</CODE>, <CODE>BBOXLLX</CODE>, <CODE>BBOXLLY</CODE>, <CODE>BBOXURX</CODE>
      * and <CODE>BBOXURY</CODE>.
      * @param key the parameter to be extracted
@@ -998,5 +1074,45 @@ public abstract class BaseFont {
         ArrayList fonts = new ArrayList();
         recourseFonts(reader.getPageN(page), hits, fonts, 1);
         return fonts;
+    }
+    
+    /**
+     * Gets the smallest box enclosing the character contours. It will return
+     * <CODE>null</CODE> if the font has not the information or the character has no
+     * contours, as in the case of the space, for example. Characters with no contours may
+     * also return [0,0,0,0].
+     * @param c the character to get the contour bounding box from
+     * @return an array of four floats with the bounding box in the format [llx,lly,urx,ury] or
+     * <code>null</code>
+     */    
+    public int[] getCharBBox(char c) {
+        byte b[] = convertToBytes(new String(new char[]{c}));
+        if (b.length == 0)
+            return null;
+        else
+            return charBBoxes[b[0] & 0xff];
+    }
+    
+    protected abstract int[] getRawCharBBox(int c, String name);
+
+    /**
+     * iText expects Arabic Diactrics (tashkeel) to have zero advance but some fonts,
+     * most notably those that come with Windows, like times.ttf, have non-zero
+     * advance for those characters. This method makes those character to have zero
+     * width advance and work correctly in the iText Arabic shaping and reordering
+     * context.
+     */    
+    public void correctArabicAdvance() {
+        for (char c = '\u064b'; c <= '\u0658'; ++c)
+            setCharAdvance(c, 0);
+        setCharAdvance('\u0670', 0);
+        for (char c = '\u06d6'; c <= '\u06dc'; ++c)
+            setCharAdvance(c, 0);
+        for (char c = '\u06df'; c <= '\u06e4'; ++c)
+            setCharAdvance(c, 0);
+        for (char c = '\u06e7'; c <= '\u06e8'; ++c)
+            setCharAdvance(c, 0);
+        for (char c = '\u06ea'; c <= '\u06ed'; ++c)
+            setCharAdvance(c, 0);
     }
 }

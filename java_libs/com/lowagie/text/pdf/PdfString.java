@@ -75,6 +75,7 @@ public class PdfString extends PdfObject {
     
     /** The value of this object. */
     protected String value = NOTHING;
+    protected String originalValue = null;
     
     /** The encoding. */
     protected String encoding = TEXT_PDFDOCENCODING;
@@ -209,6 +210,7 @@ public class PdfString extends PdfObject {
     void decrypt(PdfReader reader) {
         PdfEncryption decrypt = reader.getDecrypt();
         if (decrypt != null) {
+            originalValue = value;
             decrypt.setHashKey(objNum, objGen);
             decrypt.prepareKey();
             bytes = PdfEncodings.convertToBytes(value, null);
@@ -216,7 +218,7 @@ public class PdfString extends PdfObject {
             value = PdfEncodings.convertToString(bytes, null);
         }
     }
-    
+   
     public byte[] getBytes() {
         if (bytes == null) {
 	    /* ssteward, pdftk 1.0: I really needed the PdfString to output TEXT_UNICODE when I asked it to;
@@ -231,8 +233,24 @@ public class PdfString extends PdfObject {
         return bytes;
     }
     
-    public PdfString setWritingMode(boolean hexWriting) {
+    public byte[] getOriginalBytes() {
+        if (originalValue == null)
+            return getBytes();
+        return PdfEncodings.convertToBytes(originalValue, null);
+    }
+    
+    public PdfString setHexWriting(boolean hexWriting) {
         this.hexWriting = hexWriting;
         return this;
+    }
+    
+    public boolean isHexWriting() {
+        return hexWriting;
+    }
+
+    // ssteward; this.encoding not reliable?
+    public boolean isUnicode() {
+	getBytes();
+	return( bytes.length >= 2 && bytes[0] == (byte)254 && bytes[1] == (byte)255 );
     }
 }

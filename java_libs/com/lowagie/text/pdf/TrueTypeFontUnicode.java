@@ -209,7 +209,7 @@ class TrueTypeFontUnicode extends TrueTypeFont implements Comparator{
         // sivan; cff
         if (cff) {
 			dic.put(PdfName.SUBTYPE, PdfName.CIDFONTTYPE0);
-            dic.put(PdfName.BASEFONT, new PdfName(fontName+"-"+encoding));
+            dic.put(PdfName.BASEFONT, new PdfName(subsetPrefix+fontName+"-"+encoding));
         }
 		else {
 			dic.put(PdfName.SUBTYPE, PdfName.CIDFONTTYPE2);
@@ -265,7 +265,7 @@ class TrueTypeFontUnicode extends TrueTypeFont implements Comparator{
         dic.put(PdfName.SUBTYPE, PdfName.TYPE0);
         // The PDF Reference manual advises to add -encoding to CID font names
 		if (cff)
-		  dic.put(PdfName.BASEFONT, new PdfName(fontName+"-"+encoding));
+		  dic.put(PdfName.BASEFONT, new PdfName(subsetPrefix+fontName+"-"+encoding));
 		  //dic.put(PdfName.BASEFONT, new PdfName(subsetPrefix+fontName));
 		else
 		  dic.put(PdfName.BASEFONT, new PdfName(subsetPrefix + fontName));
@@ -321,13 +321,19 @@ class TrueTypeFontUnicode extends TrueTypeFont implements Comparator{
 					// empty on purpose
 				}
 			}
-			
+			/*
 			CFFFont cffFont = new CFFFont(new RandomAccessFileOrArray(b));
 			// test if we can find the font by name and if it's a type1 CFF
 			if (cffFont.exists(fontName) && !cffFont.isCID(fontName)) {
 				byte[] cid = cffFont.getCID( (cffFont.getNames())[0] );
 				if (cid != null) b=cid;
 			}
+			
+			*/
+			
+			CFFFontSubset cff = new CFFFontSubset(new RandomAccessFileOrArray(b),longTag);
+			b = cff.Process( (cff.getNames())[0] );
+			
 			// if the font is already CID, or not found by name, or 
 			// getCID returned null, we just use the data in the CFF
 			// table and hope for the best.
@@ -347,12 +353,20 @@ class TrueTypeFontUnicode extends TrueTypeFont implements Comparator{
 			obj = writer.addToBody(pobj);
 			ind_font = obj.getIndirectReference();
         } else {
-          TrueTypeFontSubSet sb = new TrueTypeFontSubSet(fileName, rf, longTag, directoryOffset, false);
-          byte b[] = sb.process();
-          int lengths[] = new int[]{b.length};
-          pobj = new StreamFont(b, lengths);
-          obj = writer.addToBody(pobj);
-          ind_font = obj.getIndirectReference();
+            byte[] b;
+            if (subset || directoryOffset != 0) {
+                TrueTypeFontSubSet sb = new TrueTypeFontSubSet(fileName, new RandomAccessFileOrArray(rf), longTag, directoryOffset, false);
+                b = sb.process();
+            }
+            else {
+                RandomAccessFileOrArray r = new RandomAccessFileOrArray(rf);
+                b = new byte[r.length()];
+                r.readFully(b);
+            }
+            int lengths[] = new int[]{b.length};
+            pobj = new StreamFont(b, lengths);
+            obj = writer.addToBody(pobj);
+            ind_font = obj.getIndirectReference();
         }
         String subsetPrefix = createSubsetPrefix();
         //if (cff) subsetPrefix = "";
@@ -438,5 +452,29 @@ class TrueTypeFontUnicode extends TrueTypeFont implements Comparator{
         else
             m[1] = advance;
         return true;
+    }
+    
+    public int[] getCharBBox(char c) {
+        if (bboxes == null)
+            return null;
+        HashMap map = null;
+        if (fontSpecific)
+            map = cmap10;
+        else
+            map = cmap31;
+        if (map == null)
+            return null;
+        int m[] = null;
+        if (fontSpecific) {
+            if ((c & 0xff00) == 0 || (c & 0xff00) == 0xf000)
+                m = (int[])map.get(new Integer(c & 0xff));
+            else
+                return null;
+        }
+        else
+            m = (int[])map.get(new Integer(c));
+        if (m == null)
+            return null;
+        return bboxes[m[0]];
     }
 }

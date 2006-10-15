@@ -1,5 +1,5 @@
 /*
- * $Id: Phrase.java,v 1.70 2002/07/09 10:41:39 blowagie Exp $
+ * $Id: Phrase.java,v 1.104 2005/09/05 08:04:55 blowagie Exp $
  * $Name:  $
  *
  * Copyright 1999, 2000, 2001, 2002 by Bruno Lowagie.
@@ -65,7 +65,7 @@ import com.lowagie.text.markup.MarkupParser;
  * A <CODE>Phrase</CODE> has a main <CODE>Font</CODE>, but some chunks
  * within the phrase can have a <CODE>Font</CODE> that differs from the
  * main <CODE>Font</CODE>. All the <CODE>Chunk</CODE>s in a <CODE>Phrase</CODE>
- * have the same <VAR>leading</CODE>.
+ * have the same <CODE>leading</CODE>.
  * <P>
  * Example:
  * <BLOCKQUOTE><PRE>
@@ -100,6 +100,13 @@ public class Phrase extends ArrayList implements TextElementArray, MarkupAttribu
     protected Properties markupAttributes;
     
     // constructors
+    
+/**
+ * Constructs a Phrase that can be used in the static getInstance() method.
+ * @param	dummy	a dummy parameter
+ */
+    private Phrase(boolean dummy) {
+    }
     
 /**
  * Constructs a <CODE>Phrase</CODE> without specifying a leading.
@@ -187,31 +194,69 @@ public class Phrase extends ArrayList implements TextElementArray, MarkupAttribu
     public Phrase(float leading, String string, Font font) {
         this(leading);
         this.font = font;
-        if (font.family() != Font.SYMBOL && font.family() != Font.ZAPFDINGBATS && font.getBaseFont() == null) {
+    	/* bugfix by August Detlefsen */
+        if (string != null && string.length() != 0) {
+            super.add(new Chunk(string, font));
+        }
+    }
+    
+    /**
+     * Gets a special kind of Phrase that changes some characters into corresponding symbols.
+     * @param string
+     * @return a newly constructed Phrase
+     */
+    public static final Phrase getInstance(String string) {
+    	return getInstance(16, string, new Font());
+    }
+    
+    /**
+     * Gets a special kind of Phrase that changes some characters into corresponding symbols.
+     * @param leading
+     * @param string
+     * @return a newly constructed Phrase
+     */
+    public static final Phrase getInstance(int leading, String string) {
+    	return getInstance(leading, string, new Font());
+    }
+    
+    /**
+     * Gets a special kind of Phrase that changes some characters into corresponding symbols.
+     * @param leading
+     * @param string
+     * @param font
+     * @return a newly constructed Phrase
+     */
+    public static final Phrase getInstance(int leading, String string, Font font) {
+    	Phrase p = new Phrase(true);
+    	p.setLeading(leading);
+    	p.font = font;
+    	if (font.family() != Font.SYMBOL && font.family() != Font.ZAPFDINGBATS && font.getBaseFont() == null) {
             int index;
-            while((index = Greek.index(string)) > -1) {
+            while((index = SpecialSymbol.index(string)) > -1) {
                 if (index > 0) {
                     String firstPart = string.substring(0, index);
                     /* bugfix [ #461272 ] CODE CHANGE REQUIRED IN Phrase.java
                        by Arekh Nambiar */
-                    super.add(new Chunk(firstPart, font));
+                    ((ArrayList)p).add(new Chunk(firstPart, font));
                     string = string.substring(index);
                 }
                 Font symbol = new Font(Font.SYMBOL, font.size(), font.style(), font.color());
                 StringBuffer buf = new StringBuffer();
-                buf.append(Greek.getCorrespondingSymbol(string.charAt(0)));
+                buf.append(SpecialSymbol.getCorrespondingSymbol(string.charAt(0)));
                 string = string.substring(1);
-                while (Greek.index(string) == 0) {
-                    buf.append(Greek.getCorrespondingSymbol(string.charAt(0)));
+                while (SpecialSymbol.index(string) == 0) {
+                    buf.append(SpecialSymbol.getCorrespondingSymbol(string.charAt(0)));
                     string = string.substring(1);
                 }
-                super.add(new Chunk(buf.toString(), symbol));
+                ((ArrayList)p).add(new Chunk(buf.toString(), symbol));
             }
         }
-        if (string.length() != 0) {
-            super.add(new Chunk(string, font));
+    	/* bugfix by August Detlefsen */
+        if (string != null && string.length() != 0) {
+        	((ArrayList)p).add(new Chunk(string, font));
         }
-    }
+    	return p;
+    }    
     
 /**
  * Returns a <CODE>Phrase</CODE> that has been constructed taking in account
@@ -227,7 +272,7 @@ public class Phrase extends ArrayList implements TextElementArray, MarkupAttribu
         if ((value = (String)attributes.remove(ElementTags.LEADING)) != null) {
             setLeading(Float.valueOf(value + "f").floatValue());
         }
-        else if ((value = (String)attributes.remove(MarkupTags.CSS_LINEHEIGHT)) != null) {
+        else if ((value = (String)attributes.remove(MarkupTags.CSS_KEY_LINEHEIGHT)) != null) {
             setLeading(MarkupParser.parseLength(value));
         }
         if ((value = (String)attributes.remove(ElementTags.ITEXT)) != null) {
@@ -298,6 +343,7 @@ public class Phrase extends ArrayList implements TextElementArray, MarkupAttribu
  */
     
     public void add(int index, Object o) {
+    	if (o == null) return;
         try {
             Element element = (Element) o;
             if (element.type() == Element.CHUNK) {
@@ -333,6 +379,7 @@ public class Phrase extends ArrayList implements TextElementArray, MarkupAttribu
  */
     
     public boolean add(Object o) {
+    	if (o == null) return false;
         if (o instanceof String) {
             return super.add(new Chunk((String) o, font));
         }
@@ -362,6 +409,9 @@ public class Phrase extends ArrayList implements TextElementArray, MarkupAttribu
                     return super.add((Annotation) o);
                 case Element.TABLE: // case added by David Freels
                     return super.add((Table) o);
+                case Element.PTABLE: // case added by mr. Karen Vardanyan
+                	// This will only work for PDF!!! Not for RTF/HTML
+                    return super.add((com.lowagie.text.pdf.PdfPTable) o);
                 case Element.LIST:
                     return super.add((List) o);
                 case Element.GRAPHIC: // suggested by Steven Balthazor
@@ -380,6 +430,8 @@ public class Phrase extends ArrayList implements TextElementArray, MarkupAttribu
  * <p>
  * This method is a hack to solve a problem I had with phrases that were split between chunks
  * in the wrong place.
+ * @param chunk a Chunk to add to the Phrase
+ * @return true if adding the Chunk succeeded
  */
     
     private synchronized boolean addChunk(Chunk chunk) {
@@ -514,7 +566,7 @@ public class Phrase extends ArrayList implements TextElementArray, MarkupAttribu
  * @see com.lowagie.text.MarkupAttributes#setMarkupAttribute(java.lang.String, java.lang.String)
  */
     public void setMarkupAttribute(String name, String value) {
-        markupAttributes = (markupAttributes == null) ? new Properties() : markupAttributes;
+		if (markupAttributes == null) markupAttributes = new Properties();
         markupAttributes.put(name, value);
     }
     

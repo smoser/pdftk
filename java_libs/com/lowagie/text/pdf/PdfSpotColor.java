@@ -1,5 +1,5 @@
 /*
- * $Id: PdfSpotColor.java,v 1.13 2002/07/09 11:28:24 blowagie Exp $
+ * $Id: PdfSpotColor.java,v 1.45 2005/03/24 12:38:19 blowagie Exp $
  * $Name:  $
  *
  * Copyright 2001, 2002 Paulo Soares
@@ -63,10 +63,10 @@ public class PdfSpotColor{
 /*	The tint value */
     protected float tint;
     
-/*	The color name */
+/**	The color name */
     public PdfName name;
     
-/* The alternative color space */
+/** The alternative color space */
     public Color altcs;
     // constructors
     
@@ -84,15 +84,23 @@ public class PdfSpotColor{
         this.altcs = altcs;
     }
     
+    /**
+     * Gets the tint of the SpotColor.
+     * @return a float
+     */
     public float getTint() {
         return tint;
     }
     
+    /**
+     * Gets the alternative ColorSpace.
+     * @return a Colot
+     */
     public Color getAlternativeCS() {
         return altcs;
     }
     
-    PdfArray getPdfArray(PdfWriter writer) throws IOException {
+    protected PdfObject getSpotObject(PdfWriter writer) throws IOException {
         PdfArray array = new PdfArray(PdfName.SEPARATION);
         array.add(name);
         PdfFunction func = null;
@@ -115,7 +123,7 @@ public class PdfSpotColor{
         }
         else {
             array.add(PdfName.DEVICERGB);
-            func = PdfFunction.type2(writer, new float[]{0, 1}, null, new float[]{0, 0, 0},
+            func = PdfFunction.type2(writer, new float[]{0, 1}, null, new float[]{1, 1, 1},
                 new float[]{(float)altcs.getRed() / 255, (float)altcs.getGreen() / 255, (float)altcs.getBlue() / 255}, 1);
         }
         array.add(func.getReference());

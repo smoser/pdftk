@@ -25,7 +25,7 @@ classes= $(patsubst %.java, %.class, $(sources))
 # the "$*" automatic variable, here
 #
 %.h : %.class
-	$(GCJH) $*;
+	$(GCJH) --classpath="." $*;
 	$(RM) $<
 
 ##

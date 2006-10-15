@@ -1,5 +1,5 @@
 /*
- * $Id: DocWriter.java,v 1.43 2002/07/09 10:41:33 blowagie Exp $
+ * $Id: DocWriter.java,v 1.70 2004/12/14 11:52:47 blowagie Exp $
  * $Name:  $
  *
  * Copyright 1999, 2000, 2001, 2002 by Bruno Lowagie.
@@ -113,7 +113,7 @@ public abstract class DocWriter implements DocListener {
     protected boolean open = false;
 
 /** Do we have to pause all writing actions? */
-    // SID: changed from "pause" to "m_pause" to
+    // ssteward: changed from "pause" to "m_pause" to
     // remove gcj complaints over ambiguity with pause()
     protected boolean m_pause = false;
     
@@ -144,7 +144,8 @@ public abstract class DocWriter implements DocListener {
  * <P>
  * This method should be overriden in the specific <CODE>DocWriter<CODE> classes
  * derived from this abstract class.
- *
+ * 
+ * @param element A high level object to add
  * @return  <CODE>false</CODE>
  * @throws  DocumentException when a document isn't open yet, or has been closed
  */
@@ -179,7 +180,8 @@ public abstract class DocWriter implements DocListener {
  * This method should be overriden in the specific <CODE>DocWriter<CODE> classes
  * derived from this abstract class if they actually support the use of
  * a <CODE>Watermark</CODE>.
- *
+ * 
+ * @param watermark A watermark object
  * @return  <CODE>false</CODE> (because watermarks aren't supported by default).
  */
 
@@ -339,6 +341,7 @@ public abstract class DocWriter implements DocListener {
  */
 
     public void pause() {
+	// ssteward
         m_pause = true;
     }
 
@@ -347,6 +350,7 @@ public abstract class DocWriter implements DocListener {
  */
 
     public void resume() {
+	// ssteward
         m_pause = false;
     }
 
@@ -367,6 +371,7 @@ public abstract class DocWriter implements DocListener {
  * Writes a <CODE>String</CODE> to the <CODE>OutputStream</CODE>.
  *
  * @param string    the <CODE>String</CODE> to write
+ * @throws IOException
  */
 
     protected void write(String string) throws IOException {
@@ -377,6 +382,7 @@ public abstract class DocWriter implements DocListener {
  * Writes a number of tabs.
  *
  * @param   indent  the number of tabs to add
+ * @throws IOException
  */
 
     protected void addTabs(int indent) throws IOException {
@@ -391,6 +397,7 @@ public abstract class DocWriter implements DocListener {
  *
  * @param   key     the name of an attribute
  * @param   value   the value of an attribute
+ * @throws IOException
  */
 
     protected void write(String key, String value)
@@ -407,6 +414,7 @@ public abstract class DocWriter implements DocListener {
  * Writes a starttag to the outputstream.
  *
  * @param   tag     the name of the tag
+ * @throws IOException
  */
 
     protected void writeStart(String tag)
@@ -419,6 +427,7 @@ public abstract class DocWriter implements DocListener {
  * Writes an endtag to the outputstream.
  *
  * @param   tag     the name of the tag
+ * @throws IOException
  */
 
     protected void writeEnd(String tag)
@@ -431,6 +440,7 @@ public abstract class DocWriter implements DocListener {
 
 /**
  * Writes an endtag to the outputstream.
+ * @throws IOException
  */
 
     protected void writeEnd()
@@ -444,6 +454,8 @@ public abstract class DocWriter implements DocListener {
  * Writes the markup attributes of the specified <CODE>MarkupAttributes</CODE>
  * object to the <CODE>OutputStream</CODE>.
  * @param mAtt   the <CODE>MarkupAttributes</CODE> to write.
+ * @return true, if writing the markup attributes succeeded
+ * @throws IOException
  */
     protected boolean writeMarkupAttributes(MarkupAttributes mAtt)
      throws IOException
@@ -492,7 +504,9 @@ public abstract class DocWriter implements DocListener {
 	public void clearTextWrap() throws DocumentException {
 		// do nothing
 	}
-
+    /**
+     * @see com.lowagie.text.DocListener#setMarginMirroring(boolean)
+     */
     public boolean setMarginMirroring(boolean MarginMirroring) {
         return false;
     }

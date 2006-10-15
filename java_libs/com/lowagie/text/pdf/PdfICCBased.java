@@ -45,7 +45,7 @@
  */
 package com.lowagie.text.pdf;
 
-import com.lowagie.text.pdf.ICC_Profile;
+import java.awt.color.ICC_Profile;
 
 import com.lowagie.text.ExceptionConverter;
 

@@ -144,6 +144,10 @@ public class PRTokeniser {
         return new RandomAccessFileOrArray(file);
     }
     
+    public RandomAccessFileOrArray getFile() {
+        return file;
+    }
+    
     public String readString(int size) throws IOException {
         StringBuffer buf = new StringBuffer();
         int ch;
@@ -500,21 +504,21 @@ public class PRTokeniser {
 	}
 	while ( !eol && ptr < len ) {
 	    switch (c) {
-	    case -1:
-	    case '\n':
-		eol = true;
-		break;
-	    case '\r':
-		eol = true;
-		int cur = getFilePointer();
-		if ((read()) != '\n') {
-		    seek(cur);
-		}
-		break;
-	    default:
-		input[ptr++] = (byte)c;
-		break;
-	    }
+                case -1:
+                case '\n':
+                    eol = true;
+                    break;
+                case '\r':
+                    eol = true;
+                    int cur = getFilePointer();
+                    if ((read()) != '\n') {
+                        seek(cur);
+                    }
+                    break;
+                default:
+                    input[ptr++] = (byte)c;
+                    break;
+            }
 
 	    // break loop? do it before we read() again
 	    if( eol || len <= ptr ) {
@@ -523,7 +527,7 @@ public class PRTokeniser {
 	    else {
 		c = read();
 	    }
-	}
+        }
         if (ptr >= len) {
             eol = false;
             while (!eol) {
