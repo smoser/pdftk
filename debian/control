@@ -1,8 +1,9 @@
 Source: pdftk
-Maintainer: Aurélien GÉRÔME <ag@roxor.cx>
+Maintainer: Ubuntu MOTU Developers <ubuntu-motu@lists.ubuntu.com>
+XSBC-Original-Maintainer: Aurélien GÉRÔME <ag@roxor.cx>
 Section: text
 Priority: optional
-Build-Depends: debhelper (>= 4.0.0), gcj-4.1, g++-4.1
+Build-Depends: debhelper (>= 4.0.0), gcj-4.2, g++-4.2, java-gcj-compat, dpatch
 Standards-Version: 3.7.2
 
 Package: pdftk

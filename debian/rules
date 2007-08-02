@@ -5,6 +5,8 @@
 # Uncomment this to turn on verbose mode.
 #export DH_VERBOSE=1
 
+include /usr/share/dpatch/dpatch.make
+
 # These are used for cross-compiling and for saving the configure script
 # from having to guess our platform (since we know it already)
 DEB_HOST_GNU_TYPE   ?= $(shell dpkg-architecture -qDEB_HOST_GNU_TYPE)
@@ -17,13 +19,13 @@ ifeq (,$(findstring nostrip,$(DEB_BUILD_OPTIONS)))
 	INSTALL_PROGRAM += -s
 endif
 
-build: build-stamp
+build: patch build-stamp
 build-stamp: 
 	dh_testdir
 	cd $(CURDIR)/pdftk && $(MAKE) -f Makefile.Debian
 	touch build-stamp
 
-clean: debian-clean
+clean: debian-clean unpatch
 	dh_clean
 
 debian-clean:	

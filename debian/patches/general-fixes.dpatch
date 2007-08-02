@@ -1,0 +1,154 @@
+#! /bin/sh /usr/share/dpatch/dpatch-run
+## general-fixes.dpatch by Steve Kowalik <stevenk@ubuntu.com>
+##
+## All lines beginning with `## DP:' are a description of the patch.
+## DP: Multiple fixes:
+## DP: + Change the gcj version to 4.2. 
+## DP: + Liberally sprinkle include paths around different Makefiles.
+## DP: + Don't remove .class files in certain Makefiles since this build system
+## DP:   is "special"
+## DP: + Mark .class files as .PRECIOUS in pdf so they don't get cleaned up.
+
+@DPATCH@
+diff -urNad pdftk-1.40~/java_libs/com/lowagie/bc/asn1/Makefile pdftk-1.40/java_libs/com/lowagie/bc/asn1/Makefile
+--- pdftk-1.40~/java_libs/com/lowagie/bc/asn1/Makefile	2006-07-28 08:18:06.000000000 +1000
++++ pdftk-1.40/java_libs/com/lowagie/bc/asn1/Makefile	2007-08-02 17:29:10.000000000 +1000
+@@ -25,8 +25,7 @@
+ # the "$*" automatic variable, here
+ #
+ %.h : %.class
+-	$(GCJH) --classpath="." $*;
+-	$(RM) $<
++	$(GCJH) --classpath="." -I../../../.. $*;
+ 
+ ##
+ # targets
+diff -urNad pdftk-1.40~/java_libs/com/lowagie/text/Makefile pdftk-1.40/java_libs/com/lowagie/text/Makefile
+--- pdftk-1.40~/java_libs/com/lowagie/text/Makefile	2007-08-02 00:25:00.000000000 +1000
++++ pdftk-1.40/java_libs/com/lowagie/text/Makefile	2007-08-02 17:29:10.000000000 +1000
+@@ -2,6 +2,8 @@
+ # This is part of pdftk; visit: www.pdftk.com
+ #
+ 
++.PRECIOUS: %.class
++
+ ##
+ # variables
+ 
+@@ -25,8 +27,7 @@
+ # the "$*" automatic variable, here
+ #
+ %.h : %.class
+-	$(GCJH) --classpath="." $*;
+-	$(RM) $<
++	$(GCJH) --classpath="." -I../../.. $*;
+ 
+ ##
+ # targets
+@@ -38,3 +39,6 @@
+ 
+ clean :
+ 	$(RM) $(RMFLAGS) *.o *.h *.class *.a
++
++.SECONDARY: %.class
++
+diff -urNad pdftk-1.40~/java_libs/com/lowagie/text/pdf/Makefile pdftk-1.40/java_libs/com/lowagie/text/pdf/Makefile
+--- pdftk-1.40~/java_libs/com/lowagie/text/pdf/Makefile	2006-07-27 06:15:10.000000000 +1000
++++ pdftk-1.40/java_libs/com/lowagie/text/pdf/Makefile	2007-08-02 17:29:10.000000000 +1000
+@@ -16,17 +16,16 @@
+ # implicit rules for creating A from B
+ 
+ %.o : %.java
+-	$(GCJ) $(GCJFLAGS) -c $< -o $@
++	$(GCJ) $(GCJFLAGS) -I../../../.. -c $< -o $@
+ 
+ %.class : %.java
+-	$(GCJ) $(GCJFLAGS) -C $<
++	$(GCJ) $(GCJFLAGS) -I../../../.. -C $<
+ 
+ # gcjh doesn't want the ".class" extension, so use
+ # the "$*" automatic variable, here
+ #
+ %.h : %.class
+-	$(GCJH) --classpath="." $*;
+-	$(RM) $<
++	$(GCJH) --classpath="." -I../../../.. $*;
+ 
+ ##
+ # targets
+diff -urNad pdftk-1.40~/java_libs/com/lowagie/text/pdf/codec/postscript/Makefile pdftk-1.40/java_libs/com/lowagie/text/pdf/codec/postscript/Makefile
+--- pdftk-1.40~/java_libs/com/lowagie/text/pdf/codec/postscript/Makefile	2006-07-28 08:21:06.000000000 +1000
++++ pdftk-1.40/java_libs/com/lowagie/text/pdf/codec/postscript/Makefile	2007-08-02 17:29:32.000000000 +1000
+@@ -25,8 +25,7 @@
+ # the "$*" automatic variable, here
+ #
+ %.h : %.class
+-	$(GCJH) --classpath="." $*;
+-	$(RM) $<
++	$(GCJH) --classpath="." -I../../../../../.. $*;
+ 
+ ##
+ # targets
+diff -urNad pdftk-1.40~/java_libs/com/lowagie/text/pdf/codec/wmf/Makefile pdftk-1.40/java_libs/com/lowagie/text/pdf/codec/wmf/Makefile
+--- pdftk-1.40~/java_libs/com/lowagie/text/pdf/codec/wmf/Makefile	2006-07-27 06:15:32.000000000 +1000
++++ pdftk-1.40/java_libs/com/lowagie/text/pdf/codec/wmf/Makefile	2007-08-02 17:29:10.000000000 +1000
+@@ -25,8 +25,7 @@
+ # the "$*" automatic variable, here
+ #
+ %.h : %.class
+-	$(GCJH) --classpath="." $*;
+-	$(RM) $<
++	$(GCJH) --classpath="." -I../../../../../.. $*;
+ 
+ ##
+ # targets
+diff -urNad pdftk-1.40~/java_libs/com/lowagie/text/xml/xmp/Makefile pdftk-1.40/java_libs/com/lowagie/text/xml/xmp/Makefile
+--- pdftk-1.40~/java_libs/com/lowagie/text/xml/xmp/Makefile	2006-07-27 09:53:34.000000000 +1000
++++ pdftk-1.40/java_libs/com/lowagie/text/xml/xmp/Makefile	2007-08-02 17:29:10.000000000 +1000
+@@ -25,8 +25,7 @@
+ # the "$*" automatic variable, here
+ #
+ %.h : %.class
+-	$(GCJH) --classpath="." $*;
+-	$(RM) $<
++	$(GCJH) --classpath="." -I../../../../.. $*;
+ 
+ ##
+ # targets
+diff -urNad pdftk-1.40~/java_libs/gnu_local/java/security/provider/Makefile pdftk-1.40/java_libs/gnu_local/java/security/provider/Makefile
+--- pdftk-1.40~/java_libs/gnu_local/java/security/provider/Makefile	2007-07-31 18:42:28.000000000 +1000
++++ pdftk-1.40/java_libs/gnu_local/java/security/provider/Makefile	2007-08-02 17:29:10.000000000 +1000
+@@ -25,7 +25,7 @@
+ # the "$*" automatic variable, here
+ #
+ %.h : %.class
+-	$(GCJH) --classpath="." $*;
++	$(GCJH) --classpath="." -I../../../.. $*;
+ 	$(RM) $<
+ 
+ ##
+diff -urNad pdftk-1.40~/java_libs/java_local/security/Makefile pdftk-1.40/java_libs/java_local/security/Makefile
+--- pdftk-1.40~/java_libs/java_local/security/Makefile	2006-07-27 06:13:04.000000000 +1000
++++ pdftk-1.40/java_libs/java_local/security/Makefile	2007-08-02 17:29:10.000000000 +1000
+@@ -25,8 +25,7 @@
+ # the "$*" automatic variable, here
+ #
+ %.h : %.class
+-	$(GCJH) --classpath="." $*;
+-	$(RM) $<
++	$(GCJH) --classpath="." -I../.. $*;
+ 
+ ##
+ # targets
+diff -urNad pdftk-1.40~/pdftk/Makefile.Debian pdftk-1.40/pdftk/Makefile.Debian
+--- pdftk-1.40~/pdftk/Makefile.Debian	2007-07-31 20:10:41.000000000 +1000
++++ pdftk-1.40/pdftk/Makefile.Debian	2007-08-02 17:29:10.000000000 +1000
+@@ -12,7 +12,7 @@
+ 
+ # tools
+ TOOLPATH=
+-VERSUFF=-4.1
++VERSUFF=-4.2
+ CXX= $(TOOLPATH)g++$(VERSUFF)
+ export GCJ= $(TOOLPATH)gcj$(VERSUFF)
+ export GCJH= $(TOOLPATH)gcjh$(VERSUFF)
