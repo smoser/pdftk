@@ -1,0 +1,27 @@
+#! /bin/sh /usr/share/dpatch/dpatch-run
+## abi-mismatch.dpatch by Michael Bienia <geser@ubuntu.com>
+##
+## All lines beginning with `## DP:' are a description of the patch.
+## DP: Fix libgcj linkage error about ABI mismatch when running pdftk
+
+@DPATCH@
+diff -urNad pdftk-1.40~/java_libs/com/lowagie/text/pdf/PdfEncryption.java pdftk-1.40/java_libs/com/lowagie/text/pdf/PdfEncryption.java
+--- pdftk-1.40~/java_libs/com/lowagie/text/pdf/PdfEncryption.java	2006-07-27 01:02:28.000000000 +0200
++++ pdftk-1.40/java_libs/com/lowagie/text/pdf/PdfEncryption.java	2007-09-14 17:34:37.000000000 +0200
+@@ -50,7 +50,7 @@
+ 
+ package com.lowagie.text.pdf;
+ 
+-import java_local.security.MessageDigest; // ssteward
++import java.security.MessageDigest; // ssteward
+ import com.lowagie.text.ExceptionConverter;
+ 
+ /**
+diff -urNad pdftk-1.40~/pdftk/Makefile.Debian pdftk-1.40/pdftk/Makefile.Debian
+--- pdftk-1.40~/pdftk/Makefile.Debian	2006-09-21 18:36:16.000000000 +0200
++++ pdftk-1.40/pdftk/Makefile.Debian	2007-09-14 17:33:14.000000000 +0200
+@@ -36,3 +36,4 @@
+ 
+ #
+ include Makefile.Base
++libgcj_local_libs =
