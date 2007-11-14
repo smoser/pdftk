@@ -46,7 +46,7 @@ $(java_libs_root)/gnu/gcj/convert/convert.a
 # this must already be set according to your platform Makefile;
 # we're just appending to it, here
 #
-CPPFLAGS += -DPDFTK_VER=\"1.40\"
+CPPFLAGS += -DPDFTK_VER=\"1.41\"
 
 all : java_libs pdftk
 

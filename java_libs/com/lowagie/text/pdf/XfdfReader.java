@@ -51,6 +51,7 @@ package com.lowagie.text.pdf;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream; // ssteward
 import java.io.FileInputStream;
 import java.util.HashMap;
 import java.util.Stack;
@@ -79,14 +80,20 @@ public class XfdfReader implements SimpleXMLDocHandler {
      * @throws IOException on error
      */    
     public XfdfReader(String filename) throws IOException {
-        FileInputStream fin = null;
-        try {
-            fin = new FileInputStream(filename);
-            SimpleXMLParser.parse(this, fin);
-        }
-        finally {
-            try{fin.close();}catch(Exception e){}
-        }
+		InputStream fin = null; // ssteward: was FileInputStream
+		try {
+			// ssteward: added for stdin handling (also see RandomAccessFileOrArray.java)
+			if( filename.equals("-") ) {
+				fin = System.in;
+			}
+			else {
+				fin = new FileInputStream(filename);
+			}
+			SimpleXMLParser.parse(this, fin);
+		}
+		finally {
+			try{fin.close();}catch(Exception e){}
+		}
     }
     
     /** Reads an XFDF form.

@@ -20,18 +20,19 @@ endif
 build: build-stamp
 build-stamp: 
 	dh_testdir
-	cd $(CURDIR)/pdftk && $(MAKE) -f Makefile.Debian
+	QUILT_PATCHES=debian/patches quilt push -a || test $$? = 2
+	$(MAKE) -C $(CURDIR)/pdftk -f Makefile.Debian
 	touch build-stamp
 
-clean: debian-clean
-	dh_clean
-
-debian-clean:	
+clean:
 	dh_testdir
 	dh_testroot
-	-make -C pdftk -f Makefile.Debian clean
-	-make -C $(CURDIR)/java_libs/ clean
-	-rm -f *-stamp 
+	[ ! -f $(CURDIR)/pdftk/Makefile.Debian ] || make -C $(CURDIR)/pdftk -f Makefile.Debian clean
+	[ ! -f $(CURDIR)/java_libs/Makefile ] || make -C $(CURDIR)/java_libs/ clean
+	QUILT_PATCHES=debian/patches quilt pop -a -R || test $$? = 2
+	rm -rf .pc
+	rm -f build-stamp
+	dh_clean
 
 install: build
 	dh_testdir
@@ -43,7 +44,6 @@ install: build
 	install -o root -g root -m 755 -d $(CURDIR)/debian/pdftk/usr/bin
 	install -o root -g root -m 755 pdftk/pdftk $(CURDIR)/debian/pdftk/usr/bin
 
-
 # Build architecture-independent files here.
 binary-indep: build install
 # We have nothing to do by default.
@@ -52,15 +52,9 @@ binary-indep: build install
 binary-arch: build install
 	dh_testdir
 	dh_testroot
-#	dh_installdebconf	
 	dh_installdocs
 	dh_installexamples
 	dh_installmenu
-#	dh_installlogrotate
-#	dh_installemacsen
-#	dh_installpam
-#	dh_installmime
-#	dh_installinit
 	dh_installcron
 	dh_installman
 	dh_installinfo
@@ -69,9 +63,7 @@ binary-arch: build install
 	dh_strip
 	dh_compress
 	dh_fixperms
-#	dh_makeshlibs
 	dh_installdeb
-#	dh_perl
 	dh_shlibdeps
 	dh_gencontrol
 	dh_md5sums
