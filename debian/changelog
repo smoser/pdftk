@@ -1,3 +1,33 @@
+pdftk (1.41-1) unstable; urgency=high
+
+  * New upstream release. (Closes: #400920)
+  * Regenerate upstream tarball by removing superfluous files.
+    + debian/
+    + java_libs/com/lowagie/text/pdf/PRStream.java.orig
+    + java_libs/com/lowagie/text/pdf/PRTokeniser.java.orig
+  * Add quilt support.
+  * Add the XS-Vcs-Git and XS-Vcs-Browser fields.
+  * Remove the uppercase at the beginning of the Description field.
+  * Fix upstream homepage location. (Closes: #420973)
+    + Remove it from the long description.
+    + Add it in the new Homepage field.
+  * Remove ${misc:Depends} from the Depends field.
+  * Fix FTBFS due to new behaviour of gcjh since gcj-4.1.2.
+    (Closes: #421341, #443714)
+  * Fix ABI mismatch at runtime due to old embedded copies of gcj
+    Java source code. (Closes: #426314)
+    The following directories are thus no longer needed by Debian.
+    + java_libs/gnu/
+    + java_libs/gnu_local/
+    + java_libs/java_local/
+  * Change Build-Depends to gcj-4.2 and g++-4.2.
+    + Depends on libgcj8-1. (Closes: #385914, #423417)
+  * Fix lintian warnings "debian-rules-ignores-make-clean-error".
+  * Remove unused debhelper tools from debian/rules.
+  * Update debian/copyright.
+
+ -- Aurélien GÉRÔME <ag@roxor.cx>  Wed, 14 Nov 2007 14:40:12 +0100
+
 pdftk (1.40-2) unstable; urgency=low
 
   * New maintainer.

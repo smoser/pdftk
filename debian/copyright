@@ -1,13 +1,13 @@
 This package was debianized by Aurelien Jarno <aurel32@debian.org> on
 Sun, 15 Feb 2004 23:43:55 +0100.
+It is maintained by Aurélien GÉRÔME <ag@roxor.cx> since
+Sun, 15 Oct 2006 17:14:13 +0200.
 
-It was downloaded from http://www.accesspdf.com/pdftk/
+It was downloaded from <http://www.pdfhacks.com/pdftk/>.
 
 Upstream Author: Sid Steward <ssteward@accesspdf.com>
 
-Copyright:
-
-This software is copyright (c) 2003-04 by Sid Steward
+Copyright: 2003-2006 Sid Steward
 
 You are free to distribute this software under the terms of the GNU General
 Public License.  On Debian systems, the complete text of the GNU General Public

@@ -157,7 +157,7 @@ public class PdfIndirectObject {
  */
     void writeTo(OutputStream os) throws IOException
     {
-        os.write('\n'); // ssteward
+	// ssteward: don't os.write() anything here, before the number, or you'll throw off the xref position
         os.write(DocWriter.getISOBytes(String.valueOf(number)));
         os.write(' ');
         os.write(DocWriter.getISOBytes(String.valueOf(generation)));

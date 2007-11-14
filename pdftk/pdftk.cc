@@ -1,7 +1,7 @@
 /* -*- Mode: C++; tab-width: 2; c-basic-offset: 2 -*- */
 /*
-	pdftk, the PDF Tool Kit
-	Copyright (c) 2003, 2004 Sid Steward
+	pdftk, the PDF Toolkit
+	Copyright (c) 2003-2006 Sid Steward
 
 	This program is free software; you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -71,6 +71,8 @@
 #include "com/lowagie/text/pdf/PdfIndirectObject.h"
 #include "com/lowagie/text/pdf/PdfFileSpecification.h"
 #include "com/lowagie/text/pdf/PdfBoolean.h"
+
+#include "com/lowagie/text/pdf/RandomAccessFileOrArray.h" // for InputStreamToArray()
 
 using namespace std;
 
@@ -933,10 +935,12 @@ TK_Session::TK_Session( int argc,
 				m_operation= filter_k;
 				arg_state= update_info_filename_e;
 			}
+			/*
 			else if( arg_keyword== update_xmp_k ) {
 				m_operation= filter_k;
 				arg_state= update_xmp_filename_e;
 			}
+			*/
 			else if( arg_keyword== background_k ) {
 				m_operation= filter_k;
 				arg_state= background_filename_e;
@@ -1502,6 +1506,7 @@ TK_Session::TK_Session( int argc,
 		} // end: case update_info_filename_e
 		break;
 
+		/*
 		case update_xmp_filename_e : {
 			if( arg_keyword== none_k ) {
 					if( m_update_xmp_filename.empty() ) {
@@ -1528,6 +1533,7 @@ TK_Session::TK_Session( int argc,
 
 		} // end: case update_xmp_filename_e
 		break;
+		*/
 
 		case output_e: {
 			if( m_input_pdf.empty() ) { // error; remark and set fail_b
@@ -1953,6 +1959,7 @@ TK_Session::create_output()
 {
 	if( is_valid() ) {
 
+		/*
 		bool rdfcat_available_b= false;
 		{ // is rdfcat available?  first character should be a digit;
 			// grab stderr to keep messages appearing to user;
@@ -1966,6 +1973,7 @@ TK_Session::create_output()
 				pclose( pp );
 			}
 		}
+		*/
 
 		if( m_verbose_reporting_b ) {
 			cout << endl << "Creating Output ..." << endl;
@@ -2219,31 +2227,58 @@ TK_Session::create_output()
 					break;
 				}
 
-				// try opening the FDF file before we get too involved
+				// try opening the FDF file before we get too involved;
+				// if input is stdin ("-"), don't pass it to both the FDF and XFDF readers
 				itext::FdfReader* fdf_reader_p= 0;
 				itext::XfdfReader* xfdf_reader_p= 0;
-				if( !m_form_data_filename.empty() ) {
-					if( m_form_data_filename== "PROMPT" ) {
+				if( !m_form_data_filename.empty() ) { // we have form data to process
+					if( m_form_data_filename== "PROMPT" ) { // allows user to enter - at the prompt
 						prompt_for_filename( "Please enter a filename for the form data:", 
 																 m_form_data_filename );
 					}
-					try {
-						fdf_reader_p=
-							new itext::FdfReader( JvNewStringLatin1( m_form_data_filename.c_str() ) );
-					}
-					catch( java::io::IOException* ioe_p ) { // file open error
-						// maybe it's xfdf?
+					if( m_form_data_filename== "-" ) { // form data on stdin
+						JArray<jbyte>* in_arr= itext::RandomAccessFileOrArray::InputStreamToArray( java::System::in );
+						
+						// first try fdf
 						try {
-							xfdf_reader_p=
-								new itext::XfdfReader( JvNewStringLatin1( m_form_data_filename.c_str() ) );
+							fdf_reader_p= new itext::FdfReader( in_arr );
 						}
 						catch( java::io::IOException* ioe_p ) { // file open error
-							cerr << "Error: Failed to open form data file: " << endl;
-							cerr << "   " << m_form_data_filename << endl;
-							cerr << "   No output created." << endl;
+							// maybe it's xfdf?
+							try {
+								xfdf_reader_p= new itext::XfdfReader( in_arr );
+							}
+							catch( java::io::IOException* ioe_p ) { // file open error
+								cerr << "Error: Failed to open form data file: " << endl;
+								cerr << "   " << m_form_data_filename << endl;
+								cerr << "   No output created." << endl;
 
-							//ioe_p->printStackTrace(); // debug
-							break;
+								//ioe_p->printStackTrace(); // debug
+								break;
+							}
+						}
+					}
+					else { // form data file
+
+						// first try fdf
+						try {
+							fdf_reader_p=
+								new itext::FdfReader( JvNewStringLatin1( m_form_data_filename.c_str() ) );
+						}
+						catch( java::io::IOException* ioe_p ) { // file open error
+							// maybe it's xfdf?
+							try {
+								xfdf_reader_p=
+									new itext::XfdfReader( JvNewStringLatin1( m_form_data_filename.c_str() ) );
+							}
+							catch( java::io::IOException* ioe_p ) { // file open error
+								cerr << "Error: Failed to open form data file: " << endl;
+								cerr << "   " << m_form_data_filename << endl;
+								cerr << "   No output created." << endl;
+								
+								//ioe_p->printStackTrace(); // debug
+								break;
+							}
 						}
 					}
 				}
@@ -2344,6 +2379,7 @@ TK_Session::create_output()
 					}
 				}
 
+				/*
 				// update the xmp?
 				if( !m_update_xmp_filename.empty() ) {
 					if( rdfcat_available_b ) {
@@ -2361,6 +2397,7 @@ TK_Session::create_output()
 						break;
 					}
 				}
+				*/
 
 
 				// un/compress output streams?

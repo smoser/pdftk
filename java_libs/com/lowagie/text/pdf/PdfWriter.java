@@ -363,7 +363,8 @@ public class PdfWriter extends DocWriter {
             }
             else {
                 PdfIndirectObject indirect = new PdfIndirectObject(refNumber, object, writer);
-                PdfCrossReference pxref = new PdfCrossReference(refNumber, position);
+				writer.getOs().write('\n'); // ssteward: for pretty pdf
+                PdfCrossReference pxref = new PdfCrossReference(refNumber, position+ 1); // ssteward: +1 for newline
                 if (!xrefs.add(pxref)) {
                     xrefs.remove(pxref);
                     xrefs.add(pxref);
@@ -675,7 +676,7 @@ public class PdfWriter extends DocWriter {
     
     private static final int VPOINT = 7;
     /** this is the header of a PDF document */
-    protected byte[] HEADER = getISOBytes("%PDF-1.4\n%\u00e2\u00e3\u00cf\u00d3"); // ssteward: dropped newline
+    protected byte[] HEADER = getISOBytes("%PDF-1.4\n%\u00e2\u00e3\u00cf\u00d3"); // ssteward: dropped trailing \n
 
     protected int prevxref = 0;
     

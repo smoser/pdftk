@@ -2,14 +2,17 @@ Source: pdftk
 Maintainer: Aurélien GÉRÔME <ag@roxor.cx>
 Section: text
 Priority: optional
-Build-Depends: debhelper (>= 4.0.0), gcj-4.1, g++-4.1
+Build-Depends: debhelper (>= 4.0.0), quilt, gcj-4.2, g++-4.2
 Standards-Version: 3.7.2
+Homepage: http://www.pdfhacks.com/pdftk/
+XS-Vcs-Git: git://git.roxor.cx/git/pdftk.git/
+XS-Vcs-Browser: http://git.roxor.cx/?p=pdftk.git
 
 Package: pdftk
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}
+Depends: ${shlibs:Depends}
 Suggests: xpdf-utils
-Description: A useful tool for manipulating PDF documents
+Description: useful tool for manipulating PDF documents
  If PDF is electronic paper, then pdftk is an electronic stapler-remover,
  hole-punch, binder, secret-decoder-ring, and X-Ray-glasses. Pdftk is a
  simple tool for doing everyday things with PDF documents. Keep one in the
@@ -29,4 +32,3 @@ Description: A useful tool for manipulating PDF documents
   - Repair corrupted PDF (where possible)
  .
   Author: Sid Steward <ssteward@accesspdf.com>
-  Homepage: http://www.accesspdf.com/pdftk
