@@ -1,3 +1,13 @@
+pdftk (1.41-2) unstable; urgency=low
+
+  * Switch from the XS-Vcs-Git/XS-Vcs-Browser fields to the
+    Vcs-Git/Vcs-Browser fields and fix typos in both URLs.
+  * Rework debian/copyright to include missing copyright holders
+    and licenses.
+  * Add the XS-DM-Upload-Allowed field.
+
+ -- Aurélien GÉRÔME <ag@roxor.cx>  Sun, 02 Dec 2007 00:02:04 +0100
+
 pdftk (1.41-1) unstable; urgency=high
 
   * New upstream release. (Closes: #400920)
