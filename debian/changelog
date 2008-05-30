@@ -1,0 +1,181 @@
+pdftk (1.41-3) unstable; urgency=high
+
+  * Change my email address in the Uploaders field.
+  * Bump Standards-Version to 3.7.3.
+  * Remove no longer used Vcs-Git, Vcs-Browser, and
+    XS-DM-Upload-Allowed fields.
+  * Change Build-Depends field: gcj-4.2 [!alpha !arm !hppa !hurd-i386].
+    (Closes: #477898)
+
+ -- Aurélien GÉRÔME <ag@debian.org>  Fri, 30 May 2008 15:08:46 +0200
+
+pdftk (1.41-2) unstable; urgency=low
+
+  * Switch from the XS-Vcs-Git/XS-Vcs-Browser fields to the
+    Vcs-Git/Vcs-Browser fields and fix typos in both URLs.
+  * Rework debian/copyright to include missing copyright holders
+    and licenses.
+  * Add the XS-DM-Upload-Allowed field.
+
+ -- Aurélien GÉRÔME <ag@roxor.cx>  Sun, 02 Dec 2007 00:02:04 +0100
+
+pdftk (1.41-1) unstable; urgency=high
+
+  * New upstream release. (Closes: #400920)
+  * Regenerate upstream tarball by removing superfluous files.
+    + debian/
+    + java_libs/com/lowagie/text/pdf/PRStream.java.orig
+    + java_libs/com/lowagie/text/pdf/PRTokeniser.java.orig
+  * Add quilt support.
+  * Add the XS-Vcs-Git and XS-Vcs-Browser fields.
+  * Remove the uppercase at the beginning of the Description field.
+  * Fix upstream homepage location. (Closes: #420973)
+    + Remove it from the long description.
+    + Add it in the new Homepage field.
+  * Remove ${misc:Depends} from the Depends field.
+  * Fix FTBFS due to new behaviour of gcjh since gcj-4.1.2.
+    (Closes: #421341, #443714)
+  * Fix ABI mismatch at runtime due to old embedded copies of gcj
+    Java source code. (Closes: #426314)
+    The following directories are thus no longer needed by Debian.
+    + java_libs/gnu/
+    + java_libs/gnu_local/
+    + java_libs/java_local/
+  * Change Build-Depends to gcj-4.2 and g++-4.2.
+    + Depends on libgcj8-1. (Closes: #385914, #423417)
+  * Fix lintian warnings "debian-rules-ignores-make-clean-error".
+  * Remove unused debhelper tools from debian/rules.
+  * Update debian/copyright.
+
+ -- Aurélien GÉRÔME <ag@roxor.cx>  Wed, 14 Nov 2007 14:40:12 +0100
+
+pdftk (1.40-2) unstable; urgency=low
+
+  * New maintainer.
+  * Add debian/watch file.
+
+ -- Aurélien GÉRÔME <ag@roxor.cx>  Sun, 15 Oct 2006 17:14:13 +0200
+
+pdftk (1.40-1) unstable; urgency=low
+
+  * New upstream version.
+    - Fix concatenation of 2 pdf documents which some kind of pdf
+      (closes: bug#385598).
+
+ -- Aurelien Jarno <aurel32@debian.org>  Fri, 22 Sep 2006 16:39:10 +0200
+
+pdftk (1.12-11) unstable; urgency=low
+
+  * Mixing different versions of g++ and gcj does not work, explicitely
+    use gcj-4.1 and g++-4.1.
+
+ -- Aurelien Jarno <aurel32@debian.org>  Sat, 20 May 2006 00:40:04 +0200
+
+pdftk (1.12-10) unstable; urgency=low
+
+  * Added -O2 to GCJFLAGS (closes: bug#366661).
+  * Bumped Standards-Version to 3.7.2 (no changes).
+
+ -- Aurelien Jarno <aurel32@debian.org>  Wed, 10 May 2006 10:56:37 +0200
+
+pdftk (1.12-9) unstable; urgency=low
+
+  * Fix previous FDF patch (closes: bug#365084).
+
+ -- Aurelien Jarno <aurel32@debian.org>  Thu, 27 Apr 2006 23:27:01 +0200
+
+pdftk (1.12-8) unstable; urgency=low
+
+  * Added a patch to support page rotating. Thanks to David Fabel.
+  * Bumped Standards-Version to 3.6.2 (no changes).
+
+ -- Aurelien Jarno <aurel32@debian.org>  Mon, 24 Apr 2006 22:03:59 +0200
+
+pdftk (1.12-7) unstable; urgency=low
+
+  * Build with -fdollars-in-identifiers to workaround a gcc bug on arm
+    (closes: bug#334642).
+
+ -- Aurelien Jarno <aurel32@debian.org>  Wed, 19 Oct 2005 19:31:00 +0200
+
+pdftk (1.12-6) unstable; urgency=low
+
+  * Fixed FTBFS.
+
+ -- Aurelien Jarno <aurel32@debian.org>  Sun, 16 Oct 2005 21:21:49 +0200
+
+pdftk (1.12-5) unstable; urgency=low
+
+  * C++ ABI transition.
+
+ -- Aurelien Jarno <aurel32@debian.org>  Wed,  6 Jul 2005 01:03:57 +0200
+
+pdftk (1.12-4) unstable; urgency=low
+
+  * Suggests: xpdf-utils (closes: bug#306625).
+
+ -- Aurelien Jarno <aurel32@debian.org>  Sun,  1 May 2005 11:27:28 +0200
+
+pdftk (1.12-3) unstable; urgency=low
+
+  * Depends on libgcj-dev instead of libgcj4-dev.
+  * Build with gcj instead of gcj-3.3.
+
+ -- Aurelien Jarno <aurel32@debian.org>  Wed, 30 Mar 2005 16:44:02 +0200
+
+pdftk (1.12-2) unstable; urgency=low
+
+  * Added a patch from Bernhard R. Link to adds a new generate_fdf
+    action to generate a FDF out of a PDF file. The patch will also be
+    added in the next upstream version (closes: bug#289846).
+
+ -- Aurelien Jarno <aurel32@debian.org>  Tue, 11 Jan 2005 23:22:59 +0100
+
+pdftk (1.12-1) unstable; urgency=low
+
+  * New upstream release.
+
+ -- Aurelien Jarno <aurel32@debian.org>  Wed, 10 Nov 2004 21:04:25 +0000
+
+pdftk (1.11-1) unstable; urgency=low
+
+  * New upstream version.
+
+ -- Aurelien Jarno <aurel32@debian.org>  Fri,  5 Nov 2004 09:42:53 +0000
+
+pdftk (1.10-1) unstable; urgency=low
+
+  * New upstream version.
+
+ -- Aurelien Jarno <aurel32@debian.org>  Wed, 27 Oct 2004 14:15:40 +0000
+
+pdftk (1.00-1) unstable; urgency=low
+
+  * New upstream version.
+
+ -- Aurelien Jarno <aurel32@debian.org>  Sat, 14 Aug 2004 20:18:35 +0200
+
+pdftk (0.94-1) unstable; urgency=low
+
+  * New upstream version.
+
+ -- Aurelien Jarno <aurel32@debian.org>  Thu, 25 Mar 2004 08:58:03 +0100
+
+pdftk (0.93-1) unstable; urgency=low
+
+  * New upstream release.
+  * Updated debian/copyright.
+
+ -- Aurelien Jarno <aurel32@debian.org>  Wed, 10 Mar 2004 07:37:12 +0100
+
+pdftk (0.92-2) unstable; urgency=low
+
+  * Fixed a typo in the description (closes: bug#234675).
+
+ -- Aurelien Jarno <aurel32@debian.org>  Wed, 25 Feb 2004 20:21:12 +0100
+
+pdftk (0.92-1) unstable; urgency=low
+
+  * Initial Release (closes: bug#232863).
+
+ -- Aurelien Jarno <aurel32@debian.org>  Sun, 15 Feb 2004 23:54:35 +0100
