@@ -1,8 +1,9 @@
 Source: pdftk
-Maintainer: Aurélien GÉRÔME <ag@debian.org>
+Maintainer: Ubuntu MOTU Developers <ubuntu-motu@lists.ubuntu.com>
+XSBC-Original-Maintainer: Aurélien GÉRÔME <ag@debian.org>
 Section: text
 Priority: optional
-Build-Depends: debhelper (>= 4.0.0), quilt, gcj-4.2 [!alpha !arm !hppa !hurd-i386], g++-4.2
+Build-Depends: debhelper (>= 4.0.0), quilt, gcj-4.3 [!alpha !arm !hppa !hurd-i386], g++-4.3
 Standards-Version: 3.7.3
 Homepage: http://www.pdfhacks.com/pdftk/
 

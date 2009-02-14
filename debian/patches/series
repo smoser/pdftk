@@ -1,2 +1,2 @@
-build_with_gcc-4.2
+build_with_gcc-4.3
 no_embedded_libs

@@ -7,7 +7,7 @@ Index: pdftk-1.41/pdftk/Makefile.Debian
  # tools
  TOOLPATH=
 -VERSUFF=-4.1
-+VERSUFF=-4.2
++export VERSUFF=-4.3
  CXX= $(TOOLPATH)g++$(VERSUFF)
  export GCJ= $(TOOLPATH)gcj$(VERSUFF)
  export GCJH= $(TOOLPATH)gcjh$(VERSUFF)
@@ -16,7 +16,7 @@ Index: pdftk-1.41/pdftk/Makefile.Debian
  # ASK_ABOUT_WARNINGS to true; otherwise: false; override this default
  # with the dont_ask or do_ask command-line options
 -CPPFLAGS= -O3 -DPATH_DELIM=0x2f -DASK_ABOUT_WARNINGS=false -fdollars-in-identifiers
-+CPPFLAGS= -w -O3 -DPATH_DELIM=0x2f -DASK_ABOUT_WARNINGS=false -fdollars-in-identifiers
++CPPFLAGS= -w -O2 -DPATH_DELIM=0x2f -DASK_ABOUT_WARNINGS=false -fdollars-in-identifiers
  CXXFLAGS= -lgcj
  
  # itext compiler flags
@@ -30,7 +30,7 @@ Index: pdftk-1.41/java_libs/com/lowagie/text/Makefile
  %.h : %.class
 -	$(GCJH) --classpath="." $*;
 -	$(RM) $<
-+	$(GCJH) --classpath="/usr/share/java/libgcj-4.2.jar:$(PWD):." $*
++	$(GCJH) --classpath="/usr/share/java/libgcj$(VERSUFF).jar:$(PWD):." $*
  
  ##
  # targets
@@ -52,7 +52,7 @@ Index: pdftk-1.41/java_libs/com/lowagie/text/xml/xmp/Makefile
  %.h : %.class
 -	$(GCJH) --classpath="." $*;
 -	$(RM) $<
-+	$(GCJH) --classpath="/usr/share/java/libgcj-4.2.jar:$(PWD):." $*
++	$(GCJH) --classpath="/usr/share/java/libgcj$(VERSUFF).jar:$(PWD):." $*
  
  ##
  # targets
@@ -66,7 +66,7 @@ Index: pdftk-1.41/java_libs/com/lowagie/text/pdf/Makefile
  %.h : %.class
 -	$(GCJH) --classpath="." $*;
 -	$(RM) $<
-+	$(GCJH) --classpath="/usr/share/java/libgcj-4.2.jar:$(PWD):." $*
++	$(GCJH) --classpath="/usr/share/java/libgcj$(VERSUFF).jar:$(PWD):." $*
  
  ##
  # targets
@@ -86,7 +86,7 @@ Index: pdftk-1.41/java_libs/com/lowagie/text/pdf/fonts/Makefile
  %.h : %.class
 -	$(GCJH) --classpath="." $*;
 -	$(RM) $<
-+	$(GCJH) --classpath="/usr/share/java/libgcj-4.2.jar:$(PWD):." $*
++	$(GCJH) --classpath="/usr/share/java/libgcj$(VERSUFF).jar:$(PWD):." $*
  
  ##
  # targets
@@ -100,7 +100,7 @@ Index: pdftk-1.41/java_libs/com/lowagie/text/pdf/codec/postscript/Makefile
  %.h : %.class
 -	$(GCJH) --classpath="." $*;
 -	$(RM) $<
-+	$(GCJH) --classpath="/usr/share/java/libgcj-4.2.jar:$(PWD):." $*
++	$(GCJH) --classpath="/usr/share/java/libgcj$(VERSUFF).jar:$(PWD):." $*
  
  ##
  # targets
@@ -114,7 +114,7 @@ Index: pdftk-1.41/java_libs/com/lowagie/text/pdf/codec/wmf/Makefile
  %.h : %.class
 -	$(GCJH) --classpath="." $*;
 -	$(RM) $<
-+	$(GCJH) --classpath="/usr/share/java/libgcj-4.2.jar:$(PWD):." $*
++	$(GCJH) --classpath="/usr/share/java/libgcj$(VERSUFF).jar:$(PWD):." $*
  
  ##
  # targets
@@ -128,7 +128,7 @@ Index: pdftk-1.41/java_libs/com/lowagie/text/pdf/codec/Makefile
  %.h : %.class
 -	$(GCJH) --classpath="." $*;
 -	$(RM) $<
-+	$(GCJH) --classpath="/usr/share/java/libgcj-4.2.jar:$(PWD):." $*
++	$(GCJH) --classpath="/usr/share/java/libgcj$(VERSUFF).jar:$(PWD):." $*
  
  ##
  # targets
@@ -142,7 +142,7 @@ Index: pdftk-1.41/java_libs/com/lowagie/text/markup/Makefile
  %.h : %.class
 -	$(GCJH) --classpath="." $*;
 -	$(RM) $<
-+	$(GCJH) --classpath="/usr/share/java/libgcj-4.2.jar:$(PWD):." $*
++	$(GCJH) --classpath="/usr/share/java/libgcj$(VERSUFF).jar:$(PWD):." $*
  
  ##
  # targets
@@ -156,7 +156,7 @@ Index: pdftk-1.41/java_libs/com/lowagie/bc/asn1/Makefile
  %.h : %.class
 -	$(GCJH) --classpath="." $*;
 -	$(RM) $<
-+	$(GCJH) --classpath="/usr/share/java/libgcj-4.2.jar:$(PWD):." $*
++	$(GCJH) --classpath="/usr/share/java/libgcj$(VERSUFF).jar:$(PWD):." $*
  
  ##
  # targets
