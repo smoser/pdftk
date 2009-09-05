@@ -1,2 +1,11 @@
-build_with_gcc-4.2
-no_embedded_libs
+upstream_changelog
+pdftk-use-internal-itext
+build_with_gcc-4.3
+support_utf8_filenames
+#no_embedded_libs
+#java-calendar
+use_created_java_lib_dir
+set_classpath
+handle_utf8_data_in_update_info
+use_mkstemp
+fix_compiler_warnings

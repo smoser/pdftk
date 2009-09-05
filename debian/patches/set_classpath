@@ -1,0 +1,16 @@
+Description: introduce path to bcprov.jar and bcmail.jar
+Author: Johann Felix Soden <johfel@gmx.de>
+
+--- a/pdftk/pdftk.cc
++++ b/pdftk/pdftk.cc
+@@ -2655,6 +2655,10 @@
+ 	bool synopsis_b= ( argc== 1 );
+ 	int ret_val= 0; // default: no error
+ 
++	// set classpath:
++	static char my_classpath[]="CLASSPATH=/usr/share/java/bcprov.jar:/usr/share/java/bcmail.jar";
++	putenv(my_classpath);
++
+ 	for( int ii= 1; ii< argc; ++ii ) {
+ 		version_b=
+ 			(version_b || 

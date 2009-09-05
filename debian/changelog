@@ -1,3 +1,26 @@
+pdftk (1.41+dfsg-1) unstable; urgency=low
+
+  * Adopted the package with agreement of the previous maintainer
+    - Thanks for your work Aurélien GÉRÔME!
+  * DFSG-repack and use extern libitext-java (Closes: #519466)
+  * Support newer gcj (Closes: #470215, #514561, #534080, #533795, #538252)
+  * Handle utf8 filenames (Closes: #258377, #504014, #504128)
+  * Handle utf8-data, CreationDate and ModDate fields in update_info correctly
+    (Closes: #424920, #461169)
+  * Rework build system
+    - minimize dh rules
+    - update dependencies
+  * Bump Standards-Version to 3.8.3.
+  * Update debian/watch and use created debian/uscan-dfsg-clean.sh
+  * Clean debian/copyright from itext, use machine-readable format
+    - upstream uses GPL-2+ (not unversioned GPL)
+  * Add patch: use mkstemp instead of tmpnam
+  * Add upstream changelog
+  * Remove meaningless "useful" from short description and author-field from
+    long description
+
+ -- Johann Felix Soden <johfel@gmx.de>  Sat, 05 Sep 2009 15:14:40 +0200
+
 pdftk (1.41-3) unstable; urgency=high
 
   * Change my email address in the Uploaders field.

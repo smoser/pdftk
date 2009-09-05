@@ -1,73 +1,41 @@
 #!/usr/bin/make -f
-# Sample debian/rules that uses debhelper.
-# GNU copyright 1997 to 1999 by Joey Hess.
+# -*- makefile -*-
 
-# Uncomment this to turn on verbose mode.
-#export DH_VERBOSE=1
+GCJ_ITEXT_SO_PATH =$(shell dpkg -L libitext-java-gcj | grep "itext-.*.so" | head -n 1 )
+GCJ_ITEXT_SO_NAME =$(shell basename $(GCJ_ITEXT_SO_PATH))
+GCJ_ITEXT_JAR_PATH=/usr/share/java/itext.jar
 
-# These are used for cross-compiling and for saving the configure script
-# from having to guess our platform (since we know it already)
-DEB_HOST_GNU_TYPE   ?= $(shell dpkg-architecture -qDEB_HOST_GNU_TYPE)
-DEB_BUILD_GNU_TYPE  ?= $(shell dpkg-architecture -qDEB_BUILD_GNU_TYPE)
+GCJ_ITEXT_VERSION=$(shell dpkg-query -W -f'$${Version}' libitext-java-gcj)
+GCJ_ITEXT_VERSION_SHORT=$(shell dpkg-query -W -f'$${Version}' libitext-java-gcj | sed -e 's/-[^-]*$$//')
 
-ifneq (,$(findstring debug,$(DEB_BUILD_OPTIONS)))
-	CFLAGS += -g
-endif
-ifeq (,$(findstring nostrip,$(DEB_BUILD_OPTIONS)))
-	INSTALL_PROGRAM += -s
-endif
+%:
+	dh --with quilt $@
 
-build: build-stamp
-build-stamp: 
-	dh_testdir
-	QUILT_PATCHES=debian/patches quilt push -a || test $$? = 2
-	$(MAKE) -C $(CURDIR)/pdftk -f Makefile.Debian
-	touch build-stamp
+override_dh_auto_build:
+	dh_auto_build
+	jar tf $(GCJ_ITEXT_JAR_PATH) | grep '\.class' | sed 's/\.class//' | sed 's|/|\.|g' > classes
+	gjavah -d java_libs2 -cni -classpath=$(GCJ_ITEXT_JAR_PATH) `cat classes`
+	ln --target-directory $(CURDIR)/pdftk/ -s $(GCJ_ITEXT_SO_PATH)
+	$(MAKE) -C $(CURDIR)/pdftk -f Makefile.Debian GCJ_ITEXT_SO=$(GCJ_ITEXT_SO_NAME)
 
-clean:
-	dh_testdir
-	dh_testroot
-	[ ! -f $(CURDIR)/pdftk/Makefile.Debian ] || make -C $(CURDIR)/pdftk -f Makefile.Debian clean
-	[ ! -f $(CURDIR)/java_libs/Makefile ] || make -C $(CURDIR)/java_libs/ clean
-	QUILT_PATCHES=debian/patches quilt pop -a -R || test $$? = 2
-	rm -rf .pc
-	rm -f build-stamp
-	dh_clean
+override_dh_auto_clean:
+	dh_quilt_patch
+	[ ! -f $(CURDIR)/pdftk/Makefile.Debian] || make -C $(CURDIR)/pdftk -f Makefile.Debian clean
+	rm -f $(CURDIR)/pdftk/$(GCJ_ITEXT_SO_NAME)
+	rm -rf $(CURDIR)/pdftk/pdftk
+	rm -f $(CURDIR)/classes
+	rm -rf $(CURDIR)/java_libs2
+	dh_auto_clean
 
-install: build
-	dh_testdir
-	dh_testroot
-	dh_clean -k
-	dh_installdirs
 
-	# Add here commands to install the package into debian/pdftk.
+override_dh_auto_install:
 	install -o root -g root -m 755 -d $(CURDIR)/debian/pdftk/usr/bin
-	install -o root -g root -m 755 pdftk/pdftk $(CURDIR)/debian/pdftk/usr/bin
+	install -o root -g root -m 755 $(CURDIR)/pdftk/pdftk $(CURDIR)/debian/pdftk/usr/bin
+	# generate right libitext-java-gcj depends
+	echo -n 'libitext-java-gcj:Depends=libitext-java-gcj (>=' $(GCJ_ITEXT_VERSION)'~)' >> debian/pdftk.substvars
+	echo    ', libitext-java-gcj (< '$(GCJ_ITEXT_VERSION_SHORT)'+)'  >> debian/pdftk.substvars
+	dh_auto_install
 
-# Build architecture-independent files here.
-binary-indep: build install
-# We have nothing to do by default.
+get-orig-source:
+	uscan --force-download --repack --rename --destdir `pwd`
 
-# Build architecture-dependent files here.
-binary-arch: build install
-	dh_testdir
-	dh_testroot
-	dh_installdocs
-	dh_installexamples
-	dh_installmenu
-	dh_installcron
-	dh_installman
-	dh_installinfo
-	dh_installchangelogs
-	dh_link
-	dh_strip
-	dh_compress
-	dh_fixperms
-	dh_installdeb
-	dh_shlibdeps
-	dh_gencontrol
-	dh_md5sums
-	dh_builddeb
-
-binary: binary-indep binary-arch
-.PHONY: build clean binary-indep binary-arch binary install

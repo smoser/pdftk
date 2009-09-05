@@ -1,16 +1,19 @@
 Source: pdftk
-Maintainer: Aurélien GÉRÔME <ag@debian.org>
 Section: text
 Priority: optional
-Build-Depends: debhelper (>= 4.0.0), quilt, gcj-4.2 [!alpha !arm !hppa !hurd-i386], g++-4.2
-Standards-Version: 3.7.3
+Maintainer: Johann Felix Soden <johfel@gmx.de>
+Build-Depends: debhelper (>= 7.0.50~), quilt (>=0.46-7~), gcj, libitext-java-gcj, libitext-java
+Standards-Version: 3.8.3
 Homepage: http://www.pdfhacks.com/pdftk/
+DM-Upload-Allowed: yes
+Vcs-Git: git://git.debian.org/git/collab-maint/pdftk.git
+Vcs-Browser: http://git.debian.org/?p=collab-maint/pdftk.git;a=summary
 
 Package: pdftk
 Architecture: any
-Depends: ${shlibs:Depends}
+Depends: ${shlibs:Depends}, ${misc:Depends}, ${libitext-java-gcj:Depends}, libitext-java, libbcprov-java, libbcmail-java
 Suggests: xpdf-utils
-Description: useful tool for manipulating PDF documents
+Description: tool for manipulating PDF documents
  If PDF is electronic paper, then pdftk is an electronic stapler-remover,
  hole-punch, binder, secret-decoder-ring, and X-Ray-glasses. Pdftk is a
  simple tool for doing everyday things with PDF documents. Keep one in the
@@ -28,5 +31,3 @@ Description: useful tool for manipulating PDF documents
   - Burst a PDF document into single pages
   - Uncompress and re-compress page streams
   - Repair corrupted PDF (where possible)
- .
-  Author: Sid Steward <ssteward@accesspdf.com>

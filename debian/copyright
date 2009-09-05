@@ -1,88 +1,29 @@
-This package was debianized by Aurelien Jarno <aurel32@debian.org> on
-Sun, 15 Feb 2004 23:43:55 +0100.
-It is maintained by Aurélien GÉRÔME <ag@roxor.cx> since
-Sun, 15 Oct 2006 17:14:13 +0200.
+Format-Specification: http://svn.debian.org/wsvn/dep/web/deps/dep5.mdwn?op=file&rev=59
+Name: pdftk
+Maintainer: Johann Felix Soden <johfel@gmx.de>
+Source: http://www.pdfhacks.com/pdftk/
 
-The Debian packaging is (C) 2004-2006 Aurelien Jarno <aurel32@debian.org>
-and (C) 2006-2007 Aurélien GÉRÔME <ag@roxor.cx>, and is licensed under the
-GPL, see `/usr/share/common-licenses/GPL'.
+Files: *
+Copyrigth: 2003-2006, Sid Steward <ssteward@accesspdf.com>
+License: GPL-2+
+ This program is free software; you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation; either version 2 of the License, or
+ (at your option) any later version.
 
-It was downloaded from <http://www.pdfhacks.com/pdftk/>.
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
 
+ On Debian systems, the complete text of the GNU General Public License
+ version 2 can be found in /usr/share/common-licenses/GPL-2 file.
 
-pdftk code in pdftk/
---------------------
-
-  Upstream Author:
-
-    Sid Steward <ssteward@accesspdf.com>
-
-  Copyright:
-
-    Copyright (C) 2003-2006 Sid Steward
-
-  License:
-
-    You are free to distribute this software under the terms of the
-    GNU General Public License.
-
-    On Debian systems, the complete text of the GNU General Public
-    License can be found in /usr/share/common-licenses/GPL file.
-
-    Upstream makefiles everywhere fall under the same copyright
-    and license.
-
-
-iText library in java_libs/com/lowagie/text/
---------------------------------------------
-
-  It was downloaded by the upstream author of pdftk from
-  <http://www.lowagie.com/iText/>.
-
-  Upstream Authors:
-
-    Bruno Lowagie <bruno.lowagie@rug.ac.be>
-    Paulo Soares
-
-  Copyright:
-
-    Copyright (C) 1999-2002 Bruno Lowagie
-    Copyright (C) 2000-2002 Paulo Soares
-
-  License:
-
-    This library is free software; you can redistribute it and/or
-    modify it under the terms of the MPL or under the terms of the GNU
-    Library General Public License as published by the Free Software
-    Foundation; either version 2 of the License, or any later version.
-
-    On Debian systems, the complete text of the GNU Lesser General
-    Public License can be found in /usr/share/common-licenses/GPL file.
-
-
-Portions of GNU Compiler for Java and GNU Classpath in
-java_libs/{gnu{,_local},java_local}/
-------------------------------------------------------
-
-  Upstream Author:
-
-    Free Software Foundation, Inc.
-
-  Copyright:
-
-    Copyright (C) 2003-2006 Free Software Foundation, Inc.
-
-  License:
-
-    This program is free software; you can redistribute it and/or
-    modify it under the terms of the GNU General Public License as
-    published by the Free Software Foundation; either version 2, or
-    (at your option) any later version.
-
-    On Debian systems, the complete text of the GNU General Public
-    License can be found in /usr/share/common-licenses/GPL file.
-
-  Note:
-
-    Old embedded source code copies no longer used by the Debian
-    package.
+Files: debian/*
+Copyright: 2004-2006 Aurelien Jarno <aurel32@debian.org>
+           2006-2008 Aurélien GÉRÔME <ag@roxor.cx>
+           2009 Johann Felix Soden <johfel@gmx.de>
+License: GPL
+ The Debian packaging information is under the GPL.
+ On Debian systems, the complete text of the GNU General Public
+ License can be found in `/usr/share/common-licenses/GPL-2'.

@@ -1,0 +1,189 @@
+Description: use JvNewStringUTF8 instead of JvNewStringLatin1 for supporting utf8 filenames
+Author: Johann Felix Soden <johfel@gmx.de>
+Debian-Bug: http://bugs.debian.org/258377
+Debian-Bug: http://bugs.debian.org/504014
+Debian-Bug: http://bugs.debian.org/504128
+
+--- a/pdftk/attachments.cc
++++ b/pdftk/attachments.cc
+@@ -208,10 +208,10 @@
+ 									itext::PdfAnnotation::createFileAttachment
+ 									( writer_p,
+ 										annot_bbox_p,
+-										JvNewStringLatin1( filename.c_str() ), // contents
++										JvNewStringUTF( filename.c_str() ), // contents
+ 										0,
+-										JvNewStringLatin1( vit->c_str() ), // the file path
+-										JvNewStringLatin1( filename.c_str() ) ); // display name
++										JvNewStringUTF( vit->c_str() ), // the file path
++										JvNewStringUTF( filename.c_str() ) ); // display name
+ 
+ 								itext::PdfIndirectReference* ref_p=
+ 									writer_p->addToBody( annot_p )->getIndirectReference();
+@@ -284,8 +284,8 @@
+ 								filespec_p= 
+ 									itext::PdfFileSpecification::fileEmbedded
+ 									( writer_p,
+-										JvNewStringLatin1( vit->c_str() ), // the file path
+-										JvNewStringLatin1( filename.c_str() ), // the display name
++										JvNewStringUTF( vit->c_str() ), // the file path
++										JvNewStringUTF( filename.c_str() ), // the display name
+ 										0 );
+ 							}
+ 							catch( java::io::IOException* ioe_p ) { // file open error
+@@ -301,14 +301,14 @@
+ 
+ 							// contruct a name, if necessary, to prevent possible key collision on the name tree
+ 							java::String* key_p= 
+-								JvNewStringLatin1( vit->c_str() );
++								JvNewStringUTF( vit->c_str() );
+ 							{
+ 								int counter= 1;
+ 								while( emb_files_map_p->containsKey( key_p ) ) { // append a unique suffix
+ 									char buff[256];
+ 									sprintf( buff, "-%d", counter++ );
+ 									key_p= 
+-										JvNewStringLatin1( (*vit + buff ).c_str() );
++										JvNewStringUTF( (*vit + buff ).c_str() );
+ 								}
+ 							}
+ 
+--- a/pdftk/pdftk.cc
++++ b/pdftk/pdftk.cc
+@@ -168,7 +168,7 @@
+ 		}
+ 		if( input_pdf_p->m_password.empty() ) {
+ 			reader=
+-				new itext::PdfReader( JvNewStringLatin1( input_pdf_p->m_filename.c_str() ) );
++				new itext::PdfReader( JvNewStringUTF( input_pdf_p->m_filename.c_str() ) );
+ 		}
+ 		else {
+ 			if( input_pdf_p->m_password== "PROMPT" ) {
+@@ -180,7 +180,7 @@
+ 							input_pdf_p->m_password.size() );
+ 
+ 			reader= 
+-				new itext::PdfReader( JvNewStringLatin1( input_pdf_p->m_filename.c_str() ),
++				new itext::PdfReader( JvNewStringUTF( input_pdf_p->m_filename.c_str() ),
+ 															password );
+ 		}
+ 		reader->consolidateNamedDestinations();
+@@ -203,7 +203,7 @@
+ 		}
+ 	}
+ 	catch( java::io::IOException* ioe_p ) { // file open error
+-		if( ioe_p->getMessage()->equals( JvNewStringLatin1( "Bad password" ) ) ) {
++		if( ioe_p->getMessage()->equals( JvNewStringUTF( "Bad password" ) ) ) {
+ 			input_pdf_p->m_authorized_b= false;
+ 		}
+ 		open_success_b= false;
+@@ -1900,7 +1900,7 @@
+ 
+ 		// attempt to open the stream
+ 		java::String* jv_output_filename_p=
+-			JvNewStringLatin1( output_filename.c_str() );
++			JvNewStringUTF( output_filename.c_str() );
+ 		try {
+ 			os_p= new java::FileOutputStream( jv_output_filename_p );
+ 		}
+@@ -1927,7 +1927,7 @@
+ 									jint page_num )
+ {
+ 	itext::PdfName* page_marker_p=
+-		new itext::PdfName( JvNewStringLatin1(g_page_marker) );
++		new itext::PdfName( JvNewStringUTF(g_page_marker) );
+ 	itext::PdfDictionary* page_p= reader_p->getPageN( page_index );
+ 	if( page_p && page_p->isDictionary() ) {
+ 		page_p->put( page_marker_p, new itext::PdfNumber( page_num ) );
+@@ -1946,7 +1946,7 @@
+ 											 jint page_num )
+ {
+ 	itext::PdfName* page_marker_p=
+-		new itext::PdfName( JvNewStringLatin1(g_page_marker) );
++		new itext::PdfName( JvNewStringUTF(g_page_marker) );
+ 	itext::PdfDictionary* page_p= reader_p->getPageN( page_num );
+ 	if( page_p && page_p->isDictionary() ) {
+ 		page_p->remove( page_marker_p );
+@@ -1988,7 +1988,7 @@
+ 
+ 		string creator= "pdftk "+ string(PDFTK_VER)+ " - www.pdftk.com";
+ 		java::String* jv_creator_p= 
+-			JvNewStringLatin1( creator.c_str() );
++			JvNewStringUTF( creator.c_str() );
+ 
+ 		if( m_output_owner_pw== "PROMPT" ) {
+ 			prompt_for_password( "owner", "the output PDF", m_output_owner_pw );
+@@ -2166,7 +2166,7 @@
+ 					char buff[4096]= "";
+ 					sprintf( buff, m_output_filename.c_str(), ii+ 1 );
+ 
+-					java::String* jv_output_filename_p= JvNewStringLatin1( buff );
++					java::String* jv_output_filename_p= JvNewStringUTF( buff );
+ 
+ 					itext::Document* output_doc_p= new itext::Document();
+ 					java::FileOutputStream* ofs_p= new java::FileOutputStream( jv_output_filename_p );
+@@ -2273,13 +2273,13 @@
+ 						// first try fdf
+ 						try {
+ 							fdf_reader_p=
+-								new itext::FdfReader( JvNewStringLatin1( m_form_data_filename.c_str() ) );
++								new itext::FdfReader( JvNewStringUTF( m_form_data_filename.c_str() ) );
+ 						}
+ 						catch( java::io::IOException* ioe_p ) { // file open error
+ 							// maybe it's xfdf?
+ 							try {
+ 								xfdf_reader_p=
+-									new itext::XfdfReader( JvNewStringLatin1( m_form_data_filename.c_str() ) );
++									new itext::XfdfReader( JvNewStringUTF( m_form_data_filename.c_str() ) );
+ 							}
+ 							catch( java::io::IOException* ioe_p ) { // file open error
+ 								cerr << "Error: Failed to open form data file: " << endl;
+@@ -2304,7 +2304,7 @@
+ 																 m_background_filename );
+ 					}
+ 					try {
+-						mark_p= new itext::PdfReader( JvNewStringLatin1( m_background_filename.c_str() ) );
++						mark_p= new itext::PdfReader( JvNewStringUTF( m_background_filename.c_str() ) );
+ 						mark_p->removeUnusedObjects();
+ 						mark_p->shuffleSubsetNames();
+ 					}
+@@ -2322,7 +2322,7 @@
+ 																 m_stamp_filename );
+ 					}
+ 					try {
+-						mark_p= new itext::PdfReader( JvNewStringLatin1( m_stamp_filename.c_str() ) );
++						mark_p= new itext::PdfReader( JvNewStringUTF( m_stamp_filename.c_str() ) );
+ 						mark_p->removeUnusedObjects();
+ 						mark_p->shuffleSubsetNames();
+ 					}
+--- a/pdftk/report.cc
++++ b/pdftk/report.cc
+@@ -482,8 +482,8 @@
+ 						}
+ 
+ 						{ // PageLabelNumStyle
+-							itext::PdfName* r_p= new itext::PdfName(JvNewStringLatin1("r"));
+-							itext::PdfName* a_p= new itext::PdfName(JvNewStringLatin1("a"));
++							itext::PdfName* r_p= new itext::PdfName(JvNewStringUTF("r"));
++							itext::PdfName* a_p= new itext::PdfName(JvNewStringUTF("a"));
+ 
+ 							itext::PdfName* style_p= (itext::PdfName*)
+ 								reader_p->getPdfObject( label_p->get( itext::PdfName::S ) );
+@@ -1224,7 +1224,7 @@
+ 							 it!= info_map.end(); ++it )
+ 						{
+ 							if( it->second.empty() ) {
+-								info_p->remove( new itext::PdfName( JvNewStringLatin1(it->first.c_str()) ) );
++								info_p->remove( new itext::PdfName( JvNewStringUTF(it->first.c_str()) ) );
+ 							}
+ 							else {
+ 								const jsize jvs_size= 4096;
+@@ -1232,7 +1232,7 @@
+ 								jsize jvs_len= 0;
+ 								string_to_jcharstring( jvs, jvs_size, &jvs_len, it->second );
+ 
+-								info_p->put( new itext::PdfName( JvNewStringLatin1(it->first.c_str()) ),
++								info_p->put( new itext::PdfName( JvNewStringUTF(it->first.c_str()) ),
+ 														 new itext::PdfString( JvNewString(jvs, jvs_len), itext::PdfObject::TEXT_UNICODE ) );
+ 							}
+ 						}
