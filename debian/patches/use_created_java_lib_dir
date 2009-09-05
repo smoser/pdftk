@@ -1,0 +1,20 @@
+Description: use the created java header/libs dir and don't clean it
+Author: Johann Felix Soden <johfel@gmx.de>
+
+--- a/pdftk/Makefile.Base
++++ b/pdftk/Makefile.Base
+@@ -6,7 +6,7 @@
+ # platform-specific makefiles, e.g.: Makefile.Debian
+ #
+  
+-export java_libs_root= ../java_libs
++export java_libs_root= ../java_libs2
+ 
+ # repeat pdf.a because there are circular dependencies between
+ # pdf.a and text.a
+@@ -49,5 +49,4 @@
+ 	rm -vf /usr/local/bin/pdftk
+ 
+ clean:
+-	$(MAKE) -C $(java_libs_root) clean
+ 	rm -vf *.o pdftk

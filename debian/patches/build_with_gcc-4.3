@@ -1,0 +1,39 @@
+Description: Buildfix for gcj-4.3 including fixes for using of external itext library
+Author: <ROBERTOJIMENOCA@terra.es>, Johann Felix Soden <johfel@gmx.de>
+
+--- a/pdftk/Makefile.Debian
++++ b/pdftk/Makefile.Debian
+@@ -12,7 +12,7 @@
+ 
+ # tools
+ TOOLPATH=
+-VERSUFF=-4.1
++export VERSUFF=
+ CXX= $(TOOLPATH)g++$(VERSUFF)
+ export GCJ= $(TOOLPATH)gcj$(VERSUFF)
+ export GCJH= $(TOOLPATH)gcjh$(VERSUFF)
+@@ -23,12 +23,12 @@
+ # if you want pdftk to ask before overwriting a file, set
+ # ASK_ABOUT_WARNINGS to true; otherwise: false; override this default
+ # with the dont_ask or do_ask command-line options
+-CPPFLAGS= -O3 -DPATH_DELIM=0x2f -DASK_ABOUT_WARNINGS=false -fdollars-in-identifiers
+-CXXFLAGS= -lgcj
++CXXFLAGS= -Wall -Wextra -O2 -DPATH_DELIM=0x2f -DASK_ABOUT_WARNINGS=false -fdollars-in-identifiers -fpic -Weffc++
++GCJFLAGS= -lgcj -fdollars-in-identifiers -Wl,-Bsymbolic -Wl,--as-needed -fpic -findirect-dispatch -Wl,-rpath,/usr/lib/gcj
+ 
+ # itext compiler flags
+-# -O3 causes pdftk to segfault (during a cat operation) when compiled on sarge using gcc 3.4.4
+-export GCJFLAGS= -O2
++# In gcc 4.3 "-O3" gives an error. This is fixed in PR C++/39380 which is at least in debian's gcc 4.4.1-4
++export GCJFLAGS+= -O2
+ 
+ #
+ export ARFLAGS= rs
+--- a/pdftk/Makefile.Base
++++ b/pdftk/Makefile.Base
+@@ -50,4 +50,4 @@
+ 
+ clean:
+ 	$(MAKE) -C $(java_libs_root) clean
+-	rm -vf *.o
++	rm -vf *.o pdftk

@@ -43,7 +43,7 @@ Index: pdftk/java_libs/Makefile
  
  # append gcj flags
 -export GCJFLAGS+= -w --encoding=UTF-8 --classpath="$(java_libs_root)"
-+export GCJFLAGS+= -w --encoding=UTF-8 --classpath="/usr/share/java/libgcj-4.2.jar:$(java_libs_root)"
++export GCJFLAGS+= -w --encoding=UTF-8 --classpath="/usr/share/java/libgcj$(VERSUFF).jar:$(java_libs_root)"
  
 -all : libgcj_local itext
 -

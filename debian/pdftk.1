@@ -51,7 +51,7 @@ Where:
       \fBdump_data\fR | \fBdump_data_fields\fR | \fBupdate_info\fR]
 .br
 
-For Complete Help: \fBpdftk --help\fR
+For Complete Help: \fBpdftk \-\-help\fR
 .br
 .SH DESCRIPTION
 If PDF is electronic paper, then pdftk is an electronic staple-remover, hole-punch, binder, secret-decoder-ring, and X-Ray-glasses.  Pdftk is a simple tool for doing everyday things with PDF documents.  Use it to:
@@ -92,9 +92,9 @@ A summary of options is included below.
 \fB\-\-help\fR, \fB\-h\fR
 Show summary of options.
 .TP
-.B <input PDF files | - | PROMPT>
+.B <input PDF files | \- | PROMPT>
 A list of the input PDF files. If you plan to combine these PDFs (without
-using handles) then list files in the order you want them combined.  Use \fB-\fR 
+using handles) then list files in the order you want them combined.  Use \fB\-\fR 
 to pass a single PDF into pdftk via stdin.
 Input files can be associated with handles, where a
 handle is a single, upper-case letter:
@@ -137,7 +137,7 @@ Catenates pages from input PDFs to create a new PDF.
 Page order in the new PDF is specified by the order of the given page ranges.
 Page ranges are described like this:
 
-\fI<input PDF handle>\fR[\fI<begin page number>\fR[\fB-\fR\fI<end page number>\fR[\fI<qualifier>\fR]]][\fI<page rotation>\fR]
+\fI<input PDF handle>\fR[\fI<begin page number>\fR[\fB\-\fR\fI<end page number>\fR[\fI<qualifier>\fR]]][\fI<page rotation>\fR]
 
 Where the handle identifies one of the input PDF files, and
 the beginning and ending page numbers are one-based references
@@ -150,7 +150,7 @@ The \fBeven\fR qualifier causes pdftk to use only the even-numbered PDF pages, s
 
 The \fBodd\fR qualifier works similarly to the \fBeven\fR.
 
-The page rotation setting can cause pdftk to rotate pages and documents.  Each option sets the page rotation as follows (in degrees): \fBN\fR: 0, \fBE\fR: 90, \fBS\fR: 180, \fBW\fR: 270, \fBL\fR: -90, \fBR\fR: +90, \fBD\fR: +180. \fBL\fR, \fBR\fR, and \fBD\fR make relative adjustments to a page's rotation.
+The page rotation setting can cause pdftk to rotate pages and documents.  Each option sets the page rotation as follows (in degrees): \fBN\fR: 0, \fBE\fR: 90, \fBS\fR: 180, \fBW\fR: 270, \fBL\fR: \-90, \fBR\fR: +90, \fBD\fR: +180. \fBL\fR, \fBR\fR, and \fBD\fR make relative adjustments to a page's rotation.
 
 If no arguments are passed to cat, then pdftk combines all input PDFs in the
 order they were given to create the output.
@@ -442,7 +442,7 @@ pdftk in.pdf cat 1E 2-end output out.pdf
 .B Rotate an entire PDF document to 180 degrees
 pdftk in.pdf cat 1-endS output out.pdf
 .SH NOTES
-pdftk uses a slightly modified iText Java library (http://itextpdf.sourceforge.net/) to read and write PDF. The author compiled this Java library using GCJ (http://gcc.gnu.org) so it could be linked with a front end written in C++.
+pdftk uses the iText Java library (http://itextpdf.sourceforge.net/) to read and write PDF. The author compiled this Java library using GCJ (http://gcc.gnu.org) so it could be linked with a front end written in C++.
 
 The pdftk home page is http://www.accesspdf.com/pdftk/.
 .SH AUTHOR

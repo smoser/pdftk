@@ -1,0 +1,103 @@
+Description: use mkstemp instead of tmpnam
+Author: Johann Felix Soden <johfel@gmx.de>
+
+--- a/pdftk/report.cc
++++ b/pdftk/report.cc
+@@ -1256,11 +1257,11 @@
+ }
+ 
+ static bool
+-copyStdinToFile( const char* fn )
++copyStdinToFile( const int fd )
+ {
+ 	bool ret_val_b= true;
+ 
+-	FILE* fp= fopen( fn, "wb" );
++	FILE* fp= fdopen( fd, "wb" );
+ 	if( fp ) {
+ 		int cc= 0;
+ 		while( (cc=fgetc(stdin))!= EOF ) {
+@@ -1282,15 +1283,15 @@
+ {
+ 	bool ret_val_b= true;
+ 
+-	char xmp_fn_1[L_tmpnam]= "";
++	char xmp_fn_1[FILENAME_MAX]= P_tmpdir "/pdftk_tmpXXXXXX";
+ 
+ 	itext::PdfDictionary* catalog_p= reader_p->catalog;
+ 	if( catalog_p && catalog_p->isDictionary() ) {
+ 
+ 		// stdin? copy to temp file
+ 		if( xmp_filename== "-" ) {
+-			tmpnam( xmp_fn_1 );
+-			ret_val_b= copyStdinToFile( xmp_fn_1 );
++			int xmp_fn_1_fd=mkstemp( xmp_fn_1 );
++			ret_val_b= copyStdinToFile( xmp_fn_1_fd );
+ 			xmp_filename= xmp_fn_1;
+ 		}
+ 		if( ret_val_b ) {
+@@ -1333,8 +1334,8 @@
+ 			}
+ 		}
+ 
+-		if( xmp_fn_1[0] ) {
+-			remove( xmp_fn_1 );
++		if( xmp_filename==xmp_fn_1 ) {
++				remove( xmp_fn_1 );
+ 		}
+ 	}
+ 	else {
+@@ -1357,23 +1358,30 @@
+ 	jbyteArray metadata_p= reader_p->getMetadata();
+ 	if( metadata_p ) {
+ 
+-		char xmp_fn_1[L_tmpnam]= "";
+-		char xmp_fn_2[L_tmpnam]= "";
+-		char xmp_out_fn[L_tmpnam]= "";
++		char xmp_fn_1[FILENAME_MAX]= P_tmpdir "/pdftk_tmpXXXXXX";
++		char xmp_fn_2[FILENAME_MAX]= P_tmpdir "/pdftk_tmpXXXXXX";;
++		char xmp_out_fn[FILENAME_MAX]= P_tmpdir "/pdftk_tmpXXXXXX";
+ 
+-		tmpnam( xmp_fn_2 );
+-		tmpnam( xmp_out_fn );
++		int xmp_fn_2_fd=  mkstemp(xmp_fn_2);
++		int xmp_out_fn_fd= mkstemp(xmp_out_fn);
++
++		if(xmp_fn_2_fd<0 || xmp_out_fn_fd<0)
++		{
++			perror("UpdateXmp: Can't open temporary files");
++			ret_val_b=false;
++		}
++		close(xmp_out_fn_fd);
+ 
+ 		// copy PDF's current XMP to temp file
+-		FILE* fp= fopen( xmp_fn_2, "wb" );
+-		if( fp ) {
++		FILE* fp= fdopen( xmp_fn_2_fd, "wb" );
++		if( xmp_fn_2_fd>0 && fp ) {
+ 			fputs( (char*)elements(metadata_p), fp );
+ 			fclose( fp );
+ 
+ 			// stdin? copy to temp file
+ 			if( xmp_filename== "-" ) {
+-				tmpnam( xmp_fn_1 );
+-				ret_val_b= copyStdinToFile( xmp_fn_1 );
++				int xmp_fn_1_fd=  mkstemp(xmp_fn_1);
++				ret_val_b= copyStdinToFile( xmp_fn_1_fd);
+ 				xmp_filename= xmp_fn_1;
+ 			}
+ 			if( ret_val_b ) {
+@@ -1389,11 +1397,11 @@
+ 				}
+ 
+ 				remove( xmp_out_fn );
+-				if( xmp_fn_1[0] ) {
++				if( xmp_filename== xmp_fn_1) {
+ 					remove( xmp_fn_1 );
+ 				}
+ 			}
+-			
++
+ 			remove( xmp_fn_2 );
+ 		}
+ 		else { // error
