@@ -68,16 +68,16 @@ Debian-Bug: http://bugs.debian.org/504128
  															password );
  		}
  		reader->consolidateNamedDestinations();
-@@ -203,7 +203,7 @@
+@@ -202,7 +202,7 @@
  		}
  	}
  	catch( java::io::IOException* ioe_p ) { // file open error
--		if( ioe_p->getMessage()->equals( JvNewStringLatin1( "Bad password" ) ) ) {
-+		if( ioe_p->getMessage()->equals( JvNewStringUTF( "Bad password" ) ) ) {
+-		if( ioe_p->getMessage()->equals( JvNewStringLatin1( "Bad user password" ) ) ) {
++		if( ioe_p->getMessage()->equals( JvNewStringUTF( "Bad user password" ) ) ) {
  			input_pdf_p->m_authorized_b= false;
  		}
- 		open_success_b= false;
-@@ -1900,7 +1900,7 @@
+ 		else {
+@@ -1904,7 +1904,7 @@
  
  		// attempt to open the stream
  		java::String* jv_output_filename_p=
@@ -86,7 +86,7 @@ Debian-Bug: http://bugs.debian.org/504128
  		try {
  			os_p= new java::FileOutputStream( jv_output_filename_p );
  		}
-@@ -1927,7 +1927,7 @@
+@@ -1931,7 +1931,7 @@
  									jint page_num )
  {
  	itext::PdfName* page_marker_p=
@@ -95,7 +95,7 @@ Debian-Bug: http://bugs.debian.org/504128
  	itext::PdfDictionary* page_p= reader_p->getPageN( page_index );
  	if( page_p && page_p->isDictionary() ) {
  		page_p->put( page_marker_p, new itext::PdfNumber( page_num ) );
-@@ -1946,7 +1946,7 @@
+@@ -1950,7 +1950,7 @@
  											 jint page_num )
  {
  	itext::PdfName* page_marker_p=
@@ -104,7 +104,7 @@ Debian-Bug: http://bugs.debian.org/504128
  	itext::PdfDictionary* page_p= reader_p->getPageN( page_num );
  	if( page_p && page_p->isDictionary() ) {
  		page_p->remove( page_marker_p );
-@@ -1988,7 +1988,7 @@
+@@ -1992,7 +1992,7 @@
  
  		string creator= "pdftk "+ string(PDFTK_VER)+ " - www.pdftk.com";
  		java::String* jv_creator_p= 
@@ -113,7 +113,7 @@ Debian-Bug: http://bugs.debian.org/504128
  
  		if( m_output_owner_pw== "PROMPT" ) {
  			prompt_for_password( "owner", "the output PDF", m_output_owner_pw );
-@@ -2166,7 +2166,7 @@
+@@ -2170,7 +2170,7 @@
  					char buff[4096]= "";
  					sprintf( buff, m_output_filename.c_str(), ii+ 1 );
  
@@ -122,7 +122,7 @@ Debian-Bug: http://bugs.debian.org/504128
  
  					itext::Document* output_doc_p= new itext::Document();
  					java::FileOutputStream* ofs_p= new java::FileOutputStream( jv_output_filename_p );
-@@ -2273,13 +2273,13 @@
+@@ -2277,13 +2277,13 @@
  						// first try fdf
  						try {
  							fdf_reader_p=
@@ -138,7 +138,7 @@ Debian-Bug: http://bugs.debian.org/504128
  							}
  							catch( java::io::IOException* ioe_p ) { // file open error
  								cerr << "Error: Failed to open form data file: " << endl;
-@@ -2304,7 +2304,7 @@
+@@ -2308,7 +2308,7 @@
  																 m_background_filename );
  					}
  					try {
@@ -147,7 +147,7 @@ Debian-Bug: http://bugs.debian.org/504128
  						mark_p->removeUnusedObjects();
  						mark_p->shuffleSubsetNames();
  					}
-@@ -2322,7 +2322,7 @@
+@@ -2326,7 +2326,7 @@
  																 m_stamp_filename );
  					}
  					try {

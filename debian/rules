@@ -8,19 +8,22 @@ GCJ_ITEXT_JAR_PATH=/usr/share/java/itext.jar
 GCJ_ITEXT_VERSION=$(shell dpkg-query -W -f'$${Version}' libitext-java-gcj)
 GCJ_ITEXT_VERSION_SHORT=$(shell dpkg-query -W -f'$${Version}' libitext-java-gcj | sed -e 's/-[^-]*$$//')
 
+# extract version suffix from gcj
+VERSUFF=-$(shell gcj --version | sed -r -e '1s/.* ([0-9]+\.[0-9]+).*/\1/;q')
+
 %:
 	dh --with quilt $@
 
 override_dh_auto_build:
 	dh_auto_build
 	jar tf $(GCJ_ITEXT_JAR_PATH) | grep '\.class' | sed 's/\.class//' | sed 's|/|\.|g' > classes
-	gjavah -d java_libs2 -cni -classpath=$(GCJ_ITEXT_JAR_PATH) `cat classes`
+	gjavah$(VERSUFF) -d java_libs2 -cni -classpath=$(GCJ_ITEXT_JAR_PATH) `cat classes`
 	ln --target-directory $(CURDIR)/pdftk/ -s $(GCJ_ITEXT_SO_PATH)
-	$(MAKE) -C $(CURDIR)/pdftk -f Makefile.Debian GCJ_ITEXT_SO=$(GCJ_ITEXT_SO_NAME)
+	$(MAKE) -C $(CURDIR)/pdftk -f Makefile.Debian GCJ_ITEXT_SO=$(GCJ_ITEXT_SO_NAME) VERSUFF=$(VERSUFF)
 
 override_dh_auto_clean:
 	dh_quilt_patch
-	[ ! -f $(CURDIR)/pdftk/Makefile.Debian] || make -C $(CURDIR)/pdftk -f Makefile.Debian clean
+	[ ! -f $(CURDIR)/pdftk/Makefile.Debian ] || make -C $(CURDIR)/pdftk -f Makefile.Debian clean
 	rm -f $(CURDIR)/pdftk/$(GCJ_ITEXT_SO_NAME)
 	rm -rf $(CURDIR)/pdftk/pdftk
 	rm -f $(CURDIR)/classes

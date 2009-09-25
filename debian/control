@@ -2,7 +2,7 @@ Source: pdftk
 Section: text
 Priority: optional
 Maintainer: Johann Felix Soden <johfel@gmx.de>
-Build-Depends: debhelper (>= 7.0.50~), quilt (>=0.46-7~), gcj, libitext-java-gcj, libitext-java
+Build-Depends: debhelper (>= 7.0.50~), quilt (>=0.46-7~), gcj, libitext-java-gcj, libitext-java, g++-4.4 [hppa]
 Standards-Version: 3.8.3
 Homepage: http://www.pdfhacks.com/pdftk/
 DM-Upload-Allowed: yes

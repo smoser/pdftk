@@ -3,7 +3,7 @@ Author: Johann Felix Soden <johfel@gmx.de>
 
 --- a/pdftk/pdftk.cc
 +++ b/pdftk/pdftk.cc
-@@ -2655,6 +2655,10 @@
+@@ -2659,6 +2659,10 @@
  	bool synopsis_b= ( argc== 1 );
  	int ret_val= 0; // default: no error
  

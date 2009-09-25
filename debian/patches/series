@@ -9,3 +9,4 @@ set_classpath
 handle_utf8_data_in_update_info
 use_mkstemp
 fix_compiler_warnings
+support_uncompression
