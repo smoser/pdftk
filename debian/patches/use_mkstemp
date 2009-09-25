@@ -3,7 +3,7 @@ Author: Johann Felix Soden <johfel@gmx.de>
 
 --- a/pdftk/report.cc
 +++ b/pdftk/report.cc
-@@ -1256,11 +1257,11 @@
+@@ -1256,11 +1256,11 @@
  }
  
  static bool
@@ -17,7 +17,7 @@ Author: Johann Felix Soden <johfel@gmx.de>
  	if( fp ) {
  		int cc= 0;
  		while( (cc=fgetc(stdin))!= EOF ) {
-@@ -1282,15 +1283,15 @@
+@@ -1282,15 +1282,15 @@
  {
  	bool ret_val_b= true;
  
@@ -36,7 +36,7 @@ Author: Johann Felix Soden <johfel@gmx.de>
  			xmp_filename= xmp_fn_1;
  		}
  		if( ret_val_b ) {
-@@ -1333,8 +1334,8 @@
+@@ -1333,8 +1333,8 @@
  			}
  		}
  
@@ -47,19 +47,20 @@ Author: Johann Felix Soden <johfel@gmx.de>
  		}
  	}
  	else {
-@@ -1357,23 +1358,30 @@
+@@ -1357,23 +1357,30 @@
  	jbyteArray metadata_p= reader_p->getMetadata();
  	if( metadata_p ) {
  
 -		char xmp_fn_1[L_tmpnam]= "";
 -		char xmp_fn_2[L_tmpnam]= "";
 -		char xmp_out_fn[L_tmpnam]= "";
+-
+-		tmpnam( xmp_fn_2 );
+-		tmpnam( xmp_out_fn );
 +		char xmp_fn_1[FILENAME_MAX]= P_tmpdir "/pdftk_tmpXXXXXX";
 +		char xmp_fn_2[FILENAME_MAX]= P_tmpdir "/pdftk_tmpXXXXXX";;
 +		char xmp_out_fn[FILENAME_MAX]= P_tmpdir "/pdftk_tmpXXXXXX";
- 
--		tmpnam( xmp_fn_2 );
--		tmpnam( xmp_out_fn );
++
 +		int xmp_fn_2_fd=  mkstemp(xmp_fn_2);
 +		int xmp_out_fn_fd= mkstemp(xmp_out_fn);
 +
@@ -87,7 +88,7 @@ Author: Johann Felix Soden <johfel@gmx.de>
  				xmp_filename= xmp_fn_1;
  			}
  			if( ret_val_b ) {
-@@ -1389,11 +1397,11 @@
+@@ -1389,11 +1396,11 @@
  				}
  
  				remove( xmp_out_fn );

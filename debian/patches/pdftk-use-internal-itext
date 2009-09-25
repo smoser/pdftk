@@ -123,17 +123,26 @@ Author: Jochen Schmitt <Jochen@herr-schmitt.de> (modified for Debian by Johann F
  #include "com/lowagie/text/pdf/PdfString.h"
  #include "com/lowagie/text/pdf/PdfNumber.h"
  #include "com/lowagie/text/pdf/PdfArray.h"
-@@ -191,7 +196,8 @@
+@@ -191,18 +196,24 @@
  		// store in this java object so the gc can trace it
  		g_dont_collect_p->addElement( reader );
  
 -		input_pdf_p->m_authorized_b= ( !reader->encrypted || reader->passwordIsOwner );
-+		input_pdf_p->m_authorized_b= ( !reader->encrypted // || reader->passwordIsOwner
-+																	 );
++		input_pdf_p->m_authorized_b= reader->isOpenedWithFullPermissions();
  		if( !input_pdf_p->m_authorized_b ) {
  			open_success_b= false;
  		}
-@@ -203,6 +209,7 @@
+ 	}
+ 	catch( java::io::IOException* ioe_p ) { // file open error
+-		if( ioe_p->getMessage()->equals( JvNewStringLatin1( "Bad password" ) ) ) {
++		if( ioe_p->getMessage()->equals( JvNewStringLatin1( "Bad user password" ) ) ) {
+ 			input_pdf_p->m_authorized_b= false;
+ 		}
++		else {
++			cerr << string((const char*) elements(ioe_p->getMessage()->getBytes()),
++					(int) ioe_p->getMessage()->getBytes()->length)
++			  	<< endl;
++		}
  		open_success_b= false;
  	}
  	catch( java::lang::Throwable* t_p ) { // unexpected error
@@ -141,7 +150,7 @@ Author: Jochen Schmitt <Jochen@herr-schmitt.de> (modified for Debian by Johann F
  		cerr << "Error: Unexpected Exception in open_reader()" << endl;
  		open_success_b= false;
  							
-@@ -2017,14 +2024,14 @@
+@@ -2017,14 +2028,14 @@
  				output_doc_p->addCreator( jv_creator_p );
  
  				// un/compress output streams?
@@ -164,7 +173,7 @@ Author: Jochen Schmitt <Jochen@herr-schmitt.de> (modified for Debian by Johann F
  
  				// encrypt output?
  				if( m_output_encryption_strength!= none_enc ||
-@@ -2033,7 +2040,7 @@
+@@ -2033,7 +2044,7 @@
  					{
  						// if no stregth is given, default to 128 bit,
  						// (which is incompatible w/ Acrobat 4)
@@ -173,7 +182,7 @@ Author: Jochen Schmitt <Jochen@herr-schmitt.de> (modified for Debian by Johann F
  							( m_output_encryption_strength!= bits40_enc );
  
  						writer_p->setEncryption( output_user_pw_p,
-@@ -2057,7 +2064,8 @@
+@@ -2057,7 +2068,8 @@
  							input_reader_p->getPdfObject( trailer_p->get( itext::PdfName::ID ) );
  						if( file_id_p && file_id_p->isArray() ) {
  
@@ -183,7 +192,7 @@ Author: Jochen Schmitt <Jochen@herr-schmitt.de> (modified for Debian by Johann F
  						}
  					}
  
-@@ -2168,12 +2176,14 @@
+@@ -2168,12 +2180,14 @@
  
  					// un/compress output streams?
  					if( m_output_uncompress_b ) {
@@ -202,7 +211,7 @@ Author: Jochen Schmitt <Jochen@herr-schmitt.de> (modified for Debian by Johann F
  					}
  
  					// encrypt output?
-@@ -2183,7 +2193,7 @@
+@@ -2183,7 +2197,7 @@
  						{
  							// if no stregth is given, default to 128 bit,
  							// (which is incompatible w/ Acrobat 4)
@@ -211,7 +220,7 @@ Author: Jochen Schmitt <Jochen@herr-schmitt.de> (modified for Debian by Johann F
  								( m_output_encryption_strength!= bits40_enc );
  
  							writer_p->setEncryption( output_user_pw_p,
-@@ -2403,13 +2413,15 @@
+@@ -2403,13 +2417,15 @@
  				// un/compress output streams?
  				if( m_output_uncompress_b ) {
  					add_marks_to_pages( input_reader_p );
@@ -231,7 +240,7 @@ Author: Jochen Schmitt <Jochen@herr-schmitt.de> (modified for Debian by Johann F
  				}
  
  				// encrypt output?
-@@ -2420,13 +2432,13 @@
+@@ -2420,13 +2436,13 @@
  
  						// if no stregth is given, default to 128 bit,
  						// (which is incompatible w/ Acrobat 4)
@@ -247,7 +256,7 @@ Author: Jochen Schmitt <Jochen@herr-schmitt.de> (modified for Debian by Johann F
  					}
  
  				// fill form fields?
-@@ -2435,8 +2447,11 @@
+@@ -2435,8 +2451,11 @@
  					{
  						itext::AcroFields* fields_p= writer_p->getAcroFields();
  						fields_p->setGenerateAppearances( true ); // have iText create field appearances
@@ -261,7 +270,7 @@ Author: Jochen Schmitt <Jochen@herr-schmitt.de> (modified for Debian by Johann F
  							{ // Rich Text input found
  
  								// set the PDF so that Acrobat will create appearances;
-@@ -2486,16 +2501,16 @@
+@@ -2486,16 +2505,16 @@
  							doc_page_size_p= doc_page_size_p->rotate();
  						}
  
@@ -286,7 +295,7 @@ Author: Jochen Schmitt <Jochen@herr-schmitt.de> (modified for Debian by Johann F
            
  						com::lowagie::text::pdf::PdfContentByte* content_byte_p= 
  							( background_b ) ? writer_p->getUnderContent( ii ) : writer_p->getOverContent( ii );
-@@ -2512,20 +2527,20 @@
+@@ -2512,20 +2531,20 @@
  																					 0, -1* mark_scale,
  																					 mark_scale, 0,
  																					 h_trans, 
@@ -311,7 +320,7 @@ Author: Jochen Schmitt <Jochen@herr-schmitt.de> (modified for Debian by Johann F
  						}
  					}
  				}
-@@ -2537,7 +2552,7 @@
+@@ -2537,7 +2556,7 @@
  				}
  
  				// done; write output
@@ -320,7 +329,7 @@ Author: Jochen Schmitt <Jochen@herr-schmitt.de> (modified for Debian by Johann F
  			}
  			break;
  
-@@ -2663,15 +2678,15 @@
+@@ -2663,15 +2682,15 @@
  			JvCreateJavaVM(NULL);
  			JvAttachCurrentThread(NULL, NULL);
  

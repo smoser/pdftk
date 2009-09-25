@@ -1,3 +1,17 @@
+pdftk (1.41+dfsg-2) unstable; urgency=low
+
+  * Fix FTBFS on hppa:
+   - debian/rules: enforce same version for gcj and g++.
+   - debian/control: add g++-4.4 [hppa] to Build-Depends field.
+  * debian/rules: add missing space in clean rule.
+  * Fix failing on pdf files with owner password:
+    - change pdftk-use-internal-itext and support_utf8_filenames
+      in debian/patches and refresh other patches
+  * Add uncompression support which was removed in 1.41+dfsg-1.
+    (Closes: #547910)
+
+ -- Johann Felix Soden <johfel@gmx.de>  Fri, 25 Sep 2009 11:54:04 +0200
+
 pdftk (1.41+dfsg-1) unstable; urgency=low
 
   * Adopted the package with agreement of the previous maintainer
