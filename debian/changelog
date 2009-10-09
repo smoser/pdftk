@@ -1,3 +1,12 @@
+pdftk (1.41+dfsg-3) unstable; urgency=low
+
+  * Add multistamp and multibackground support (Closes: #511415)
+    - thanks to Bernhard R. Link <brlink@debian.org> for the patch.
+  * Extend uncompression: Don't fail when for libitext unknown filters
+    occur. (Closes: #550367)
+
+ -- Johann Felix Soden <johfel@gmx.de>  Fri, 09 Oct 2009 22:48:13 +0200
+
 pdftk (1.41+dfsg-2) unstable; urgency=low
 
   * Fix FTBFS on hppa:
