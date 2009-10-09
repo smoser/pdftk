@@ -8,5 +8,6 @@ use_created_java_lib_dir
 set_classpath
 handle_utf8_data_in_update_info
 use_mkstemp
+multistamp_support
 fix_compiler_warnings
 support_uncompression

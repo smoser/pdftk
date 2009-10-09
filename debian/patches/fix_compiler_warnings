@@ -12,7 +12,7 @@ Author: Johann Felix Soden <johfel@gmx.de>
  		cout << "The name you entered might have exceeded our internal buffer." << endl;
  		cout << "   Please review it and make sure it wasn't truncated:" << endl;
  		cout << fn << endl;
-@@ -851,7 +851,22 @@
+@@ -857,18 +857,33 @@
  	m_valid_b( false ),
  	m_authorized_b( true ),
  	m_input_pdf_readers_opened_b( false ),
@@ -34,9 +34,11 @@ Author: Johann Felix Soden <johfel@gmx.de>
 +	m_output_owner_pw(),
 +	m_output_user_pw(),
  	m_output_user_perms( 0 ),
++	m_multistamp_b ( false ),
++	m_multibackground_b ( false ),
  	m_output_uncompress_b( false ),
  	m_output_compress_b( false ),
-@@ -859,10 +874,8 @@
+ 	m_output_flatten_b( false ),
  	m_output_drop_xfa_b( false ),
  	m_output_keep_first_id_b( false ),
  	m_output_keep_final_id_b( false ),
@@ -49,7 +51,7 @@ Author: Johann Felix Soden <johfel@gmx.de>
  {
  	TK_Session::ArgState arg_state = input_files_e;
  
-@@ -1351,7 +1364,7 @@
+@@ -1367,7 +1382,7 @@
  						if( (!even_pages_b || !(kk % 2)) &&
  								(!odd_pages_b || (kk % 2)) )
  							{
@@ -58,7 +60,7 @@ Author: Johann Felix Soden <johfel@gmx.de>
  
  									// look to see if this page of this document
  									// has already been referenced; if it has,
-@@ -1591,7 +1604,7 @@
+@@ -1607,7 +1622,7 @@
  					for( InputPdfIndex ii= 0; ii< m_input_pdf.size(); ++ii ) {
  						InputPdf& input_pdf= m_input_pdf[ii];
  
@@ -67,16 +69,16 @@ Author: Johann Felix Soden <johfel@gmx.de>
  							m_page_seq.push_back( PageRef( ii, jj ) ); // DF rotate
  							m_input_pdf[ii].m_readers.back().first.insert( jj ); // mark our claim
  						}
-@@ -2300,7 +2313,7 @@
- 				// try opening the PDF background or stamp before we get too involved
+@@ -2317,7 +2332,7 @@
  				itext::PdfReader* mark_p= 0;
+ 				bool mark_per_page_b = false;
  				bool background_b= true; // set false for stamp
 -				com::lowagie::text::pdf::PdfImportedPage* mark_page_p= 0;
 +				//com::lowagie::text::pdf::PdfImportedPage* mark_page_p= 0;
  				//
  				if( !m_background_filename.empty() ) {
- 					if( m_background_filename== "PROMPT" ) {
-@@ -2642,6 +2655,9 @@
+ 					mark_per_page_b = m_multibackground_b;
+@@ -2665,6 +2680,9 @@
  				this->unpack_files( input_reader_p );
  			}
  			break;

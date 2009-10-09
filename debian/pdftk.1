@@ -46,7 +46,9 @@ Where:
 .br
      [\fBcat\fR | \fBattach_files\fR | \fBunpack_files\fR | \fBburst\fR |
 .br
-      \fBfill_form\fR | \fBbackground\fR | \fBstamp\fR | \fBgenerate_fdf\fR
+      \fBfill_form\fR | \fBbackground\fR | \fBstamp\fR | \fBgenerate_fdf |\fR
+.br
+      \fBmultibackground\fR | \fBmultistamp\fR |
 .br
       \fBdump_data\fR | \fBdump_data_fields\fR | \fBupdate_info\fR]
 .br
@@ -274,8 +276,16 @@ to pass a background PDF into pdftk via stdin.
 
 If the input PDF does not have a transparent background (such as a PDF created from page scans) then the resulting background won't be visible -- use the \fIstamp\fR feature instead.
 .TP
+.B multibackground <background PDF filename | - | PROMPT>
+Same as the \fIbackground\fR feature, but applies each page of the
+the background PDF to the corresponding page of the input PDF. 
+.TP
 .B stamp <stamp PDF filename | - | PROMPT>
 This behaves just like the \fIbackground\fR feature except it overlays the stamp PDF page \fIon top\fR of the input PDF document's pages.  This works best if the stamp PDF page has a transparent background.
+.TP
+.B multistamp <stamp PDF filename | - | PROMPT>
+Same as stamp, but stamps different pages with different
+pages (not only the first pages) of the stamp PDF file. 
 .TP
 .B dump_data
 Reads a single, input PDF file and reports various statistics, 
