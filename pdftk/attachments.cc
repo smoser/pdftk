@@ -208,10 +208,10 @@ TK_Session::attach_files
 									itext::PdfAnnotation::createFileAttachment
 									( writer_p,
 										annot_bbox_p,
-										JvNewStringLatin1( filename.c_str() ), // contents
+										JvNewStringUTF( filename.c_str() ), // contents
 										0,
-										JvNewStringLatin1( vit->c_str() ), // the file path
-										JvNewStringLatin1( filename.c_str() ) ); // display name
+										JvNewStringUTF( vit->c_str() ), // the file path
+										JvNewStringUTF( filename.c_str() ) ); // display name
 
 								itext::PdfIndirectReference* ref_p=
 									writer_p->addToBody( annot_p )->getIndirectReference();
@@ -284,8 +284,8 @@ TK_Session::attach_files
 								filespec_p= 
 									itext::PdfFileSpecification::fileEmbedded
 									( writer_p,
-										JvNewStringLatin1( vit->c_str() ), // the file path
-										JvNewStringLatin1( filename.c_str() ), // the display name
+										JvNewStringUTF( vit->c_str() ), // the file path
+										JvNewStringUTF( filename.c_str() ), // the display name
 										0 );
 							}
 							catch( java::io::IOException* ioe_p ) { // file open error
@@ -301,14 +301,14 @@ TK_Session::attach_files
 
 							// contruct a name, if necessary, to prevent possible key collision on the name tree
 							java::String* key_p= 
-								JvNewStringLatin1( vit->c_str() );
+								JvNewStringUTF( vit->c_str() );
 							{
 								int counter= 1;
 								while( emb_files_map_p->containsKey( key_p ) ) { // append a unique suffix
 									char buff[256];
 									sprintf( buff, "-%d", counter++ );
 									key_p= 
-										JvNewStringLatin1( (*vit + buff ).c_str() );
+										JvNewStringUTF( (*vit + buff ).c_str() );
 								}
 							}
 

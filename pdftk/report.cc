@@ -482,8 +482,8 @@ ReportPageLabels( ostream& ofs,
 						}
 
 						{ // PageLabelNumStyle
-							itext::PdfName* r_p= new itext::PdfName(JvNewStringLatin1("r"));
-							itext::PdfName* a_p= new itext::PdfName(JvNewStringLatin1("a"));
+							itext::PdfName* r_p= new itext::PdfName(JvNewStringUTF("r"));
+							itext::PdfName* a_p= new itext::PdfName(JvNewStringUTF("a"));
 
 							itext::PdfName* style_p= (itext::PdfName*)
 								reader_p->getPdfObject( label_p->get( itext::PdfName::S ) );
@@ -1224,7 +1224,7 @@ UpdateInfo( itext::PdfReader* reader_p,
 							 it!= info_map.end(); ++it )
 						{
 							if( it->second.empty() ) {
-								info_p->remove( new itext::PdfName( JvNewStringLatin1(it->first.c_str()) ) );
+								info_p->remove( new itext::PdfName( JvNewStringUTF(it->first.c_str()) ) );
 							}
 							else {
 								const jsize jvs_size= 4096;
@@ -1232,7 +1232,7 @@ UpdateInfo( itext::PdfReader* reader_p,
 								jsize jvs_len= 0;
 								string_to_jcharstring( jvs, jvs_size, &jvs_len, it->second );
 
-								info_p->put( new itext::PdfName( JvNewStringLatin1(it->first.c_str()) ),
+								info_p->put( new itext::PdfName( JvNewStringUTF(it->first.c_str()) ),
 														 new itext::PdfString( JvNewString(jvs, jvs_len), itext::PdfObject::TEXT_UNICODE ) );
 							}
 						}
