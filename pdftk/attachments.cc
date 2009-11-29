@@ -243,7 +243,7 @@ TK_Session::attach_files
 			if( catalog_p && catalog_p->isDictionary() ) {
 
 				// the Names dict
-				itext::PdfIndirectReference* names_ref_p= 0;
+				//itext::PdfIndirectReference* names_ref_p= 0;
 				itext::PdfDictionary* names_p= (itext::PdfDictionary*)
 					input_reader_p->getPdfObject( catalog_p->get( itext::PdfName::NAMES ) );
 				bool names_new_b= false;
@@ -455,7 +455,7 @@ TK_Session::unpack_files
 		if( catalog_p && catalog_p->isDictionary() ) {
 
 			// the Names dict
-			itext::PdfIndirectReference* names_ref_p= 0;
+			//itext::PdfIndirectReference* names_ref_p= 0;
 			itext::PdfDictionary* names_p= (itext::PdfDictionary*)
 				input_reader_p->getPdfObject( catalog_p->get( itext::PdfName::NAMES ) );
 			if( names_p && names_p->isDictionary() ) {
