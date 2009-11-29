@@ -12,7 +12,7 @@ GCJ_ITEXT_VERSION_SHORT=$(shell dpkg-query -W -f'$${Version}' libitext-java-gcj 
 VERSUFF=-$(shell gcj --version | sed -r -e '1s/.* ([0-9]+\.[0-9]+).*/\1/;q')
 
 %:
-	dh --with quilt $@
+	dh $@
 
 override_dh_auto_build:
 	dh_auto_build
@@ -22,7 +22,6 @@ override_dh_auto_build:
 	$(MAKE) -C $(CURDIR)/pdftk -f Makefile.Debian GCJ_ITEXT_SO=$(GCJ_ITEXT_SO_NAME) VERSUFF=$(VERSUFF)
 
 override_dh_auto_clean:
-	dh_quilt_patch
 	[ ! -f $(CURDIR)/pdftk/Makefile.Debian ] || make -C $(CURDIR)/pdftk -f Makefile.Debian clean
 	rm -f $(CURDIR)/pdftk/$(GCJ_ITEXT_SO_NAME)
 	rm -rf $(CURDIR)/pdftk/pdftk
@@ -40,5 +39,5 @@ override_dh_auto_install:
 	dh_auto_install
 
 get-orig-source:
-	uscan --force-download --repack --rename --destdir `pwd`
-
+	cd $(dir $(firstword $(MAKEFILE_LIST))).. && \
+	uscan --force-download --repack --rename --destdir $(CURDIR)

@@ -1,3 +1,14 @@
+pdftk (1.41+dfsg-4) unstable; urgency=low
+
+  * To solve a fill_form bug, insert itext.jar path into classpath.
+  * Convert package to the 3.0 (quilt) source format.
+  * Improve get-orig-source target:
+   - debian/rules: support any working directory in get-orig-source.
+   - debian/uscan-dfsg-clean.sh: do not add .orig to the main directory
+     in .orig.tar.gz.
+
+ -- Johann Felix Soden <johfel@gmx.de>  Sun, 29 Nov 2009 13:17:30 +0100
+
 pdftk (1.41+dfsg-3) unstable; urgency=low
 
   * Add multistamp and multibackground support (Closes: #511415)

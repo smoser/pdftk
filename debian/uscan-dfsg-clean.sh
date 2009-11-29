@@ -19,11 +19,11 @@ rm -f ${filename}
 
 rm -rf ${dir}/java_libs
 rm -rf ${dir}/debian
-mv ${dir} ${dir}+dfsg.orig
+mv ${dir} ${dir}+dfsg
 
-tar cf - ${dir}+dfsg.orig | gzip -9 > ${dfsgfilename}
+tar cf - ${dir}+dfsg | gzip -9 > ${dfsgfilename}
 
-rm -rf ${dir}+dfsg.orig
+rm -rf ${dir}+dfsg
 
 echo "${dfsgfilename} created."
 
