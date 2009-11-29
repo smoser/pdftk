@@ -51,7 +51,11 @@
 
 #include "com/lowagie/text/Document.h"
 #include "com/lowagie/text/Rectangle.h"
+// Ewww, PdfName has a field called NULL.
+#undef NULL
 #include "com/lowagie/text/pdf/PdfName.h"
+#define NULL __null
+
 #include "com/lowagie/text/pdf/PdfString.h"
 #include "com/lowagie/text/pdf/PdfNumber.h"
 #include "com/lowagie/text/pdf/PdfArray.h"
@@ -148,8 +152,8 @@ TK_Session::attach_files
 
 					itext::Rectangle* crop_box_p= 
 						input_reader_p->getCropBox( m_input_attach_file_pagenum );
-					float corner_top= crop_box_p->top()- margin;
-					float corner_left= crop_box_p->left()+ margin;
+					float corner_top= crop_box_p->getTop()- margin;
+					float corner_left= crop_box_p->getLeft()+ margin;
 
 					itext::PdfArray* annots_p= (itext::PdfArray*)
 						input_reader_p->getPdfObject( page_p->get( itext::PdfName::ANNOTS ) );
@@ -187,11 +191,11 @@ TK_Session::attach_files
 								string filename= drop_path(*vit);
 
 								// wrap our location over page bounds, if needed
-								if( crop_box_p->right() < corner_left+ trans ) {
-									corner_left= crop_box_p->left()+ margin;
+								if( crop_box_p->getRight() < corner_left+ trans ) {
+									corner_left= crop_box_p->getLeft()+ margin;
 								}
-								if( corner_top- trans< crop_box_p->bottom() ) {
-									corner_top= crop_box_p->top()- margin;
+								if( corner_top- trans< crop_box_p->getBottom() ) {
+									corner_top= crop_box_p->getTop()- margin;
 								}
 
 								itext::Rectangle* annot_bbox_p= 
@@ -204,10 +208,10 @@ TK_Session::attach_files
 									itext::PdfAnnotation::createFileAttachment
 									( writer_p,
 										annot_bbox_p,
-										JvNewStringLatin1( filename.c_str() ), // contents
+										JvNewStringUTF( filename.c_str() ), // contents
 										0,
-										JvNewStringLatin1( vit->c_str() ), // the file path
-										JvNewStringLatin1( filename.c_str() ) ); // display name
+										JvNewStringUTF( vit->c_str() ), // the file path
+										JvNewStringUTF( filename.c_str() ) ); // display name
 
 								itext::PdfIndirectReference* ref_p=
 									writer_p->addToBody( annot_p )->getIndirectReference();
@@ -239,7 +243,7 @@ TK_Session::attach_files
 			if( catalog_p && catalog_p->isDictionary() ) {
 
 				// the Names dict
-				itext::PdfIndirectReference* names_ref_p= 0;
+				//itext::PdfIndirectReference* names_ref_p= 0;
 				itext::PdfDictionary* names_p= (itext::PdfDictionary*)
 					input_reader_p->getPdfObject( catalog_p->get( itext::PdfName::NAMES ) );
 				bool names_new_b= false;
@@ -280,8 +284,8 @@ TK_Session::attach_files
 								filespec_p= 
 									itext::PdfFileSpecification::fileEmbedded
 									( writer_p,
-										JvNewStringLatin1( vit->c_str() ), // the file path
-										JvNewStringLatin1( filename.c_str() ), // the display name
+										JvNewStringUTF( vit->c_str() ), // the file path
+										JvNewStringUTF( filename.c_str() ), // the display name
 										0 );
 							}
 							catch( java::io::IOException* ioe_p ) { // file open error
@@ -297,14 +301,14 @@ TK_Session::attach_files
 
 							// contruct a name, if necessary, to prevent possible key collision on the name tree
 							java::String* key_p= 
-								JvNewStringLatin1( vit->c_str() );
+								JvNewStringUTF( vit->c_str() );
 							{
 								int counter= 1;
 								while( emb_files_map_p->containsKey( key_p ) ) { // append a unique suffix
 									char buff[256];
 									sprintf( buff, "-%d", counter++ );
 									key_p= 
-										JvNewStringLatin1( (*vit + buff ).c_str() );
+										JvNewStringUTF( (*vit + buff ).c_str() );
 								}
 							}
 
@@ -451,7 +455,7 @@ TK_Session::unpack_files
 		if( catalog_p && catalog_p->isDictionary() ) {
 
 			// the Names dict
-			itext::PdfIndirectReference* names_ref_p= 0;
+			//itext::PdfIndirectReference* names_ref_p= 0;
 			itext::PdfDictionary* names_p= (itext::PdfDictionary*)
 				input_reader_p->getPdfObject( catalog_p->get( itext::PdfName::NAMES ) );
 			if( names_p && names_p->isDictionary() ) {

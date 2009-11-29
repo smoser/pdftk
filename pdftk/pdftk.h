@@ -43,7 +43,7 @@ public:
 
 		jint m_num_pages;
 
-		InputPdf() : m_authorized_b(true), m_num_pages(0) {}
+		InputPdf() : m_filename(), m_password(), m_authorized_b(true), m_readers(), m_num_pages(0)  {}
 	};
 	// pack input PDF in the order they're given on the command line
 	vector< InputPdf > m_input_pdf;
@@ -83,7 +83,9 @@ public:
 		update_info_k,
 		update_xmp_k,
 		background_k, // promoted from output option to operation in pdftk 1.10
+		multibackground_k,
 		stamp_k,
+		multistamp_k,
 
 		// optional attach_file argument
 		attach_file_to_page_k,
@@ -161,6 +163,8 @@ public:
 	string m_output_owner_pw;
 	string m_output_user_pw;
 	jint m_output_user_perms;
+	bool m_multistamp_b;
+	bool m_multibackground_b;
 	bool m_output_uncompress_b;
 	bool m_output_compress_b;
 	bool m_output_flatten_b;

@@ -42,15 +42,22 @@
 #include <java/lang/String.h>
 #include <java/io/IOException.h>
 #include <java/io/PrintStream.h>
+#include <java/io/ByteArrayOutputStream.h>
 #include <java/io/FileOutputStream.h>
 #include <java/util/Vector.h>
 #include <java/util/ArrayList.h>
 #include <java/util/Iterator.h>
 #include <java/util/HashMap.h>
+#include <java/util/Set.h>
 
 #include "com/lowagie/text/Document.h"
 #include "com/lowagie/text/Rectangle.h"
+
+// Ewww, PdfName has a field called NULL.
+#undef NULL
 #include "com/lowagie/text/pdf/PdfName.h"
+#define NULL __null
+
 #include "com/lowagie/text/pdf/PdfString.h"
 #include "com/lowagie/text/pdf/PdfNumber.h"
 #include "com/lowagie/text/pdf/PdfArray.h"
@@ -71,8 +78,10 @@
 #include "com/lowagie/text/pdf/PdfIndirectObject.h"
 #include "com/lowagie/text/pdf/PdfFileSpecification.h"
 #include "com/lowagie/text/pdf/PdfBoolean.h"
+#include "com/lowagie/text/pdf/PRStream.h"
 
 #include "com/lowagie/text/pdf/RandomAccessFileOrArray.h" // for InputStreamToArray()
+#include "com/lowagie/text/exceptions/UnsupportedPdfException.h"
 
 using namespace std;
 
@@ -143,12 +152,150 @@ prompt_for_filename( const string message,
 		fn= buff;
 	}
 
-	if( buff_size== fn.size() ) { // might have been too long for buff
+	if( buff_size== (int) fn.size() ) { // might have been too long for buff
 		cout << "The name you entered might have exceeded our internal buffer." << endl;
 		cout << "   Please review it and make sure it wasn't truncated:" << endl;
 		cout << fn << endl;
 	}
 }
+
+void uncompress_stream(itext::PRStream* stream)
+{
+	try { // try first itext own way
+		stream->setData( itext::PdfReader::getStreamBytes( stream ) );
+		stream->remove( itext::PdfName::FILTER );
+		stream->remove( itext::PdfName::DECODEPARMS );
+	}
+	catch (itext::exceptions::UnsupportedPdfException * err ) { // unknow filter detected
+		itext::RandomAccessFileOrArray *rf = stream->getReader()->getSafeFile();
+		rf->reOpen();
+		itext::PdfObject *filter =
+			itext::PdfReader::getPdfObjectRelease( stream->get( itext::PdfName::FILTER ) );
+		JArray<jbyte>* b = itext::PdfReader::getStreamBytesRaw( stream, rf );
+		java::ArrayList *filters = new java::ArrayList();
+		if( filter ) {
+			if( filter->isName() )
+				filters->add( filter );
+			else if( filter->isArray() )
+				filters = ( (itext::PdfArray*) filter )->getArrayList();
+		}
+		java::ArrayList *dp = new java::ArrayList( ( jint ) 1 );
+		itext::PdfObject *dpo = itext::PdfReader::getPdfObjectRelease(
+				stream->get( itext::PdfName::DECODEPARMS ) );
+		if( !dpo || ( !dpo->isDictionary() && !dpo->isArray() ) )
+			dpo = itext::PdfReader::getPdfObjectRelease( stream->get( itext::PdfName::DP ) );
+		if( dpo ) {
+			if( dpo->isDictionary() )
+				dp->add( dpo );
+			else if( dpo->isArray() )
+				dp = ( (itext::PdfArray*)dpo )->getArrayList();
+		}
+		jstring name;
+		int j;
+		for (j = 0; j < filters->size(); ++j ) {
+			name = ( (itext::PdfName*)itext::PdfReader::getPdfObjectRelease(
+						(itext::PdfObject*)filters->get( j ) ) )->toString();
+			if( name->equals( JvNewStringUTF( "/FlateDecode" ) )
+					|| name->equals( JvNewStringUTF( "/Fl" ) ) ) {
+				b = itext::PdfReader::FlateDecode( b );
+				itext::PdfObject *dicParam = NULL;
+				if( j < dp->size() ) {
+					dicParam = (itext::PdfObject*)dp->get( j );
+					b = itext::PdfReader::decodePredictor( b, dicParam );
+				}
+			}
+			else if( name->equals( JvNewStringUTF( "/ASCII85Decode" ) )
+					|| name->equals( JvNewStringUTF( "/A85" ) ) )
+				b = itext::PdfReader::ASCII85Decode( b );
+			else if( name->equals( JvNewStringUTF( "/ASCIIHexDecode" ) )
+					|| name->equals( JvNewStringUTF( "/AHx" ) ) )
+				b = itext::PdfReader::ASCIIHexDecode( b );
+			else if( name->equals( JvNewStringUTF( "/LZWDecode" ) ) ) {
+				b = itext::PdfReader::LZWDecode( b );
+				itext::PdfObject *dicParam = NULL;
+				if( j < dp->size() ) {
+					dicParam = (itext::PdfObject*)dp->get( j );
+					b = itext::PdfReader::decodePredictor( b, dicParam );
+				}
+			}
+			else if( !name->equals( JvNewStringUTF( "/Crypt" ) ) ){
+				break;
+			}
+		}
+		// remove handled filters
+		for(int k=0; k< j;k++ )
+		{
+			filters->remove( k );
+			if( k < dp->size() )
+				dp->remove( k );
+		}
+		rf->close();
+		stream->setData( b );
+		stream->remove( itext::PdfName::FILTER );
+		stream->remove( itext::PdfName::DECODEPARMS );
+		// write not handled filters back
+		if( filters->size() )
+			stream->put( itext::PdfName::FILTER, new itext::PdfArray( filters ) );
+		if( dp->size() )
+			stream->put( itext::PdfName::DECODEPARMS, new itext::PdfArray( dp ) );
+	}
+}
+
+
+void uncompress_dictionary( itext::PdfDictionary *dict, itext::PdfReader *reader )
+{
+	if( !dict )
+		return;
+
+	// prevent circuit references
+	static set<void*> already_uncompressed;
+	if( already_uncompressed.find(dict) != already_uncompressed.end() )
+		return;
+	already_uncompressed.insert(dict);
+
+	java::util::Iterator * keys=dict->getKeys()->iterator();
+	while( keys->hasNext() ) {
+		itext::PdfName *n = (itext::PdfName*)keys->next();
+		if( !n )
+			continue;
+		itext::PdfObject *obj = dict->get( n );
+		if( !obj || obj == dict )
+			continue;
+		obj = reader->getPdfObject( obj );
+		if( !obj || obj == dict )
+			continue;
+		if( obj->isDictionary() )
+			uncompress_dictionary( (itext::PdfDictionary*)obj,reader );
+		if( obj->isStream() )
+			uncompress_stream( (itext::PRStream*) obj );
+	}
+}
+
+void uncompress( itext::PdfReader * reader )
+{
+	int pages = reader->getNumberOfPages();
+
+	itext::PdfDictionary *catalog = reader->getCatalog();
+	uncompress_dictionary( catalog, reader );
+
+	for( int i=1; i<reader->getXrefSize(); i++ )
+	{
+		itext::PdfObject *obj = reader->getPdfObjectRelease( i );
+		if(!obj)
+			continue;
+		if( obj->isDictionary() )
+			uncompress_dictionary( (itext::PdfDictionary*)obj, reader );
+		if( obj->isStream() )
+			uncompress_stream( (itext::PRStream*)obj );
+	}
+
+	for( int i = 1; i <= pages; i++ )
+	{
+		reader->setPageContent( i, reader->getPageContent( i ), 0 );
+	}
+}
+
+
 
 bool
 TK_Session::add_reader( InputPdf* input_pdf_p )
@@ -163,7 +310,7 @@ TK_Session::add_reader( InputPdf* input_pdf_p )
 		}
 		if( input_pdf_p->m_password.empty() ) {
 			reader=
-				new itext::PdfReader( JvNewStringLatin1( input_pdf_p->m_filename.c_str() ) );
+				new itext::PdfReader( JvNewStringUTF( input_pdf_p->m_filename.c_str() ) );
 		}
 		else {
 			if( input_pdf_p->m_password== "PROMPT" ) {
@@ -175,7 +322,7 @@ TK_Session::add_reader( InputPdf* input_pdf_p )
 							input_pdf_p->m_password.size() );
 
 			reader= 
-				new itext::PdfReader( JvNewStringLatin1( input_pdf_p->m_filename.c_str() ),
+				new itext::PdfReader( JvNewStringUTF( input_pdf_p->m_filename.c_str() ),
 															password );
 		}
 		reader->consolidateNamedDestinations();
@@ -191,18 +338,24 @@ TK_Session::add_reader( InputPdf* input_pdf_p )
 		// store in this java object so the gc can trace it
 		g_dont_collect_p->addElement( reader );
 
-		input_pdf_p->m_authorized_b= ( !reader->encrypted || reader->passwordIsOwner );
+		input_pdf_p->m_authorized_b= reader->isOpenedWithFullPermissions();
 		if( !input_pdf_p->m_authorized_b ) {
 			open_success_b= false;
 		}
 	}
 	catch( java::io::IOException* ioe_p ) { // file open error
-		if( ioe_p->getMessage()->equals( JvNewStringLatin1( "Bad password" ) ) ) {
+		if( ioe_p->getMessage()->equals( JvNewStringUTF( "Bad user password" ) ) ) {
 			input_pdf_p->m_authorized_b= false;
+		}
+		else {
+			cerr << string((const char*) elements(ioe_p->getMessage()->getBytes()),
+					(int) ioe_p->getMessage()->getBytes()->length)
+			  	<< endl;
 		}
 		open_success_b= false;
 	}
 	catch( java::lang::Throwable* t_p ) { // unexpected error
+		t_p->printStackTrace();
 		cerr << "Error: Unexpected Exception in open_reader()" << endl;
 		open_success_b= false;
 							
@@ -392,6 +545,12 @@ TK_Session::is_keyword( char* ss, int* keyword_len_p )
 		// (and preserving old behavior for backwards compatibility)
 		return background_k;
 	}
+	else if( strcmp( ss_copy, "multibackground" )== 0 ) {
+		return multibackground_k;
+	}
+	else if( strcmp( ss_copy, "multistamp" )== 0 ) {
+		return multistamp_k;
+	}
 	else if( strcmp( ss_copy, "stamp" )== 0 ) {
 		return stamp_k;
 	}
@@ -488,6 +647,7 @@ TK_Session::is_keyword( char* ss, int* keyword_len_p )
 		return perm_all_k;
 	}
 	else if( strcmp( ss_copy, "uncompress" )== 0 ) {
+		itext::Document::Document::compress=false;
 		return filt_uncompress_k;
 	}
 	else if( strcmp( ss_copy, "compress" )== 0 ) {
@@ -840,18 +1000,33 @@ TK_Session::TK_Session( int argc,
 	m_valid_b( false ),
 	m_authorized_b( true ),
 	m_input_pdf_readers_opened_b( false ),
-  m_operation( none_k ),
+	m_verbose_reporting_b( false ),
+	m_ask_about_warnings_b( ASK_ABOUT_WARNINGS ), // set default at compile-time
+	m_input_pdf(),
+	m_input_pdf_index(),
+	m_input_attach_file_filename(),
+	m_input_attach_file_pagenum( 0 ),
+	m_update_info_filename(),
+	m_update_xmp_filename(),
+	m_operation( none_k ),
+	m_page_seq(),
+	m_form_data_filename(),
+	m_background_filename(),
+	m_stamp_filename(),
+	m_output_filename(),
+	m_output_owner_pw(),
+	m_output_user_pw(),
 	m_output_user_perms( 0 ),
+	m_multistamp_b ( false ),
+	m_multibackground_b ( false ),
 	m_output_uncompress_b( false ),
 	m_output_compress_b( false ),
 	m_output_flatten_b( false ),
 	m_output_drop_xfa_b( false ),
 	m_output_keep_first_id_b( false ),
 	m_output_keep_final_id_b( false ),
-	m_output_encryption_strength( none_enc ),
-	m_verbose_reporting_b( false ),
-	m_ask_about_warnings_b( ASK_ABOUT_WARNINGS ), // set default at compile-time
-	m_input_attach_file_pagenum( 0 )
+	m_output_encryption_strength( none_enc )
+
 {
 	TK_Session::ArgState arg_state = input_files_e;
 
@@ -945,8 +1120,18 @@ TK_Session::TK_Session( int argc,
 				m_operation= filter_k;
 				arg_state= background_filename_e;
 			}
+			else if( arg_keyword== multibackground_k ) {
+				m_operation= filter_k;
+				m_multibackground_b = true;
+				arg_state= background_filename_e;
+			}
 			else if( arg_keyword== stamp_k ) {
 				m_operation= filter_k;
+				arg_state= stamp_filename_e;
+			}
+			else if( arg_keyword== multistamp_k ) {
+				m_operation= filter_k;
+				m_multistamp_b = true;
 				arg_state= stamp_filename_e;
 			}
 			else if( arg_keyword== output_k ) { // we reached the output section
@@ -1340,7 +1525,7 @@ TK_Session::TK_Session( int argc,
 						if( (!even_pages_b || !(kk % 2)) &&
 								(!odd_pages_b || (kk % 2)) )
 							{
-								if( 0<= kk && kk<= m_input_pdf[range_pdf_index].m_num_pages ) {
+								if( (int) kk<= m_input_pdf[range_pdf_index].m_num_pages ) {
 
 									// look to see if this page of this document
 									// has already been referenced; if it has,
@@ -1580,7 +1765,7 @@ TK_Session::TK_Session( int argc,
 					for( InputPdfIndex ii= 0; ii< m_input_pdf.size(); ++ii ) {
 						InputPdf& input_pdf= m_input_pdf[ii];
 
-						for( PageNumber jj= 1; jj<= input_pdf.m_num_pages; ++jj ) {
+						for( PageNumber jj= 1; (int) jj<= input_pdf.m_num_pages; ++jj ) {
 							m_page_seq.push_back( PageRef( ii, jj ) ); // DF rotate
 							m_input_pdf[ii].m_readers.back().first.insert( jj ); // mark our claim
 						}
@@ -1893,7 +2078,7 @@ get_output_stream( string output_filename,
 
 		// attempt to open the stream
 		java::String* jv_output_filename_p=
-			JvNewStringLatin1( output_filename.c_str() );
+			JvNewStringUTF( output_filename.c_str() );
 		try {
 			os_p= new java::FileOutputStream( jv_output_filename_p );
 		}
@@ -1920,7 +2105,7 @@ add_mark_to_page( itext::PdfReader* reader_p,
 									jint page_num )
 {
 	itext::PdfName* page_marker_p=
-		new itext::PdfName( JvNewStringLatin1(g_page_marker) );
+		new itext::PdfName( JvNewStringUTF(g_page_marker) );
 	itext::PdfDictionary* page_p= reader_p->getPageN( page_index );
 	if( page_p && page_p->isDictionary() ) {
 		page_p->put( page_marker_p, new itext::PdfNumber( page_num ) );
@@ -1939,7 +2124,7 @@ remove_mark_from_page( itext::PdfReader* reader_p,
 											 jint page_num )
 {
 	itext::PdfName* page_marker_p=
-		new itext::PdfName( JvNewStringLatin1(g_page_marker) );
+		new itext::PdfName( JvNewStringUTF(g_page_marker) );
 	itext::PdfDictionary* page_p= reader_p->getPageN( page_num );
 	if( page_p && page_p->isDictionary() ) {
 		page_p->remove( page_marker_p );
@@ -1981,7 +2166,7 @@ TK_Session::create_output()
 
 		string creator= "pdftk "+ string(PDFTK_VER)+ " - www.pdftk.com";
 		java::String* jv_creator_p= 
-			JvNewStringLatin1( creator.c_str() );
+			JvNewStringUTF( creator.c_str() );
 
 		if( m_output_owner_pw== "PROMPT" ) {
 			prompt_for_password( "owner", "the output PDF", m_output_owner_pw );
@@ -2017,14 +2202,15 @@ TK_Session::create_output()
 				output_doc_p->addCreator( jv_creator_p );
 
 				// un/compress output streams?
-				if( m_output_uncompress_b ) {
-					writer_p->filterStreams= true;
-					writer_p->compressStreams= false;
-				}
-				else if( m_output_compress_b ) {
-					writer_p->filterStreams= false;
-					writer_p->compressStreams= true;
-				}
+ 				if( m_output_uncompress_b ) {
+// 					writer_p->filterStreams= true;
+// 					writer_p->compressStreams= false;
+ 				}
+ 				else if( m_output_compress_b ) {
+// 					writer_p->filterStreams= false;
+// 					writer_p->compressStreams= true;
+ 					writer_p->setCompressionLevel(9);
+ 				}
 
 				// encrypt output?
 				if( m_output_encryption_strength!= none_enc ||
@@ -2033,7 +2219,7 @@ TK_Session::create_output()
 					{
 						// if no stregth is given, default to 128 bit,
 						// (which is incompatible w/ Acrobat 4)
-						bool bit128_b=
+						jboolean bit128_b=
 							( m_output_encryption_strength!= bits40_enc );
 
 						writer_p->setEncryption( output_user_pw_p,
@@ -2057,7 +2243,8 @@ TK_Session::create_output()
 							input_reader_p->getPdfObject( trailer_p->get( itext::PdfName::ID ) );
 						if( file_id_p && file_id_p->isArray() ) {
 
-							writer_p->setFileID( file_id_p );
+							// Absent from itext-2.1.4
+// 							writer_p->setFileID( file_id_p );
 						}
 					}
 
@@ -2093,10 +2280,13 @@ TK_Session::create_output()
 
 								//
 								if( m_output_uncompress_b ) {
+									uncompress(input_reader_p);
 									add_mark_to_page( input_reader_p, it->m_page_num, output_page_count+ 1 );
+									writer_p->setCompressionLevel(0);
 								}
 								else if( m_output_compress_b ) {
 									remove_mark_from_page( input_reader_p, it->m_page_num );
+									writer_p->setCompressionLevel(9);
 								}
 
 								// DF rotate
@@ -2158,7 +2348,7 @@ TK_Session::create_output()
 					char buff[4096]= "";
 					sprintf( buff, m_output_filename.c_str(), ii+ 1 );
 
-					java::String* jv_output_filename_p= JvNewStringLatin1( buff );
+					java::String* jv_output_filename_p= JvNewStringUTF( buff );
 
 					itext::Document* output_doc_p= new itext::Document();
 					java::FileOutputStream* ofs_p= new java::FileOutputStream( jv_output_filename_p );
@@ -2168,12 +2358,17 @@ TK_Session::create_output()
 
 					// un/compress output streams?
 					if( m_output_uncompress_b ) {
-						writer_p->filterStreams= true;
-						writer_p->compressStreams= false;
+						// Absent from itext-2.1.4
+// 						writer_p->filterStreams= true;
+// 						writer_p->compressStreams= false;
+ 						writer_p->setCompressionLevel(0);
+						uncompress(input_reader_p);
 					}
 					else if( m_output_compress_b ) {
-						writer_p->filterStreams= false;
-						writer_p->compressStreams= true;
+						// Absent from itext-2.1.4
+// 						writer_p->filterStreams= false;
+// 						writer_p->compressStreams= true;
+						writer_p->setCompressionLevel(9);
 					}
 
 					// encrypt output?
@@ -2183,7 +2378,7 @@ TK_Session::create_output()
 						{
 							// if no stregth is given, default to 128 bit,
 							// (which is incompatible w/ Acrobat 4)
-							bool bit128_b=
+							jboolean bit128_b=
 								( m_output_encryption_strength!= bits40_enc );
 
 							writer_p->setEncryption( output_user_pw_p,
@@ -2263,13 +2458,13 @@ TK_Session::create_output()
 						// first try fdf
 						try {
 							fdf_reader_p=
-								new itext::FdfReader( JvNewStringLatin1( m_form_data_filename.c_str() ) );
+								new itext::FdfReader( JvNewStringUTF( m_form_data_filename.c_str() ) );
 						}
 						catch( java::io::IOException* ioe_p ) { // file open error
 							// maybe it's xfdf?
 							try {
 								xfdf_reader_p=
-									new itext::XfdfReader( JvNewStringLatin1( m_form_data_filename.c_str() ) );
+									new itext::XfdfReader( JvNewStringUTF( m_form_data_filename.c_str() ) );
 							}
 							catch( java::io::IOException* ioe_p ) { // file open error
 								cerr << "Error: Failed to open form data file: " << endl;
@@ -2285,16 +2480,18 @@ TK_Session::create_output()
 
 				// try opening the PDF background or stamp before we get too involved
 				itext::PdfReader* mark_p= 0;
+				bool mark_per_page_b = false;
 				bool background_b= true; // set false for stamp
-				com::lowagie::text::pdf::PdfImportedPage* mark_page_p= 0;
+				//com::lowagie::text::pdf::PdfImportedPage* mark_page_p= 0;
 				//
 				if( !m_background_filename.empty() ) {
+					mark_per_page_b = m_multibackground_b;
 					if( m_background_filename== "PROMPT" ) {
 						prompt_for_filename( "Please enter a filename for the background PDF:", 
 																 m_background_filename );
 					}
 					try {
-						mark_p= new itext::PdfReader( JvNewStringLatin1( m_background_filename.c_str() ) );
+						mark_p= new itext::PdfReader( JvNewStringUTF( m_background_filename.c_str() ) );
 						mark_p->removeUnusedObjects();
 						mark_p->shuffleSubsetNames();
 					}
@@ -2306,13 +2503,14 @@ TK_Session::create_output()
 					}
 				}
 				else if( !m_stamp_filename.empty() ) { // stamp
+					mark_per_page_b = m_multistamp_b;
 					background_b= false;
 					if( m_stamp_filename== "PROMPT" ) {
 						prompt_for_filename( "Please enter a filename for the stamp PDF:", 
 																 m_stamp_filename );
 					}
 					try {
-						mark_p= new itext::PdfReader( JvNewStringLatin1( m_stamp_filename.c_str() ) );
+						mark_p= new itext::PdfReader( JvNewStringUTF( m_stamp_filename.c_str() ) );
 						mark_p->removeUnusedObjects();
 						mark_p->shuffleSubsetNames();
 					}
@@ -2402,14 +2600,19 @@ TK_Session::create_output()
 
 				// un/compress output streams?
 				if( m_output_uncompress_b ) {
+					uncompress(input_reader_p);
 					add_marks_to_pages( input_reader_p );
-					writer_p->filterStreams= true;
-					writer_p->compressStreams= false;
+					// Absent from itext-2.1.4
+// 					writer_p->filterStreams= true;
+// 					writer_p->compressStreams= false;
+ 					writer_p->setCompressionLevel(0);
 				}
 				else if( m_output_compress_b ) {
 					remove_marks_from_pages( input_reader_p );
-					writer_p->filterStreams= false;
-					writer_p->compressStreams= true;
+					// Absent from itext-2.1.4
+// 					writer_p->filterStreams= false;
+// 					writer_p->compressStreams= true;
+ 					writer_p->setCompressionLevel(9);
 				}
 
 				// encrypt output?
@@ -2420,13 +2623,13 @@ TK_Session::create_output()
 
 						// if no stregth is given, default to 128 bit,
 						// (which is incompatible w/ Acrobat 4)
-						bool bit128_b=
+						jboolean bit128_b=
 							( m_output_encryption_strength!= bits40_enc );
 
 						writer_p->setEncryption( output_user_pw_p,
 																			output_owner_pw_p,
 																			m_output_user_perms,
-																			bit128_b );
+																		  bit128_b );
 					}
 
 				// fill form fields?
@@ -2435,8 +2638,11 @@ TK_Session::create_output()
 					{
 						itext::AcroFields* fields_p= writer_p->getAcroFields();
 						fields_p->setGenerateAppearances( true ); // have iText create field appearances
-						if( fdf_reader_p && fields_p->setFields( fdf_reader_p ) ||
-								xfdf_reader_p && fields_p->setFields( xfdf_reader_p ) )
+						if( fdf_reader_p ) 
+							fields_p->setFields( fdf_reader_p );
+						if(	xfdf_reader_p )
+							fields_p->setFields( xfdf_reader_p );
+
 							{ // Rich Text input found
 
 								// set the PDF so that Acrobat will create appearances;
@@ -2470,15 +2676,19 @@ TK_Session::create_output()
 
 					// create a PdfTemplate from the first page of mark
 					// (PdfImportedPage is derived from PdfTemplate)
-					com::lowagie::text::pdf::PdfImportedPage* mark_page_p=
-						writer_p->getImportedPage( mark_p, 1 );
+					com::lowagie::text::pdf::PdfImportedPage* mark_page_p=0;
+					if( !mark_per_page_b )
+						mark_page_p = writer_p->getImportedPage( mark_p, 1 );
 
           // iterate over document's pages, adding mark_page as
           // a layer 'underneath' the page content; scale mark_page
           // and move it so it fits within the document's page;
 					jint num_pages= input_reader_p->getNumberOfPages();
+					jint mark_num_pages= mark_p->getNumberOfPages();
 					for( jint ii= 0; ii< num_pages; ) {
 						++ii;
+						if( mark_per_page_b && ( ii == 1 || ii <= mark_num_pages ) )
+							mark_page_p = writer_p->getImportedPage( mark_p, ii );
 						com::lowagie::text::Rectangle* doc_page_size_p= 
 							input_reader_p->getCropBox( ii );
 						jint doc_page_rotation= input_reader_p->getPageRotation( ii );
@@ -2486,16 +2696,16 @@ TK_Session::create_output()
 							doc_page_size_p= doc_page_size_p->rotate();
 						}
 
-						jfloat h_scale= doc_page_size_p->width() / mark_page_size_p->width();
-						jfloat v_scale= doc_page_size_p->height() / mark_page_size_p->height();
+						jfloat h_scale= doc_page_size_p->getWidth() / mark_page_size_p->getWidth();
+						jfloat v_scale= doc_page_size_p->getHeight() / mark_page_size_p->getHeight();
 						jfloat mark_scale= (h_scale< v_scale) ? h_scale : v_scale;
 
-						jfloat h_trans= (jfloat)(doc_page_size_p->left()- mark_page_size_p->left()* mark_scale +
-																		 (doc_page_size_p->width()- 
-																			mark_page_size_p->width()* mark_scale) / 2.0);
-						jfloat v_trans= (jfloat)(doc_page_size_p->bottom()- mark_page_size_p->bottom()* mark_scale +
-																		 (doc_page_size_p->height()- 
-																			mark_page_size_p->height()* mark_scale) / 2.0);
+						jfloat h_trans= (jfloat)(doc_page_size_p->getLeft()- mark_page_size_p->getLeft()* mark_scale +
+																		 (doc_page_size_p->getWidth()- 
+																			mark_page_size_p->getWidth()* mark_scale) / 2.0);
+						jfloat v_trans= (jfloat)(doc_page_size_p->getBottom()- mark_page_size_p->getBottom()* mark_scale +
+																		 (doc_page_size_p->getHeight()- 
+																			mark_page_size_p->getHeight()* mark_scale) / 2.0);
           
 						com::lowagie::text::pdf::PdfContentByte* content_byte_p= 
 							( background_b ) ? writer_p->getUnderContent( ii ) : writer_p->getOverContent( ii );
@@ -2512,20 +2722,20 @@ TK_Session::create_output()
 																					 0, -1* mark_scale,
 																					 mark_scale, 0,
 																					 h_trans, 
-																					 v_trans+ mark_page_size_p->height()* mark_scale );
+																					 v_trans+ mark_page_size_p->getHeight()* mark_scale );
 						}
 						else if( mark_page_rotation== 180 ) {
 							content_byte_p->addTemplate( mark_page_p, 
 																					 -1* mark_scale, 0,
 																					 0, -1* mark_scale,
-																					 h_trans+ mark_page_size_p->width()* mark_scale, 
-																					 v_trans+ mark_page_size_p->height()* mark_scale );
+																					 h_trans+ mark_page_size_p->getWidth()* mark_scale, 
+																					 v_trans+ mark_page_size_p->getHeight()* mark_scale );
 						}
 						else if( mark_page_rotation== 270 ) {
 							content_byte_p->addTemplate( mark_page_p, 
 																					 0, mark_scale,
 																					 -1* mark_scale, 0,
-																					 h_trans+ mark_page_size_p->width()* mark_scale, v_trans );
+																					 h_trans+ mark_page_size_p->getWidth()* mark_scale, v_trans );
 						}
 					}
 				}
@@ -2537,7 +2747,7 @@ TK_Session::create_output()
 				}
 
 				// done; write output
-				writer_p->close();
+				writer_p->close(NULL);
 			}
 			break;
 
@@ -2623,6 +2833,9 @@ TK_Session::create_output()
 				this->unpack_files( input_reader_p );
 			}
 			break;
+			default:
+			 // nothing to do
+			break;
 			}
 		}
 		catch( java::lang::Throwable* t_p )
@@ -2639,6 +2852,10 @@ int main(int argc, char** argv)
 	bool version_b= false;
 	bool synopsis_b= ( argc== 1 );
 	int ret_val= 0; // default: no error
+
+	// set classpath:
+	static char my_classpath[]="CLASSPATH=/usr/share/java/bcprov.jar:/usr/share/java/bcmail.jar:/usr/share/java/itext.jar";
+	putenv(my_classpath);
 
 	for( int ii= 1; ii< argc; ++ii ) {
 		version_b=
@@ -2663,15 +2880,15 @@ int main(int argc, char** argv)
 			JvCreateJavaVM(NULL);
 			JvAttachCurrentThread(NULL, NULL);
 
-			JvInitClass(&java::System::class$);
-			JvInitClass(&java::util::ArrayList::class$);
-			JvInitClass(&java::util::Iterator::class$);
+// 			JvInitClass(&java::System::class$);
+// 			JvInitClass(&java::util::ArrayList::class$);
+// 			JvInitClass(&java::util::Iterator::class$);
 
-			JvInitClass(&itext::PdfObject::class$);
-			JvInitClass(&itext::PdfName::class$);
-			JvInitClass(&itext::PdfDictionary::class$);
-			JvInitClass(&itext::PdfOutline::class$);
-			JvInitClass(&itext::PdfBoolean::class$);
+// 			JvInitClass(&itext::PdfObject::class$);
+// 			JvInitClass(&itext::PdfName::class$);
+// 			JvInitClass(&itext::PdfDictionary::class$);
+// 			JvInitClass(&itext::PdfOutline::class$);
+// 			JvInitClass(&itext::PdfBoolean::class$);
 
 			TK_Session tk_session( argc, argv );
 
@@ -2725,7 +2942,8 @@ describe_synopsis() {
        Where:\n\
 	    <operation> may be empty, or:\n\
 	    [cat | attach_files | unpack_files | burst |\n\
-	     fill_form | background | stamp | generate_fdf\n\
+	     fill_form | background | stamp | generate_fdf |\n\
+	     multibackground | multistamp |\n\
 	     dump_data | dump_data_fields | update_info]\n\
 \n\
        For Complete Help: pdftk --help\n";
@@ -2951,11 +3169,20 @@ OPTIONS\n\
 		 as  a	PDF  created from page scans) then the resulting back-\n\
 		 ground won't be visible -- use the stamp feature instead.\n\
 \n\
+	  multibackground <background PDF filename | - | PROMPT>\n\
+		 Same  as the background feature, but applies each page of the\n\
+		 the  background PDF to  the corresponding  page of  the input\n\
+		 PDF.\n\
+\n\
 	  stamp <stamp PDF filename | - | PROMPT>\n\
 		 This behaves just like the background feature except it over-\n\
 		 lays  the  stamp  PDF page on top of the input PDF document's\n\
 		 pages.  This works best if the stamp PDF page has a transpar-\n\
 		 ent background.\n\
+\n\
+	  multistamp <stamp PDF filename | - | PROMPT>\n\
+		 Same  as stamp,  but stamps  different  pages with  different\n\
+		 pages (not only the first pages) of the stamp PDF file.\n\
 \n\
 	  dump_data\n\
 		 Reads	a  single,  input PDF file and reports various statis-\n\

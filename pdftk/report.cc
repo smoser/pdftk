@@ -50,8 +50,13 @@
 
 #include "com/lowagie/text/Document.h"
 #include "com/lowagie/text/Rectangle.h"
+#undef NULL
+
+// Ewww, PdfName has a field called NULL.
 #include "com/lowagie/text/pdf/PdfObject.h"
 #include "com/lowagie/text/pdf/PdfName.h"
+#define NULL __null
+
 #include "com/lowagie/text/pdf/PdfString.h"
 #include "com/lowagie/text/pdf/PdfNumber.h"
 #include "com/lowagie/text/pdf/PdfArray.h"
@@ -380,8 +385,8 @@ ReportOutlines( ostream& ofs,
 
 static void
 ReportInfo( ostream& ofs,
-						itext::PdfDictionary* info_p,
-						itext::PdfReader* reader_p )
+						itext::PdfDictionary* info_p
+						)
 {
 	if( info_p && info_p->isDictionary() ) {
 		java::Set* keys_p= info_p->getKeys();
@@ -477,8 +482,8 @@ ReportPageLabels( ostream& ofs,
 						}
 
 						{ // PageLabelNumStyle
-							itext::PdfName* r_p= new itext::PdfName(JvNewStringLatin1("r"));
-							itext::PdfName* a_p= new itext::PdfName(JvNewStringLatin1("a"));
+							itext::PdfName* r_p= new itext::PdfName(JvNewStringUTF("r"));
+							itext::PdfName* a_p= new itext::PdfName(JvNewStringUTF("a"));
 
 							itext::PdfName* style_p= (itext::PdfName*)
 								reader_p->getPdfObject( label_p->get( itext::PdfName::S ) );
@@ -571,7 +576,8 @@ class FormField {
 	set< string > m_states; // possible states
 	string m_state;
 
-	FormField() : m_ff(0), m_qq(0), m_maxlen(0) {}
+	FormField() : m_ft(), m_tt(), m_tu(), m_ff(0), m_vv(), m_dv(), m_qq(0), m_ds(), m_rv(), m_maxlen(0),
+		      m_states(),m_state() {}
 };
 
 static void
@@ -951,7 +957,7 @@ ReportOnPdf( ostream& ofs,
 					reader_p->getPdfObject( trailer_p->get( itext::PdfName::INFO ) );
 				if( info_p && info_p->isDictionary() ) {
 						
-					ReportInfo( ofs, info_p, reader_p );
+					ReportInfo( ofs, info_p);
 				}
 				else { // warning
 					cerr << "Warning: no info dictionary found" << endl;
@@ -1219,7 +1225,7 @@ UpdateInfo( itext::PdfReader* reader_p,
 							 it!= info_map.end(); ++it )
 						{
 							if( it->second.empty() ) {
-								info_p->remove( new itext::PdfName( JvNewStringLatin1(it->first.c_str()) ) );
+								info_p->remove( new itext::PdfName( JvNewStringUTF(it->first.c_str()) ) );
 							}
 							else {
 								const jsize jvs_size= 4096;
@@ -1227,8 +1233,8 @@ UpdateInfo( itext::PdfReader* reader_p,
 								jsize jvs_len= 0;
 								string_to_jcharstring( jvs, jvs_size, &jvs_len, it->second );
 
-								info_p->put( new itext::PdfName( JvNewStringLatin1(it->first.c_str()) ),
-														 new itext::PdfString( JvNewString(jvs, jvs_len), itext::PdfObject::TEXT_UNICODE ) );
+								info_p->put( new itext::PdfName( JvNewStringUTF(it->first.c_str()) ),
+														 new itext::PdfString( JvNewStringUTF((char* )it->second.c_str()), (strcmp(it->first.c_str(), "ModDate") && strcmp(it->first.c_str(), "CreationDate")) ? itext::PdfObject::TEXT_UNICODE : itext::PdfObject::TEXT_PDFDOCENCODING ) );
 							}
 						}
 				}
@@ -1251,11 +1257,11 @@ UpdateInfo( itext::PdfReader* reader_p,
 }
 
 static bool
-copyStdinToFile( const char* fn )
+copyStdinToFile( const int fd )
 {
 	bool ret_val_b= true;
 
-	FILE* fp= fopen( fn, "wb" );
+	FILE* fp= fdopen( fd, "wb" );
 	if( fp ) {
 		int cc= 0;
 		while( (cc=fgetc(stdin))!= EOF ) {
@@ -1277,15 +1283,15 @@ ReplaceXmp( itext::PdfReader* reader_p,
 {
 	bool ret_val_b= true;
 
-	char xmp_fn_1[L_tmpnam]= "";
+	char xmp_fn_1[FILENAME_MAX]= P_tmpdir "/pdftk_tmpXXXXXX";
 
 	itext::PdfDictionary* catalog_p= reader_p->catalog;
 	if( catalog_p && catalog_p->isDictionary() ) {
 
 		// stdin? copy to temp file
 		if( xmp_filename== "-" ) {
-			tmpnam( xmp_fn_1 );
-			ret_val_b= copyStdinToFile( xmp_fn_1 );
+			int xmp_fn_1_fd=mkstemp( xmp_fn_1 );
+			ret_val_b= copyStdinToFile( xmp_fn_1_fd );
 			xmp_filename= xmp_fn_1;
 		}
 		if( ret_val_b ) {
@@ -1315,11 +1321,12 @@ ReplaceXmp( itext::PdfReader* reader_p,
 				if( xmp_str_p ) {
 					xmp_str_p->put( itext::PdfName::TYPE, itext::PdfName::METADATA );
 					xmp_str_p->put( itext::PdfName::SUBTYPE, itext::PdfName::XML );
-			
-					itext::PdfIndirectReference* xmp_str_ref_p=
-						(itext::PdfIndirectReference*)reader_p->getPRIndirectReference( xmp_str_p );
 
-					catalog_p->put( itext::PdfName::METADATA, xmp_str_ref_p );
+//				FIXME: PdfReader.getPRIndirectReference is absent from itext-2.1.4
+// 					itext::PdfIndirectReference* xmp_str_ref_p=
+// 						(itext::PdfIndirectReference*)reader_p->getPRIndirectReference( xmp_str_p );
+
+// 					catalog_p->put( itext::PdfName::METADATA, xmp_str_ref_p );
 				}
 				else {
 					ret_val_b= false;
@@ -1327,8 +1334,8 @@ ReplaceXmp( itext::PdfReader* reader_p,
 			}
 		}
 
-		if( xmp_fn_1[0] ) {
-			remove( xmp_fn_1 );
+		if( xmp_filename==xmp_fn_1 ) {
+				remove( xmp_fn_1 );
 		}
 	}
 	else {
@@ -1351,23 +1358,30 @@ UpdateXmp( itext::PdfReader* reader_p,
 	jbyteArray metadata_p= reader_p->getMetadata();
 	if( metadata_p ) {
 
-		char xmp_fn_1[L_tmpnam]= "";
-		char xmp_fn_2[L_tmpnam]= "";
-		char xmp_out_fn[L_tmpnam]= "";
+		char xmp_fn_1[FILENAME_MAX]= P_tmpdir "/pdftk_tmpXXXXXX";
+		char xmp_fn_2[FILENAME_MAX]= P_tmpdir "/pdftk_tmpXXXXXX";;
+		char xmp_out_fn[FILENAME_MAX]= P_tmpdir "/pdftk_tmpXXXXXX";
 
-		tmpnam( xmp_fn_2 );
-		tmpnam( xmp_out_fn );
+		int xmp_fn_2_fd=  mkstemp(xmp_fn_2);
+		int xmp_out_fn_fd= mkstemp(xmp_out_fn);
+
+		if(xmp_fn_2_fd<0 || xmp_out_fn_fd<0)
+		{
+			perror("UpdateXmp: Can't open temporary files");
+			ret_val_b=false;
+		}
+		close(xmp_out_fn_fd);
 
 		// copy PDF's current XMP to temp file
-		FILE* fp= fopen( xmp_fn_2, "wb" );
-		if( fp ) {
+		FILE* fp= fdopen( xmp_fn_2_fd, "wb" );
+		if( xmp_fn_2_fd>0 && fp ) {
 			fputs( (char*)elements(metadata_p), fp );
 			fclose( fp );
 
 			// stdin? copy to temp file
 			if( xmp_filename== "-" ) {
-				tmpnam( xmp_fn_1 );
-				ret_val_b= copyStdinToFile( xmp_fn_1 );
+				int xmp_fn_1_fd=  mkstemp(xmp_fn_1);
+				ret_val_b= copyStdinToFile( xmp_fn_1_fd);
 				xmp_filename= xmp_fn_1;
 			}
 			if( ret_val_b ) {
@@ -1383,11 +1397,11 @@ UpdateXmp( itext::PdfReader* reader_p,
 				}
 
 				remove( xmp_out_fn );
-				if( xmp_fn_1[0] ) {
+				if( xmp_filename== xmp_fn_1) {
 					remove( xmp_fn_1 );
 				}
 			}
-			
+
 			remove( xmp_fn_2 );
 		}
 		else { // error

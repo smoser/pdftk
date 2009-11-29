@@ -1,5 +1,5 @@
 version=3
 opts=dversionmangle=s/\+dfsg$// \
 http://www.pdfhacks.com/pdftk/pdftk-(.*)\.tar\.gz \
-debian debian/uscan-dfsg-clean.sh
+debian /bin/sh debian/uscan-dfsg-clean.sh
 

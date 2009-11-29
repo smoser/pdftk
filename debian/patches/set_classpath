@@ -1,4 +1,4 @@
-Description: introduce path to bcprov.jar and bcmail.jar
+Description: introduce path to bcprov.jar, bcmail.jar and itext.jar
 Author: Johann Felix Soden <johfel@gmx.de>
 
 --- a/pdftk/pdftk.cc
@@ -8,7 +8,7 @@ Author: Johann Felix Soden <johfel@gmx.de>
  	int ret_val= 0; // default: no error
  
 +	// set classpath:
-+	static char my_classpath[]="CLASSPATH=/usr/share/java/bcprov.jar:/usr/share/java/bcmail.jar";
++	static char my_classpath[]="CLASSPATH=/usr/share/java/bcprov.jar:/usr/share/java/bcmail.jar:/usr/share/java/itext.jar";
 +	putenv(my_classpath);
 +
  	for( int ii= 1; ii< argc; ++ii ) {
