@@ -1,3 +1,22 @@
+pdftk (1.41+dfsg-6) unstable; urgency=low
+
+  * Add patch to circumvent libgcj10 exception with de_AT.UTF-8 locale.
+    (Closes: #560594)
+  * Conform patch descriptions to DEP3.
+  * debian/rules: fail with error message if itext-*.so is missing.
+
+ -- Johann Felix Soden <johfel@gmx.de>  Sun, 13 Dec 2009 17:41:56 +0100
+
+pdftk (1.41+dfsg-5) unstable; urgency=low
+
+  * debian/{rules,control}:
+    - Support clean target in unpatched source dir.
+    - Depend on proper main version of libgcj-bc.
+  * Call g++/gcj with "-g" to improve usefulness of
+    DEB_BUILD_OPTIONS=nostrip.
+
+ -- Johann Felix Soden <johfel@gmx.de>  Thu, 10 Dec 2009 18:56:12 +0100
+
 pdftk (1.41+dfsg-4) unstable; urgency=low
 
   * To solve a fill_form bug, insert itext.jar path into classpath.

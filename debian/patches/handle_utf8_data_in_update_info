@@ -1,6 +1,6 @@
 Description: Handle utf8-data, CreationDate and ModDate fields in update_info correctly
-Debian-Bug: http://bugs.debian.org/424920
-Debian-Bug: http://bugs.debian.org/461169
+Bug-Debian: http://bugs.debian.org/424920
+Bug-Debian: http://bugs.debian.org/461169
 Author: Quentin Godfroy <godfroy@clipper.ens.fr>, Chris Adams <cadams@salk.edu>
 
 --- a/pdftk/report.cc

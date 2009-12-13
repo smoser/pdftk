@@ -8,6 +8,10 @@ GCJ_ITEXT_JAR_PATH=/usr/share/java/itext.jar
 GCJ_ITEXT_VERSION=$(shell dpkg-query -W -f'$${Version}' libitext-java-gcj)
 GCJ_ITEXT_VERSION_SHORT=$(shell dpkg-query -W -f'$${Version}' libitext-java-gcj | sed -e 's/-[^-]*$$//')
 
+GCJ_BC_MAIN_VERSION_A=$(shell dpkg-query -W -f'$${Version}' libgcj-bc | egrep -o "^[0-9]+" )
+GCJ_BC_MAIN_VERSION_B=$(shell dpkg-query -W -f'$${Version}' libgcj-bc | sed -r -e '1s/[0-9]+\.([0-9]+).*/\1/;q')
+GCJ_BC_MAIN_VERSION_B_NEXT=$(shell expr $(GCJ_BC_MAIN_VERSION_B) + 1)
+
 # extract version suffix from gcj
 VERSUFF=-$(shell gcj --version | sed -r -e '1s/.* ([0-9]+\.[0-9]+).*/\1/;q')
 
@@ -22,9 +26,14 @@ override_dh_auto_build:
 	$(MAKE) -C $(CURDIR)/pdftk -f Makefile.Debian GCJ_ITEXT_SO=$(GCJ_ITEXT_SO_NAME) VERSUFF=$(VERSUFF)
 
 override_dh_auto_clean:
-	[ ! -f $(CURDIR)/pdftk/Makefile.Debian ] || make -C $(CURDIR)/pdftk -f Makefile.Debian clean
+	# do not call clean target if source is unpatched
+	grep -q "libgcj_local" $(CURDIR)/pdftk/Makefile.Base || make -C $(CURDIR)/pdftk -f Makefile.Debian clean
+	@[ -n "$(GCJ_ITEXT_SO_NAME)" ] || \
+		echo "*** itext-*.so not found in libitext-java-gcj -> No gcj native code support for this arch."
+	@[ -n "$(GCJ_ITEXT_SO_NAME)" ] || exit 1
 	rm -f $(CURDIR)/pdftk/$(GCJ_ITEXT_SO_NAME)
 	rm -rf $(CURDIR)/pdftk/pdftk
+	rm -rf $(CURDIR)/pdftk/*.o
 	rm -f $(CURDIR)/classes
 	rm -rf $(CURDIR)/java_libs2
 	dh_auto_clean
@@ -35,7 +44,10 @@ override_dh_auto_install:
 	install -o root -g root -m 755 $(CURDIR)/pdftk/pdftk $(CURDIR)/debian/pdftk/usr/bin
 	# generate right libitext-java-gcj depends
 	echo -n 'libitext-java-gcj:Depends=libitext-java-gcj (>=' $(GCJ_ITEXT_VERSION)'~)' >> debian/pdftk.substvars
-	echo    ', libitext-java-gcj (< '$(GCJ_ITEXT_VERSION_SHORT)'+)'  >> debian/pdftk.substvars
+	echo    ', libitext-java-gcj (<= '$(GCJ_ITEXT_VERSION_SHORT)'++)'  >> debian/pdftk.substvars
+	echo -n 'libgcj-bc:Depends=libgcj-bc (>= '$(GCJ_BC_MAIN_VERSION_A)'.'$(GCJ_BC_MAIN_VERSION_B)'~)' >> debian/pdftk.substvars
+	echo    ', libgcj-bc (<< '$(GCJ_BC_MAIN_VERSION_A)'.'$(GCJ_BC_MAIN_VERSION_B_NEXT)'~)'  >> debian/pdftk.substvars
+
 	dh_auto_install
 
 get-orig-source:

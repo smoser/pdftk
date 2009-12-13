@@ -11,3 +11,4 @@ use_mkstemp
 multistamp_support
 fix_compiler_warnings
 support_uncompression
+ignore_locale
