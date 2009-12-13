@@ -1233,7 +1233,7 @@ UpdateInfo( itext::PdfReader* reader_p,
 								string_to_jcharstring( jvs, jvs_size, &jvs_len, it->second );
 
 								info_p->put( new itext::PdfName( JvNewStringUTF(it->first.c_str()) ),
-														 new itext::PdfString( JvNewString(jvs, jvs_len), itext::PdfObject::TEXT_UNICODE ) );
+														 new itext::PdfString( JvNewStringUTF((char* )it->second.c_str()), (strcmp(it->first.c_str(), "ModDate") && strcmp(it->first.c_str(), "CreationDate")) ? itext::PdfObject::TEXT_UNICODE : itext::PdfObject::TEXT_PDFDOCENCODING ) );
 							}
 						}
 				}
