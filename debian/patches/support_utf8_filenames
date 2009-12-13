@@ -1,8 +1,8 @@
 Description: use JvNewStringUTF8 instead of JvNewStringLatin1 for supporting utf8 filenames
 Author: Johann Felix Soden <johfel@gmx.de>
-Debian-Bug: http://bugs.debian.org/258377
-Debian-Bug: http://bugs.debian.org/504014
-Debian-Bug: http://bugs.debian.org/504128
+Bug-Debian: http://bugs.debian.org/258377
+Bug-Debian: http://bugs.debian.org/504014
+Bug-Debian: http://bugs.debian.org/504128
 
 --- a/pdftk/attachments.cc
 +++ b/pdftk/attachments.cc

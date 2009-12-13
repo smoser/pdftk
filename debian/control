@@ -11,7 +11,8 @@ Vcs-Browser: http://git.debian.org/?p=collab-maint/pdftk.git;a=summary
 
 Package: pdftk
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, ${libitext-java-gcj:Depends}, libitext-java, libbcprov-java, libbcmail-java
+Depends: ${shlibs:Depends}, ${misc:Depends}, ${libgcj-bc:Depends}, ${libitext-java-gcj:Depends},
+ libitext-java, libbcprov-java, libbcmail-java
 Suggests: xpdf-utils
 Description: tool for manipulating PDF documents
  If PDF is electronic paper, then pdftk is an electronic stapler-remover,

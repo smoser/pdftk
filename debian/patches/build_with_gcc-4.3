@@ -18,8 +18,8 @@ Author: <ROBERTOJIMENOCA@terra.es>, Johann Felix Soden <johfel@gmx.de>
  # with the dont_ask or do_ask command-line options
 -CPPFLAGS= -O3 -DPATH_DELIM=0x2f -DASK_ABOUT_WARNINGS=false -fdollars-in-identifiers
 -CXXFLAGS= -lgcj
-+CXXFLAGS= -Wall -Wextra -O2 -DPATH_DELIM=0x2f -DASK_ABOUT_WARNINGS=false -fdollars-in-identifiers -fpic -Weffc++
-+GCJFLAGS= -lgcj -fdollars-in-identifiers -Wl,-Bsymbolic -Wl,--as-needed -fpic -findirect-dispatch -Wl,-rpath,/usr/lib/gcj
++CXXFLAGS= -Wall -Wextra -O2 -g -DPATH_DELIM=0x2f -DASK_ABOUT_WARNINGS=false -fdollars-in-identifiers -fpic -Weffc++
++GCJFLAGS= -g -lgcj -fdollars-in-identifiers -Wl,-Bsymbolic -Wl,--as-needed -fpic -findirect-dispatch -Wl,-rpath,/usr/lib/gcj
  
  # itext compiler flags
 -# -O3 causes pdftk to segfault (during a cat operation) when compiled on sarge using gcc 3.4.4
