@@ -48,6 +48,23 @@ Bug-Debian: http://bugs.debian.org/504128
  								}
  							}
  
+@@ -394,11 +394,12 @@
+ 						input_reader_p->getPdfObject( filespec_p->get( itext::PdfName::F ) );
+ 					if( fn_p && fn_p->isString() ) {
+ 
+-						const jbyteArray fn_array_p= 
+-							itext::PdfEncodings::convertToBytes( fn_p->toString(),
+-																									 itext::BaseFont::WINANSI );
++						jstring fn_str = fn_p->toString();
++						int fn_str_len = JvGetStringUTFLength( fn_str );
++						char fn_buf[ fn_str_len ];
++						JvGetStringUTFRegion( fn_str, 0, fn_str->length() , fn_buf );
+ 						string fn= 
+-							drop_path( string((const char*)elements(fn_array_p), fn_array_p->length) );
++							drop_path( string(fn_buf, fn_str_len ) );
+ 						// did the user supply a path?
+ 						if( !output_pathname.empty() ) { // prepend it
+ 							fn= output_pathname+ fn; // output_pathname has been normalized, already
 --- a/pdftk/pdftk.cc
 +++ b/pdftk/pdftk.cc
 @@ -168,7 +168,7 @@
