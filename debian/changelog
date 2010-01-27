@@ -1,3 +1,10 @@
+pdftk (1.41+dfsg-7) unstable; urgency=low
+
+  * Improve utf8-encoded attachment filename support (fixes crash on
+    unpack_files) (Closes: #462756, #563330)
+
+ -- Johann Felix Soden <johfel@gmx.de>  Wed, 27 Jan 2010 20:08:45 +0100
+
 pdftk (1.41+dfsg-6) unstable; urgency=low
 
   * Add patch to circumvent libgcj10 exception with de_AT.UTF-8 locale.

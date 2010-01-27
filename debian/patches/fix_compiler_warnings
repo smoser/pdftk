@@ -99,7 +99,7 @@ Author: Johann Felix Soden <johfel@gmx.de>
  				itext::PdfDictionary* names_p= (itext::PdfDictionary*)
  					input_reader_p->getPdfObject( catalog_p->get( itext::PdfName::NAMES ) );
  				bool names_new_b= false;
-@@ -455,7 +455,7 @@
+@@ -456,7 +456,7 @@
  		if( catalog_p && catalog_p->isDictionary() ) {
  
  			// the Names dict
