@@ -168,7 +168,7 @@ TK_Session::add_reader( InputPdf* input_pdf_p )
 		}
 		if( input_pdf_p->m_password.empty() ) {
 			reader=
-				new itext::PdfReader( JvNewStringLatin1( input_pdf_p->m_filename.c_str() ) );
+				new itext::PdfReader( JvNewStringUTF( input_pdf_p->m_filename.c_str() ) );
 		}
 		else {
 			if( input_pdf_p->m_password== "PROMPT" ) {
@@ -180,7 +180,7 @@ TK_Session::add_reader( InputPdf* input_pdf_p )
 							input_pdf_p->m_password.size() );
 
 			reader= 
-				new itext::PdfReader( JvNewStringLatin1( input_pdf_p->m_filename.c_str() ),
+				new itext::PdfReader( JvNewStringUTF( input_pdf_p->m_filename.c_str() ),
 															password );
 		}
 		reader->consolidateNamedDestinations();
@@ -202,7 +202,7 @@ TK_Session::add_reader( InputPdf* input_pdf_p )
 		}
 	}
 	catch( java::io::IOException* ioe_p ) { // file open error
-		if( ioe_p->getMessage()->equals( JvNewStringLatin1( "Bad user password" ) ) ) {
+		if( ioe_p->getMessage()->equals( JvNewStringUTF( "Bad user password" ) ) ) {
 			input_pdf_p->m_authorized_b= false;
 		}
 		else {
@@ -1904,7 +1904,7 @@ get_output_stream( string output_filename,
 
 		// attempt to open the stream
 		java::String* jv_output_filename_p=
-			JvNewStringLatin1( output_filename.c_str() );
+			JvNewStringUTF( output_filename.c_str() );
 		try {
 			os_p= new java::FileOutputStream( jv_output_filename_p );
 		}
@@ -1931,7 +1931,7 @@ add_mark_to_page( itext::PdfReader* reader_p,
 									jint page_num )
 {
 	itext::PdfName* page_marker_p=
-		new itext::PdfName( JvNewStringLatin1(g_page_marker) );
+		new itext::PdfName( JvNewStringUTF(g_page_marker) );
 	itext::PdfDictionary* page_p= reader_p->getPageN( page_index );
 	if( page_p && page_p->isDictionary() ) {
 		page_p->put( page_marker_p, new itext::PdfNumber( page_num ) );
@@ -1950,7 +1950,7 @@ remove_mark_from_page( itext::PdfReader* reader_p,
 											 jint page_num )
 {
 	itext::PdfName* page_marker_p=
-		new itext::PdfName( JvNewStringLatin1(g_page_marker) );
+		new itext::PdfName( JvNewStringUTF(g_page_marker) );
 	itext::PdfDictionary* page_p= reader_p->getPageN( page_num );
 	if( page_p && page_p->isDictionary() ) {
 		page_p->remove( page_marker_p );
@@ -1992,7 +1992,7 @@ TK_Session::create_output()
 
 		string creator= "pdftk "+ string(PDFTK_VER)+ " - www.pdftk.com";
 		java::String* jv_creator_p= 
-			JvNewStringLatin1( creator.c_str() );
+			JvNewStringUTF( creator.c_str() );
 
 		if( m_output_owner_pw== "PROMPT" ) {
 			prompt_for_password( "owner", "the output PDF", m_output_owner_pw );
@@ -2170,7 +2170,7 @@ TK_Session::create_output()
 					char buff[4096]= "";
 					sprintf( buff, m_output_filename.c_str(), ii+ 1 );
 
-					java::String* jv_output_filename_p= JvNewStringLatin1( buff );
+					java::String* jv_output_filename_p= JvNewStringUTF( buff );
 
 					itext::Document* output_doc_p= new itext::Document();
 					java::FileOutputStream* ofs_p= new java::FileOutputStream( jv_output_filename_p );
@@ -2277,13 +2277,13 @@ TK_Session::create_output()
 						// first try fdf
 						try {
 							fdf_reader_p=
-								new itext::FdfReader( JvNewStringLatin1( m_form_data_filename.c_str() ) );
+								new itext::FdfReader( JvNewStringUTF( m_form_data_filename.c_str() ) );
 						}
 						catch( java::io::IOException* ioe_p ) { // file open error
 							// maybe it's xfdf?
 							try {
 								xfdf_reader_p=
-									new itext::XfdfReader( JvNewStringLatin1( m_form_data_filename.c_str() ) );
+									new itext::XfdfReader( JvNewStringUTF( m_form_data_filename.c_str() ) );
 							}
 							catch( java::io::IOException* ioe_p ) { // file open error
 								cerr << "Error: Failed to open form data file: " << endl;
@@ -2308,7 +2308,7 @@ TK_Session::create_output()
 																 m_background_filename );
 					}
 					try {
-						mark_p= new itext::PdfReader( JvNewStringLatin1( m_background_filename.c_str() ) );
+						mark_p= new itext::PdfReader( JvNewStringUTF( m_background_filename.c_str() ) );
 						mark_p->removeUnusedObjects();
 						mark_p->shuffleSubsetNames();
 					}
@@ -2326,7 +2326,7 @@ TK_Session::create_output()
 																 m_stamp_filename );
 					}
 					try {
-						mark_p= new itext::PdfReader( JvNewStringLatin1( m_stamp_filename.c_str() ) );
+						mark_p= new itext::PdfReader( JvNewStringUTF( m_stamp_filename.c_str() ) );
 						mark_p->removeUnusedObjects();
 						mark_p->shuffleSubsetNames();
 					}
