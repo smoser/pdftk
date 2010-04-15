@@ -194,7 +194,7 @@ public:
 	void unpack_files
 	( itext::PdfReader* input_reader_p );
 
-	void create_output();
+	bool create_output();
 
 private:
 	enum ArgState {
