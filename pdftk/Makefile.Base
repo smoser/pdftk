@@ -50,4 +50,4 @@ uninstall:
 
 clean:
 	$(MAKE) -C $(java_libs_root) clean
-	rm -vf *.o
+	rm -vf *.o pdftk
