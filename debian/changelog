@@ -1,3 +1,12 @@
+pdftk (1.41+dfsg-8) unstable; urgency=low
+
+  * Imrove error handling on non-standard conform pdf files.
+  * Use error reporting via non-zero exit code for all errors.
+    (Closes: #577849)
+  * Bump Standards-Version to 3.8.4.
+
+ -- Johann Felix Soden <johfel@gmx.de>  Thu, 15 Apr 2010 16:03:42 +0200
+
 pdftk (1.41+dfsg-7) unstable; urgency=low
 
   * Improve utf8-encoded attachment filename support (fixes crash on
