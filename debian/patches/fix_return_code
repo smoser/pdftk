@@ -1,0 +1,184 @@
+Description: The return code of pdftk should be not zero if an error occured.
+Author: Johann Felix Soden <johfel@gmx.de>
+Bug-Debian: http://bugs.debian.org/577849
+
+--- a/pdftk/pdftk.cc
++++ b/pdftk/pdftk.cc
+@@ -2140,9 +2140,10 @@
+ 	}
+ }
+ 
+-void
++bool
+ TK_Session::create_output()
+ {
++	bool ret_val= true;
+ 	if( is_valid() ) {
+ 
+ 		/*
+@@ -2196,6 +2197,7 @@
+ 														 m_ask_about_warnings_b );
+ 
+ 				if( !ofs_p ) { // file open error
++					ret_val= false;
+ 					break;
+ 				}
+ 				itext::PdfCopy* writer_p= new itext::PdfCopy( output_doc_p, ofs_p );
+@@ -2311,11 +2313,13 @@
+ 							else { // error
+ 								cerr << "Internal Error: no reader found for page: ";
+ 								cerr << it->m_page_num << " in file: " << input_pdf.m_filename << endl;
++								ret_val= false;
+ 								break;
+ 							}
+ 						}
+ 						else { // error
+ 							cerr << "Internal Error: Unable to find handle in m_input_pdf." << endl;
++							ret_val= false;
+ 							break;
+ 						}
+ 					}
+@@ -2408,6 +2412,7 @@
+ 				}
+ 				else { // error
+ 					cerr << "Error: unable to open file for output: doc_data.txt" << endl;
++					ret_val= false;
+ 				}
+ 
+ 			}
+@@ -2420,6 +2425,7 @@
+ 					cerr << "Error: Only one input PDF file may be given for this" << endl;
+ 					cerr << "   operation.  Maybe you meant to use the \"cat\" operator?" << endl;
+ 					cerr << "   No output created." << endl;
++					ret_val= false;
+ 					break;
+ 				}
+ 
+@@ -2448,6 +2454,7 @@
+ 								cerr << "Error: Failed to open form data file: " << endl;
+ 								cerr << "   " << m_form_data_filename << endl;
+ 								cerr << "   No output created." << endl;
++								ret_val= false;
+ 
+ 								//ioe_p->printStackTrace(); // debug
+ 								break;
+@@ -2471,6 +2478,7 @@
+ 								cerr << "Error: Failed to open form data file: " << endl;
+ 								cerr << "   " << m_form_data_filename << endl;
+ 								cerr << "   No output created." << endl;
++								ret_val= false;
+ 								
+ 								//ioe_p->printStackTrace(); // debug
+ 								break;
+@@ -2500,6 +2508,7 @@
+ 						cerr << "Error: Failed to open background PDF file: " << endl;
+ 						cerr << "   " << m_background_filename << endl;
+ 						cerr << "   No output created." << endl;
++						ret_val= false;
+ 						break;
+ 					}
+ 				}
+@@ -2519,6 +2528,7 @@
+ 						cerr << "Error: Failed to open stamp PDF file: " << endl;
+ 						cerr << "   " << m_stamp_filename << endl;
+ 						cerr << "   No output created." << endl;
++						ret_val= false;
+ 						break;
+ 					}
+ 				}
+@@ -2528,6 +2538,7 @@
+ 					get_output_stream( m_output_filename,
+ 														 m_ask_about_warnings_b );
+ 				if( !ofs_p ) { // file open error
++					ret_val= false;
+ 					break;
+ 				}
+ 
+@@ -2573,6 +2584,7 @@
+ 						}
+ 						else { // error
+ 							cerr << "Error: unable to open FDF file for input: " << m_update_info_filename << endl;
++							ret_val= false;
+ 							break;
+ 						}
+ 					}
+@@ -2759,6 +2771,7 @@
+ 				if( 1< m_input_pdf.size() ) { // error
+ 					cerr << "Error: Only one input PDF file may be used for the dump_data operation" << endl;
+ 					cerr << "   No output created." << endl;
++					ret_val= false;
+ 					break;
+ 				}
+ 
+@@ -2785,6 +2798,7 @@
+ 					}
+ 					else { // error
+ 						cerr << "Error: unable to open file for output: " << m_output_filename << endl;
++						ret_val= false;
+ 					}
+ 				}
+ 			}
+@@ -2796,6 +2810,7 @@
+ 				if( 1< m_input_pdf.size() ) { // error
+ 					cerr << "Error: Only one input PDF file may be used for the generate_fdf operation" << endl;
+ 					cerr << "   No output created." << endl;
++					ret_val= false;
+ 					break;
+ 				}
+ 
+@@ -2814,6 +2829,7 @@
+ 					//delete writer_p; // OK? GC? -- NOT okay!
+ 				}
+ 				else { // error: get_output_stream() reports error
++					ret_val= false;
+ 					break;
+ 				}
+ 			}
+@@ -2825,6 +2841,7 @@
+ 				if( 1< m_input_pdf.size() ) { // error
+ 					cerr << "Error: Only one input PDF file may be given for \"unpack_files\" op." << endl;
+ 					cerr << "   No output created." << endl;
++					ret_val= false;
+ 					break;
+ 				}
+ 
+@@ -2852,13 +2869,18 @@
+ 			}
+ 			cerr << "Java Exception:" << endl;
+ 			c_p->printStackTrace();
++			ret_val= false;
+ 		}
+ 		catch( java::lang::Throwable* t_p )
+ 			{
+ 				cerr << "Unhandled Java Exception:" << endl;
+ 				t_p->printStackTrace();
++				ret_val= false;
+ 			}
+ 	}
++	else
++		ret_val= false;
++	return ret_val;
+ }
+ 
+ int main(int argc, char** argv)
+@@ -2912,7 +2934,8 @@
+ 			tk_session.dump_session_data();
+ 
+ 			if( tk_session.is_valid() ) {
+-				tk_session.create_output();
++				if ( !tk_session.create_output() )
++					ret_val= 1;
+ 			}
+ 			else { // error
+ 				cerr << "Done.  Input errors, so no output created." << endl;
+--- a/pdftk/pdftk.h
++++ b/pdftk/pdftk.h
+@@ -194,7 +194,7 @@
+ 	void unpack_files
+ 	( itext::PdfReader* input_reader_p );
+ 
+-	void create_output();
++	bool create_output();
+ 
+ private:
+ 	enum ArgState {
