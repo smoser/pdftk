@@ -83,7 +83,9 @@ public:
 		update_info_k,
 		update_xmp_k,
 		background_k, // promoted from output option to operation in pdftk 1.10
+		multibackground_k,
 		stamp_k,
+		multistamp_k,
 
 		// optional attach_file argument
 		attach_file_to_page_k,
@@ -161,6 +163,8 @@ public:
 	string m_output_owner_pw;
 	string m_output_user_pw;
 	jint m_output_user_perms;
+	bool m_multistamp_b;
+	bool m_multibackground_b;
 	bool m_output_uncompress_b;
 	bool m_output_compress_b;
 	bool m_output_flatten_b;
