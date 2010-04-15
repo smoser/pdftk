@@ -2659,6 +2659,10 @@ int main(int argc, char** argv)
 	bool synopsis_b= ( argc== 1 );
 	int ret_val= 0; // default: no error
 
+	// set classpath:
+	static char my_classpath[]="CLASSPATH=/usr/share/java/bcprov.jar:/usr/share/java/bcmail.jar:/usr/share/java/itext.jar";
+	putenv(my_classpath);
+
 	for( int ii= 1; ii< argc; ++ii ) {
 		version_b=
 			(version_b || 
