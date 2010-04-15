@@ -51,7 +51,11 @@
 
 #include "com/lowagie/text/Document.h"
 #include "com/lowagie/text/Rectangle.h"
+// Ewww, PdfName has a field called NULL.
+#undef NULL
 #include "com/lowagie/text/pdf/PdfName.h"
+#define NULL __null
+
 #include "com/lowagie/text/pdf/PdfString.h"
 #include "com/lowagie/text/pdf/PdfNumber.h"
 #include "com/lowagie/text/pdf/PdfArray.h"
@@ -148,8 +152,8 @@ TK_Session::attach_files
 
 					itext::Rectangle* crop_box_p= 
 						input_reader_p->getCropBox( m_input_attach_file_pagenum );
-					float corner_top= crop_box_p->top()- margin;
-					float corner_left= crop_box_p->left()+ margin;
+					float corner_top= crop_box_p->getTop()- margin;
+					float corner_left= crop_box_p->getLeft()+ margin;
 
 					itext::PdfArray* annots_p= (itext::PdfArray*)
 						input_reader_p->getPdfObject( page_p->get( itext::PdfName::ANNOTS ) );
@@ -187,11 +191,11 @@ TK_Session::attach_files
 								string filename= drop_path(*vit);
 
 								// wrap our location over page bounds, if needed
-								if( crop_box_p->right() < corner_left+ trans ) {
-									corner_left= crop_box_p->left()+ margin;
+								if( crop_box_p->getRight() < corner_left+ trans ) {
+									corner_left= crop_box_p->getLeft()+ margin;
 								}
-								if( corner_top- trans< crop_box_p->bottom() ) {
-									corner_top= crop_box_p->top()- margin;
+								if( corner_top- trans< crop_box_p->getBottom() ) {
+									corner_top= crop_box_p->getTop()- margin;
 								}
 
 								itext::Rectangle* annot_bbox_p= 
