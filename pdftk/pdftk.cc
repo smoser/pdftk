@@ -160,8 +160,22 @@ prompt_for_filename( const string message,
 	}
 }
 
-void uncompress_stream(itext::PRStream* stream)
+void change_compression_stream(itext::PRStream* stream, bool compress_mode )
 {
+	if( compress_mode )
+	{
+
+		try {
+			stream->setData(  itext::PdfReader::getStreamBytes( stream ), compress_mode );
+		}
+		catch (itext::exceptions::UnsupportedPdfException * err ) { // unknow filter detected
+			// ignore this
+		}
+		return;
+	}
+
+	// ----- uncompress -----
+
 	try { // try first itext own way
 		stream->setData( itext::PdfReader::getStreamBytes( stream ) );
 		stream->remove( itext::PdfName::FILTER );
@@ -243,16 +257,16 @@ void uncompress_stream(itext::PRStream* stream)
 }
 
 
-void uncompress_dictionary( itext::PdfDictionary *dict, itext::PdfReader *reader )
+void change_compression_dictionary( itext::PdfDictionary *dict, itext::PdfReader *reader, bool compress_mode )
 {
 	if( !dict )
 		return;
 
 	// prevent circuit references
-	static set<void*> already_uncompressed;
-	if( already_uncompressed.find(dict) != already_uncompressed.end() )
+	static set<void*> already_handled;
+	if( already_handled.find(dict) != already_handled.end() )
 		return;
-	already_uncompressed.insert(dict);
+	already_handled.insert(dict);
 
 	java::util::Iterator * keys=dict->getKeys()->iterator();
 	while( keys->hasNext() ) {
@@ -266,18 +280,19 @@ void uncompress_dictionary( itext::PdfDictionary *dict, itext::PdfReader *reader
 		if( !obj || obj == dict )
 			continue;
 		if( obj->isDictionary() )
-			uncompress_dictionary( (itext::PdfDictionary*)obj,reader );
+			change_compression_dictionary( (itext::PdfDictionary*)obj, reader, compress_mode );
 		if( obj->isStream() )
-			uncompress_stream( (itext::PRStream*) obj );
+			change_compression_stream( (itext::PRStream*) obj, compress_mode );
 	}
 }
 
-void uncompress( itext::PdfReader * reader )
+void change_compression( itext::PdfReader * reader, bool compress_mode )
 {
 	int pages = reader->getNumberOfPages();
+	itext::Document::Document::compress = compress_mode;
 
 	itext::PdfDictionary *catalog = reader->getCatalog();
-	uncompress_dictionary( catalog, reader );
+	change_compression_dictionary( catalog, reader, compress_mode );
 
 	for( int i=1; i<reader->getXrefSize(); i++ )
 	{
@@ -285,14 +300,14 @@ void uncompress( itext::PdfReader * reader )
 		if(!obj)
 			continue;
 		if( obj->isDictionary() )
-			uncompress_dictionary( (itext::PdfDictionary*)obj, reader );
+			change_compression_dictionary( (itext::PdfDictionary*)obj, reader, compress_mode );
 		if( obj->isStream() )
-			uncompress_stream( (itext::PRStream*)obj );
+			change_compression_stream( (itext::PRStream*)obj, compress_mode );
 	}
 
 	for( int i = 1; i <= pages; i++ )
 	{
-		reader->setPageContent( i, reader->getPageContent( i ), 0 );
+		reader->setPageContent( i, reader->getPageContent( i ));
 	}
 }
 
@@ -652,6 +667,7 @@ TK_Session::is_keyword( char* ss, int* keyword_len_p )
 		return filt_uncompress_k;
 	}
 	else if( strcmp( ss_copy, "compress" )== 0 ) {
+		itext::Document::Document::compress=true;
 		return filt_compress_k;
 	}
 	else if( strcmp( ss_copy, "flatten" )== 0 ) {
@@ -2283,11 +2299,12 @@ TK_Session::create_output()
 
 								//
 								if( m_output_uncompress_b ) {
-									uncompress(input_reader_p);
+									change_compression(input_reader_p, false );
 									add_mark_to_page( input_reader_p, it->m_page_num, output_page_count+ 1 );
 									writer_p->setCompressionLevel(0);
 								}
 								else if( m_output_compress_b ) {
+									change_compression(input_reader_p, true );
 									remove_mark_from_page( input_reader_p, it->m_page_num );
 									writer_p->setCompressionLevel(9);
 								}
@@ -2363,13 +2380,14 @@ TK_Session::create_output()
 
 					// un/compress output streams?
 					if( m_output_uncompress_b ) {
+						change_compression( input_reader_p, false );
 						// Absent from itext-2.1.4
 // 						writer_p->filterStreams= true;
 // 						writer_p->compressStreams= false;
  						writer_p->setCompressionLevel(0);
-						uncompress(input_reader_p);
 					}
 					else if( m_output_compress_b ) {
+						change_compression( input_reader_p, true );
 						// Absent from itext-2.1.4
 // 						writer_p->filterStreams= false;
 // 						writer_p->compressStreams= true;
@@ -2613,7 +2631,7 @@ TK_Session::create_output()
 
 				// un/compress output streams?
 				if( m_output_uncompress_b ) {
-					uncompress(input_reader_p);
+					change_compression( input_reader_p, false );
 					add_marks_to_pages( input_reader_p );
 					// Absent from itext-2.1.4
 // 					writer_p->filterStreams= true;
@@ -2621,6 +2639,7 @@ TK_Session::create_output()
  					writer_p->setCompressionLevel(0);
 				}
 				else if( m_output_compress_b ) {
+					change_compression( input_reader_p, true );
 					remove_marks_from_pages( input_reader_p );
 					// Absent from itext-2.1.4
 // 					writer_p->filterStreams= false;

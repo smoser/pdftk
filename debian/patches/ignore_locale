@@ -7,7 +7,7 @@ Bug-Debian: http://bugs.debian.org/560594
 
 --- a/pdftk/pdftk.cc
 +++ b/pdftk/pdftk.cc
-@@ -2856,6 +2856,8 @@
+@@ -2875,6 +2875,8 @@
  	// set classpath:
  	static char my_classpath[]="CLASSPATH=/usr/share/java/bcprov.jar:/usr/share/java/bcmail.jar:/usr/share/java/itext.jar";
  	putenv(my_classpath);
