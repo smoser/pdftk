@@ -1,6 +1,14 @@
+pdftk (1.41+dfsg-9) unstable; urgency=low
+
+  * Fix pdf compression support: Uncompressed files can now be
+    compressed.
+  * Bump Standards-Version to 3.9.1.
+
+ -- Johann Felix Soden <johfel@gmx.de>  Sun, 08 Aug 2010 11:24:11 +0200
+
 pdftk (1.41+dfsg-8) unstable; urgency=low
 
-  * Imrove error handling on non-standard conform pdf files.
+  * Improve error handling on non-standard conform pdf files.
   * Use error reporting via non-zero exit code for all errors.
     (Closes: #577849)
   * Bump Standards-Version to 3.8.4.

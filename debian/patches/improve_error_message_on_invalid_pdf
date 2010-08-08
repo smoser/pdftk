@@ -14,7 +14,7 @@ Bug-Ubuntu: https://bugs.launchpad.net/ubuntu/+source/pdftk/+bug/544636
  #include <java/lang/Throwable.h>
  #include <java/lang/String.h>
  #include <java/io/IOException.h>
-@@ -2838,6 +2839,20 @@
+@@ -2857,6 +2858,20 @@
  			break;
  			}
  		}

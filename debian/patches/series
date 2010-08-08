@@ -10,7 +10,7 @@ handle_utf8_data_in_update_info
 use_mkstemp
 multistamp_support
 fix_compiler_warnings
-support_uncompression
+support_compression
 ignore_locale
 improve_error_message_on_invalid_pdf
 fix_return_code

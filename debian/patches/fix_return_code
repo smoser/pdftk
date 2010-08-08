@@ -4,7 +4,7 @@ Bug-Debian: http://bugs.debian.org/577849
 
 --- a/pdftk/pdftk.cc
 +++ b/pdftk/pdftk.cc
-@@ -2140,9 +2140,10 @@
+@@ -2156,9 +2156,10 @@
  	}
  }
  
@@ -16,7 +16,7 @@ Bug-Debian: http://bugs.debian.org/577849
  	if( is_valid() ) {
  
  		/*
-@@ -2196,6 +2197,7 @@
+@@ -2212,6 +2213,7 @@
  														 m_ask_about_warnings_b );
  
  				if( !ofs_p ) { // file open error
@@ -24,7 +24,7 @@ Bug-Debian: http://bugs.debian.org/577849
  					break;
  				}
  				itext::PdfCopy* writer_p= new itext::PdfCopy( output_doc_p, ofs_p );
-@@ -2311,11 +2313,13 @@
+@@ -2328,11 +2330,13 @@
  							else { // error
  								cerr << "Internal Error: no reader found for page: ";
  								cerr << it->m_page_num << " in file: " << input_pdf.m_filename << endl;
@@ -38,7 +38,7 @@ Bug-Debian: http://bugs.debian.org/577849
  							break;
  						}
  					}
-@@ -2408,6 +2412,7 @@
+@@ -2426,6 +2430,7 @@
  				}
  				else { // error
  					cerr << "Error: unable to open file for output: doc_data.txt" << endl;
@@ -46,7 +46,7 @@ Bug-Debian: http://bugs.debian.org/577849
  				}
  
  			}
-@@ -2420,6 +2425,7 @@
+@@ -2438,6 +2443,7 @@
  					cerr << "Error: Only one input PDF file may be given for this" << endl;
  					cerr << "   operation.  Maybe you meant to use the \"cat\" operator?" << endl;
  					cerr << "   No output created." << endl;
@@ -54,7 +54,7 @@ Bug-Debian: http://bugs.debian.org/577849
  					break;
  				}
  
-@@ -2448,6 +2454,7 @@
+@@ -2466,6 +2472,7 @@
  								cerr << "Error: Failed to open form data file: " << endl;
  								cerr << "   " << m_form_data_filename << endl;
  								cerr << "   No output created." << endl;
@@ -62,7 +62,7 @@ Bug-Debian: http://bugs.debian.org/577849
  
  								//ioe_p->printStackTrace(); // debug
  								break;
-@@ -2471,6 +2478,7 @@
+@@ -2489,6 +2496,7 @@
  								cerr << "Error: Failed to open form data file: " << endl;
  								cerr << "   " << m_form_data_filename << endl;
  								cerr << "   No output created." << endl;
@@ -70,7 +70,7 @@ Bug-Debian: http://bugs.debian.org/577849
  								
  								//ioe_p->printStackTrace(); // debug
  								break;
-@@ -2500,6 +2508,7 @@
+@@ -2518,6 +2526,7 @@
  						cerr << "Error: Failed to open background PDF file: " << endl;
  						cerr << "   " << m_background_filename << endl;
  						cerr << "   No output created." << endl;
@@ -78,7 +78,7 @@ Bug-Debian: http://bugs.debian.org/577849
  						break;
  					}
  				}
-@@ -2519,6 +2528,7 @@
+@@ -2537,6 +2546,7 @@
  						cerr << "Error: Failed to open stamp PDF file: " << endl;
  						cerr << "   " << m_stamp_filename << endl;
  						cerr << "   No output created." << endl;
@@ -86,7 +86,7 @@ Bug-Debian: http://bugs.debian.org/577849
  						break;
  					}
  				}
-@@ -2528,6 +2538,7 @@
+@@ -2546,6 +2556,7 @@
  					get_output_stream( m_output_filename,
  														 m_ask_about_warnings_b );
  				if( !ofs_p ) { // file open error
@@ -94,7 +94,7 @@ Bug-Debian: http://bugs.debian.org/577849
  					break;
  				}
  
-@@ -2573,6 +2584,7 @@
+@@ -2591,6 +2602,7 @@
  						}
  						else { // error
  							cerr << "Error: unable to open FDF file for input: " << m_update_info_filename << endl;
@@ -102,7 +102,7 @@ Bug-Debian: http://bugs.debian.org/577849
  							break;
  						}
  					}
-@@ -2759,6 +2771,7 @@
+@@ -2778,6 +2790,7 @@
  				if( 1< m_input_pdf.size() ) { // error
  					cerr << "Error: Only one input PDF file may be used for the dump_data operation" << endl;
  					cerr << "   No output created." << endl;
@@ -110,7 +110,7 @@ Bug-Debian: http://bugs.debian.org/577849
  					break;
  				}
  
-@@ -2785,6 +2798,7 @@
+@@ -2804,6 +2817,7 @@
  					}
  					else { // error
  						cerr << "Error: unable to open file for output: " << m_output_filename << endl;
@@ -118,7 +118,7 @@ Bug-Debian: http://bugs.debian.org/577849
  					}
  				}
  			}
-@@ -2796,6 +2810,7 @@
+@@ -2815,6 +2829,7 @@
  				if( 1< m_input_pdf.size() ) { // error
  					cerr << "Error: Only one input PDF file may be used for the generate_fdf operation" << endl;
  					cerr << "   No output created." << endl;
@@ -126,7 +126,7 @@ Bug-Debian: http://bugs.debian.org/577849
  					break;
  				}
  
-@@ -2814,6 +2829,7 @@
+@@ -2833,6 +2848,7 @@
  					//delete writer_p; // OK? GC? -- NOT okay!
  				}
  				else { // error: get_output_stream() reports error
@@ -134,7 +134,7 @@ Bug-Debian: http://bugs.debian.org/577849
  					break;
  				}
  			}
-@@ -2825,6 +2841,7 @@
+@@ -2844,6 +2860,7 @@
  				if( 1< m_input_pdf.size() ) { // error
  					cerr << "Error: Only one input PDF file may be given for \"unpack_files\" op." << endl;
  					cerr << "   No output created." << endl;
@@ -142,7 +142,7 @@ Bug-Debian: http://bugs.debian.org/577849
  					break;
  				}
  
-@@ -2852,13 +2869,18 @@
+@@ -2871,13 +2888,18 @@
  			}
  			cerr << "Java Exception:" << endl;
  			c_p->printStackTrace();
@@ -161,7 +161,7 @@ Bug-Debian: http://bugs.debian.org/577849
  }
  
  int main(int argc, char** argv)
-@@ -2912,7 +2934,8 @@
+@@ -2931,7 +2953,8 @@
  			tk_session.dump_session_data();
  
  			if( tk_session.is_valid() ) {

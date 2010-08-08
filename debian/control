@@ -3,7 +3,7 @@ Section: text
 Priority: optional
 Maintainer: Johann Felix Soden <johfel@gmx.de>
 Build-Depends: debhelper (>= 7.0.50~), gcj, libitext-java-gcj, libitext-java, g++-4.4 [hppa]
-Standards-Version: 3.8.4
+Standards-Version: 3.9.1
 Homepage: http://www.pdfhacks.com/pdftk/
 DM-Upload-Allowed: yes
 Vcs-Git: git://git.debian.org/git/collab-maint/pdftk.git
