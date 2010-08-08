@@ -38,6 +38,7 @@
 #include <unistd.h> // for access()
 
 #include <java/lang/System.h>
+#include <java/lang/ClassCastException.h>
 #include <java/lang/Throwable.h>
 #include <java/lang/String.h>
 #include <java/io/IOException.h>
@@ -2856,6 +2857,20 @@ TK_Session::create_output()
 			 // nothing to do
 			break;
 			}
+		}
+		catch(java::lang::ClassCastException * c_p ) {
+			jstring message=c_p->getMessage();
+			int found=message->indexOf(JvNewStringUTF("com.lowagie.text.pdf.PdfDictionary"));
+			if (found >= 0 && message->indexOf(JvNewStringUTF("com.lowagie.text.pdf.PRIndirectReference"))>=0 )
+			{
+				cerr << "Error: One input pdf file seems to be not standard conform." << endl;
+				cerr << "The document information dictionary is a direct object, "
+				     <<  "not an indirect reference. " << endl;
+				cerr << "Please report this bug to the program which have produced the pdf file." << endl;
+				cerr << endl;
+			}
+			cerr << "Java Exception:" << endl;
+			c_p->printStackTrace();
 		}
 		catch( java::lang::Throwable* t_p )
 			{
