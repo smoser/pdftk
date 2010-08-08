@@ -42,11 +42,13 @@
 #include <java/lang/String.h>
 #include <java/io/IOException.h>
 #include <java/io/PrintStream.h>
+#include <java/io/ByteArrayOutputStream.h>
 #include <java/io/FileOutputStream.h>
 #include <java/util/Vector.h>
 #include <java/util/ArrayList.h>
 #include <java/util/Iterator.h>
 #include <java/util/HashMap.h>
+#include <java/util/Set.h>
 
 #include "com/lowagie/text/Document.h"
 #include "com/lowagie/text/Rectangle.h"
@@ -76,8 +78,10 @@
 #include "com/lowagie/text/pdf/PdfIndirectObject.h"
 #include "com/lowagie/text/pdf/PdfFileSpecification.h"
 #include "com/lowagie/text/pdf/PdfBoolean.h"
+#include "com/lowagie/text/pdf/PRStream.h"
 
 #include "com/lowagie/text/pdf/RandomAccessFileOrArray.h" // for InputStreamToArray()
+#include "com/lowagie/text/exceptions/UnsupportedPdfException.h"
 
 using namespace std;
 
@@ -154,6 +158,159 @@ prompt_for_filename( const string message,
 		cout << fn << endl;
 	}
 }
+
+void change_compression_stream(itext::PRStream* stream, bool compress_mode )
+{
+	if( compress_mode )
+	{
+
+		try {
+			stream->setData(  itext::PdfReader::getStreamBytes( stream ), compress_mode );
+		}
+		catch (itext::exceptions::UnsupportedPdfException * err ) { // unknow filter detected
+			// ignore this
+		}
+		return;
+	}
+
+	// ----- uncompress -----
+
+	try { // try first itext own way
+		stream->setData( itext::PdfReader::getStreamBytes( stream ) );
+		stream->remove( itext::PdfName::FILTER );
+		stream->remove( itext::PdfName::DECODEPARMS );
+	}
+	catch (itext::exceptions::UnsupportedPdfException * err ) { // unknow filter detected
+		itext::RandomAccessFileOrArray *rf = stream->getReader()->getSafeFile();
+		rf->reOpen();
+		itext::PdfObject *filter =
+			itext::PdfReader::getPdfObjectRelease( stream->get( itext::PdfName::FILTER ) );
+		JArray<jbyte>* b = itext::PdfReader::getStreamBytesRaw( stream, rf );
+		java::ArrayList *filters = new java::ArrayList();
+		if( filter ) {
+			if( filter->isName() )
+				filters->add( filter );
+			else if( filter->isArray() )
+				filters = ( (itext::PdfArray*) filter )->getArrayList();
+		}
+		java::ArrayList *dp = new java::ArrayList( ( jint ) 1 );
+		itext::PdfObject *dpo = itext::PdfReader::getPdfObjectRelease(
+				stream->get( itext::PdfName::DECODEPARMS ) );
+		if( !dpo || ( !dpo->isDictionary() && !dpo->isArray() ) )
+			dpo = itext::PdfReader::getPdfObjectRelease( stream->get( itext::PdfName::DP ) );
+		if( dpo ) {
+			if( dpo->isDictionary() )
+				dp->add( dpo );
+			else if( dpo->isArray() )
+				dp = ( (itext::PdfArray*)dpo )->getArrayList();
+		}
+		jstring name;
+		int j;
+		for (j = 0; j < filters->size(); ++j ) {
+			name = ( (itext::PdfName*)itext::PdfReader::getPdfObjectRelease(
+						(itext::PdfObject*)filters->get( j ) ) )->toString();
+			if( name->equals( JvNewStringUTF( "/FlateDecode" ) )
+					|| name->equals( JvNewStringUTF( "/Fl" ) ) ) {
+				b = itext::PdfReader::FlateDecode( b );
+				itext::PdfObject *dicParam = NULL;
+				if( j < dp->size() ) {
+					dicParam = (itext::PdfObject*)dp->get( j );
+					b = itext::PdfReader::decodePredictor( b, dicParam );
+				}
+			}
+			else if( name->equals( JvNewStringUTF( "/ASCII85Decode" ) )
+					|| name->equals( JvNewStringUTF( "/A85" ) ) )
+				b = itext::PdfReader::ASCII85Decode( b );
+			else if( name->equals( JvNewStringUTF( "/ASCIIHexDecode" ) )
+					|| name->equals( JvNewStringUTF( "/AHx" ) ) )
+				b = itext::PdfReader::ASCIIHexDecode( b );
+			else if( name->equals( JvNewStringUTF( "/LZWDecode" ) ) ) {
+				b = itext::PdfReader::LZWDecode( b );
+				itext::PdfObject *dicParam = NULL;
+				if( j < dp->size() ) {
+					dicParam = (itext::PdfObject*)dp->get( j );
+					b = itext::PdfReader::decodePredictor( b, dicParam );
+				}
+			}
+			else if( !name->equals( JvNewStringUTF( "/Crypt" ) ) ){
+				break;
+			}
+		}
+		// remove handled filters
+		for(int k=0; k< j;k++ )
+		{
+			filters->remove( k );
+			if( k < dp->size() )
+				dp->remove( k );
+		}
+		rf->close();
+		stream->setData( b );
+		stream->remove( itext::PdfName::FILTER );
+		stream->remove( itext::PdfName::DECODEPARMS );
+		// write not handled filters back
+		if( filters->size() )
+			stream->put( itext::PdfName::FILTER, new itext::PdfArray( filters ) );
+		if( dp->size() )
+			stream->put( itext::PdfName::DECODEPARMS, new itext::PdfArray( dp ) );
+	}
+}
+
+
+void change_compression_dictionary( itext::PdfDictionary *dict, itext::PdfReader *reader, bool compress_mode )
+{
+	if( !dict )
+		return;
+
+	// prevent circuit references
+	static set<void*> already_handled;
+	if( already_handled.find(dict) != already_handled.end() )
+		return;
+	already_handled.insert(dict);
+
+	java::util::Iterator * keys=dict->getKeys()->iterator();
+	while( keys->hasNext() ) {
+		itext::PdfName *n = (itext::PdfName*)keys->next();
+		if( !n )
+			continue;
+		itext::PdfObject *obj = dict->get( n );
+		if( !obj || obj == dict )
+			continue;
+		obj = reader->getPdfObject( obj );
+		if( !obj || obj == dict )
+			continue;
+		if( obj->isDictionary() )
+			change_compression_dictionary( (itext::PdfDictionary*)obj, reader, compress_mode );
+		if( obj->isStream() )
+			change_compression_stream( (itext::PRStream*) obj, compress_mode );
+	}
+}
+
+void change_compression( itext::PdfReader * reader, bool compress_mode )
+{
+	int pages = reader->getNumberOfPages();
+	itext::Document::Document::compress = compress_mode;
+
+	itext::PdfDictionary *catalog = reader->getCatalog();
+	change_compression_dictionary( catalog, reader, compress_mode );
+
+	for( int i=1; i<reader->getXrefSize(); i++ )
+	{
+		itext::PdfObject *obj = reader->getPdfObjectRelease( i );
+		if(!obj)
+			continue;
+		if( obj->isDictionary() )
+			change_compression_dictionary( (itext::PdfDictionary*)obj, reader, compress_mode );
+		if( obj->isStream() )
+			change_compression_stream( (itext::PRStream*)obj, compress_mode );
+	}
+
+	for( int i = 1; i <= pages; i++ )
+	{
+		reader->setPageContent( i, reader->getPageContent( i ));
+	}
+}
+
+
 
 bool
 TK_Session::add_reader( InputPdf* input_pdf_p )
@@ -505,9 +662,11 @@ TK_Session::is_keyword( char* ss, int* keyword_len_p )
 		return perm_all_k;
 	}
 	else if( strcmp( ss_copy, "uncompress" )== 0 ) {
+		itext::Document::Document::compress=false;
 		return filt_uncompress_k;
 	}
 	else if( strcmp( ss_copy, "compress" )== 0 ) {
+		itext::Document::Document::compress=true;
 		return filt_compress_k;
 	}
 	else if( strcmp( ss_copy, "flatten" )== 0 ) {
@@ -2059,14 +2218,15 @@ TK_Session::create_output()
 				output_doc_p->addCreator( jv_creator_p );
 
 				// un/compress output streams?
-// 				if( m_output_uncompress_b ) {
+ 				if( m_output_uncompress_b ) {
 // 					writer_p->filterStreams= true;
 // 					writer_p->compressStreams= false;
-// 				}
-// 				else if( m_output_compress_b ) {
+ 				}
+ 				else if( m_output_compress_b ) {
 // 					writer_p->filterStreams= false;
 // 					writer_p->compressStreams= true;
-// 				}
+ 					writer_p->setCompressionLevel(9);
+ 				}
 
 				// encrypt output?
 				if( m_output_encryption_strength!= none_enc ||
@@ -2136,10 +2296,14 @@ TK_Session::create_output()
 
 								//
 								if( m_output_uncompress_b ) {
+									change_compression(input_reader_p, false );
 									add_mark_to_page( input_reader_p, it->m_page_num, output_page_count+ 1 );
+									writer_p->setCompressionLevel(0);
 								}
 								else if( m_output_compress_b ) {
+									change_compression(input_reader_p, true );
 									remove_mark_from_page( input_reader_p, it->m_page_num );
+									writer_p->setCompressionLevel(9);
 								}
 
 								// DF rotate
@@ -2211,14 +2375,18 @@ TK_Session::create_output()
 
 					// un/compress output streams?
 					if( m_output_uncompress_b ) {
+						change_compression( input_reader_p, false );
 						// Absent from itext-2.1.4
 // 						writer_p->filterStreams= true;
 // 						writer_p->compressStreams= false;
+ 						writer_p->setCompressionLevel(0);
 					}
 					else if( m_output_compress_b ) {
+						change_compression( input_reader_p, true );
 						// Absent from itext-2.1.4
 // 						writer_p->filterStreams= false;
 // 						writer_p->compressStreams= true;
+						writer_p->setCompressionLevel(9);
 					}
 
 					// encrypt output?
@@ -2450,16 +2618,20 @@ TK_Session::create_output()
 
 				// un/compress output streams?
 				if( m_output_uncompress_b ) {
+					change_compression( input_reader_p, false );
 					add_marks_to_pages( input_reader_p );
 					// Absent from itext-2.1.4
 // 					writer_p->filterStreams= true;
 // 					writer_p->compressStreams= false;
+ 					writer_p->setCompressionLevel(0);
 				}
 				else if( m_output_compress_b ) {
+					change_compression( input_reader_p, true );
 					remove_marks_from_pages( input_reader_p );
 					// Absent from itext-2.1.4
 // 					writer_p->filterStreams= false;
 // 					writer_p->compressStreams= true;
+ 					writer_p->setCompressionLevel(9);
 				}
 
 				// encrypt output?
