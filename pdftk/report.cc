@@ -385,8 +385,8 @@ ReportOutlines( ostream& ofs,
 
 static void
 ReportInfo( ostream& ofs,
-						itext::PdfDictionary* info_p,
-						itext::PdfReader* reader_p )
+						itext::PdfDictionary* info_p
+						)
 {
 	if( info_p && info_p->isDictionary() ) {
 		java::Set* keys_p= info_p->getKeys();
@@ -576,7 +576,8 @@ class FormField {
 	set< string > m_states; // possible states
 	string m_state;
 
-	FormField() : m_ff(0), m_qq(0), m_maxlen(0) {}
+	FormField() : m_ft(), m_tt(), m_tu(), m_ff(0), m_vv(), m_dv(), m_qq(0), m_ds(), m_rv(), m_maxlen(0),
+		      m_states(),m_state() {}
 };
 
 static void
@@ -956,7 +957,7 @@ ReportOnPdf( ostream& ofs,
 					reader_p->getPdfObject( trailer_p->get( itext::PdfName::INFO ) );
 				if( info_p && info_p->isDictionary() ) {
 						
-					ReportInfo( ofs, info_p, reader_p );
+					ReportInfo( ofs, info_p);
 				}
 				else { // warning
 					cerr << "Warning: no info dictionary found" << endl;
