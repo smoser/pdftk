@@ -1,7 +1,8 @@
 /* -*- Mode: C++; tab-width: 2; c-basic-offset: 2 -*- */
 /*
-	pdftk, the PDF Tool Kit
-	Copyright (c) 2003, 2004 Sid Steward
+	pdftk, the PDF Toolkit
+	Copyright (c) 2003, 2004, 2010 Sid Steward
+
 
 	This program is free software; you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -13,13 +14,17 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 	GNU General Public License for more details.
 
-	Visit: http://www.gnu.org/licenses/gpl.txt
-	for more details on this license.
+	You should have received a copy of the GNU General Public License
+	along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-	Visit: http://www.pdftk.com for the latest information on pdftk
 
-	Please contact Sid Steward with bug reports:
-	ssteward at AccessPDF dot com
+	Visit: www.pdftk.com for pdftk information and articles
+	Permalink: http://www.pdflabs.com/tools/pdftk-the-pdf-toolkit/
+
+	Please email Sid Steward with questions or bug reports.
+	Include "pdftk" in the subject line to ensure successful delivery:
+	sid.steward at pdflabs dot com
+
 */
 
 // Tell C++ compiler to use Java-style exceptions.
@@ -89,8 +94,8 @@ namespace itext {
 #include "report.h"
 
 static void 
-OutputString( ostream& ofs,
-							java::lang::String* jss_p )
+OutputXmlString( ostream& ofs,
+								 java::lang::String* jss_p )
 {
 	if( jss_p ) {
 		for( jint ii= 0; ii< jss_p->length(); ++ii ) {
@@ -114,20 +119,43 @@ OutputString( ostream& ofs,
 					break;
 				}
 			}
-			else { // HTML numerical entity
-				ofs << "&#" << (int)wc << ";";
+			else { // HTML/MXL numerical entity
+				ofs << "&#" << (unsigned int)wc << ";";
 			}
 		}
 	}
 }
 
+static void 
+OutputUtf8String( ostream& ofs,
+									java::lang::String* jss_p )
+{
+	if( jss_p ) {
+		int fn_buff_len = JvGetStringUTFLength( jss_p );
+		char* fn_buff= (char*)malloc( fn_buff_len* sizeof(char) ); // fn_buff not a C string, not NULL terminated
+		JvGetStringUTFRegion( jss_p, 0, jss_p->length(), fn_buff );
+
+		for( int ii= 0; ii< fn_buff_len; ++ii ) {
+			ofs << fn_buff[ii];
+		}
+
+		free( fn_buff );
+	}
+}
+
 static void
 OutputPdfString( ostream& ofs,
-								 itext::PdfString* pdfss_p )
+								 itext::PdfString* pdfss_p,
+								 bool utf8_b )
 {
 	if( pdfss_p && pdfss_p->isString() ) {
 		java::lang::String* jss_p= pdfss_p->toUnicodeString();
-		OutputString( ofs, jss_p );
+		if( utf8_b ) {
+			OutputUtf8String( ofs, jss_p );
+		}
+		else {
+			OutputXmlString( ofs, jss_p );
+		}
 	}
 }
 
@@ -138,7 +166,7 @@ OutputPdfName( ostream& ofs,
 	if( pdfnn_p && pdfnn_p->isName() ) {
 		java::String* jnn_p= new java::String( pdfnn_p->getBytes() );
 		jnn_p= itext::PdfName::decodeName( jnn_p );
-		OutputString( ofs, jnn_p );
+		OutputXmlString( ofs, jnn_p );
 	}
 }
 
@@ -259,7 +287,8 @@ static void
 ReportOutlines( ostream& ofs, 
 								itext::PdfDictionary* outline_p,
 								int level,
-								itext::PdfReader* reader_p )
+								itext::PdfReader* reader_p,
+								bool utf8_b )
 {
 	// the title; HTML-compatible
 	ofs << "BookmarkTitle: ";
@@ -267,7 +296,7 @@ ReportOutlines( ostream& ofs,
 		reader_p->getPdfObject( outline_p->get( itext::PdfName::TITLE ) );
 	if( title_p && title_p->isString() ) {
 
-		OutputPdfString( ofs, title_p );
+		OutputPdfString( ofs, title_p, utf8_b );
 		
 		ofs << endl;
 	}
@@ -362,7 +391,7 @@ ReportOutlines( ostream& ofs,
 			reader_p->getPdfObject( outline_p->get( itext::PdfName::FIRST ) );
 		if( child_p && child_p->isDictionary() ) {
 
-			ReportOutlines( ofs, child_p, level+ 1, reader_p );
+			ReportOutlines( ofs, child_p, level+ 1, reader_p, utf8_b );
 		}
 	}
 
@@ -373,7 +402,7 @@ ReportOutlines( ostream& ofs,
 			reader_p->getPdfObject( outline_p->get( itext::PdfName::NEXT ) );
 		if( sibling_p && sibling_p->isDictionary() ) {
 
-			ReportOutlines( ofs, sibling_p, level, reader_p );
+			ReportOutlines( ofs, sibling_p, level, reader_p, utf8_b );
 		}
 	}
 }
@@ -381,7 +410,7 @@ ReportOutlines( ostream& ofs,
 static void
 ReportInfo( ostream& ofs,
 						itext::PdfDictionary* info_p,
-						itext::PdfReader* reader_p )
+						bool utf8_b )
 {
 	if( info_p && info_p->isDictionary() ) {
 		java::Set* keys_p= info_p->getKeys();
@@ -391,7 +420,6 @@ ReportInfo( ostream& ofs,
 
 			itext::PdfName* key_p= (itext::PdfName*)it->next();
 			int key_len= JvGetArrayLength( key_p->getBytes() )- 1; // minus one for init. slash
-			
 
 			itext::PdfObject* value_p= (itext::PdfObject*)info_p->get( key_p );
 
@@ -400,6 +428,7 @@ ReportInfo( ostream& ofs,
 					value_p->isString() && 
 					0< ((itext::PdfString*)value_p)->toString()->length() ) 
 				{ // ouput
+					/*
 					const int buff_size= 128;
 					char buff[buff_size];
 					memset( buff, 0, buff_size );
@@ -411,9 +440,13 @@ ReportInfo( ostream& ofs,
 									 ( key_len< buff_size- 1 ) ? key_len : buff_size- 1 );
 
 					ofs << "InfoKey: " << buff << endl;
+					*/
+					ofs << "InfoKey: ";
+					OutputPdfName( ofs, key_p );
+					ofs << endl;
 
 					ofs << "InfoValue: ";
-					OutputPdfString( ofs, (itext::PdfString*)value_p );
+					OutputPdfString( ofs, (itext::PdfString*)value_p, utf8_b );
 					ofs << endl;
 				}
 		}
@@ -426,7 +459,8 @@ ReportInfo( ostream& ofs,
 static void
 ReportPageLabels( ostream& ofs,
 									itext::PdfDictionary* numtree_node_p,
-									itext::PdfReader* reader_p )
+									itext::PdfReader* reader_p,
+									bool utf8_b )
 	// if *numtree_node_p has Nums, report them;
 	// else if *numtree_node_p has Kids, recurse
 	// output 1-based page numbers; that's what we do for bookmarks
@@ -471,14 +505,14 @@ ReportPageLabels( ostream& ofs,
 								reader_p->getPdfObject( label_p->get( itext::PdfName::P ) );
 							if( prefix_p && prefix_p->isString() ) {
 								ofs << "PageLabelPrefix: ";
-								OutputPdfString( ofs, prefix_p );
+								OutputPdfString( ofs, prefix_p, utf8_b );
 								ofs << endl;
 							}
 						}
 
 						{ // PageLabelNumStyle
-							itext::PdfName* r_p= new itext::PdfName(JvNewStringLatin1("r"));
-							itext::PdfName* a_p= new itext::PdfName(JvNewStringLatin1("a"));
+							itext::PdfName* r_p= new itext::PdfName(JvNewStringUTF("r"));
+							itext::PdfName* a_p= new itext::PdfName(JvNewStringUTF("a"));
 
 							itext::PdfName* style_p= (itext::PdfName*)
 								reader_p->getPdfObject( label_p->get( itext::PdfName::S ) );
@@ -532,9 +566,7 @@ ReportPageLabels( ostream& ofs,
 					if( kid_p && kid_p->isDictionary() ) {
 
 						// recurse
-						ReportPageLabels( ofs,
-															kid_p,
-															reader_p );
+						ReportPageLabels( ofs, kid_p, reader_p, utf8_b );
 					}
 					else { // error
 						ofs << "[ERROR: INVALID kid_p]" << endl;
@@ -571,7 +603,10 @@ class FormField {
 	set< string > m_states; // possible states
 	string m_state;
 
-	FormField() : m_ff(0), m_qq(0), m_maxlen(0) {}
+	FormField() : m_ft(), m_tt(), m_tu(), m_ff(0), m_vv(), m_dv(),
+								m_qq(0), m_ds(), m_rv(),
+								m_maxlen(0),
+								m_states(), m_state() {}
 };
 
 static void
@@ -624,7 +659,8 @@ static bool
 ReportAcroFormFields( ostream& ofs,
 											itext::PdfArray* kids_array_p,
 											FormField& acc_state,
-											itext::PdfReader* reader_p )
+											itext::PdfReader* reader_p,
+											bool utf8_b )
 {
 	FormField prev_state= acc_state;
 	bool ret_val_b= false;
@@ -668,7 +704,7 @@ ReportAcroFormFields( ostream& ofs,
 					if( pdfs_p && pdfs_p->isString() ) {
 
 						ostringstream name_oss;
-						OutputPdfString( name_oss, pdfs_p );
+						OutputPdfString( name_oss, pdfs_p, utf8_b );
 
 						if( !acc_state.m_tt.empty() ) {
 							acc_state.m_tt+= ".";
@@ -684,7 +720,7 @@ ReportAcroFormFields( ostream& ofs,
 					if( pdfs_p && pdfs_p->isString() ) {
 
 						ostringstream name_oss;
-						OutputPdfString( name_oss, pdfs_p );
+						OutputPdfString( name_oss, pdfs_p, utf8_b );
 						acc_state.m_tu= name_oss.str();
 					}
 				}
@@ -708,7 +744,7 @@ ReportAcroFormFields( ostream& ofs,
 						reader_p->getPdfObject( kid_p->get( itext::PdfName::V ) );
 					if( pdfs_p && pdfs_p->isString() ) {
 						ostringstream name_oss;
-						OutputPdfString( name_oss, (itext::PdfString*)pdfs_p );
+						OutputPdfString( name_oss, (itext::PdfString*)pdfs_p, utf8_b );
 						acc_state.m_vv= name_oss.str();
 					}
 					if( pdfs_p && pdfs_p->isName() ) {
@@ -725,7 +761,7 @@ ReportAcroFormFields( ostream& ofs,
 					if( pdfs_p && pdfs_p->isString() ) {
 
 						ostringstream name_oss;
-						OutputPdfString( name_oss, pdfs_p );
+						OutputPdfString( name_oss, pdfs_p, utf8_b );
 						acc_state.m_dv= name_oss.str();
 					}
 				}
@@ -747,7 +783,7 @@ ReportAcroFormFields( ostream& ofs,
 					if( pdfs_p && pdfs_p->isString() ) {
 
 						ostringstream name_oss;
-						OutputPdfString( name_oss, pdfs_p );
+						OutputPdfString( name_oss, pdfs_p, utf8_b );
 						acc_state.m_ds= name_oss.str();
 					}
 				}
@@ -763,7 +799,7 @@ ReportAcroFormFields( ostream& ofs,
 						itext::PdfString* pdfs_p= (itext::PdfString*)pdfo_p;
 
 						ostringstream name_oss;
-						OutputPdfString( name_oss, pdfs_p );
+						OutputPdfString( name_oss, pdfs_p, utf8_b );
 						acc_state.m_rv= name_oss.str();
 					}
 					else if( pdfo_p && pdfo_p->isStream() ) { // stream
@@ -857,7 +893,7 @@ ReportAcroFormFields( ostream& ofs,
 								reader_p->getPdfObject( (itext::PdfObject*)(opts_p->get(opts_ii)) );
 							if( opt_p && opt_p->isString() ) {
 								ostringstream name_oss;
-								OutputPdfString( name_oss, opt_p );
+								OutputPdfString( name_oss, opt_p, utf8_b );
 								acc_state.m_states.insert( name_oss.str() );
 							}
 						}
@@ -870,10 +906,7 @@ ReportAcroFormFields( ostream& ofs,
 					if( kid_kids_p && kid_kids_p->isArray() ) {
 
 						bool kids_have_names_b=
-							ReportAcroFormFields( ofs,
-																		kid_kids_p,
-																		acc_state,
-																		reader_p );
+							ReportAcroFormFields( ofs, kid_kids_p, acc_state, reader_p, utf8_b );
 
 						if( !kids_have_names_b &&
 								kid_p->contains( itext::PdfName::T ) )
@@ -911,7 +944,8 @@ ReportAcroFormFields( ostream& ofs,
 
 void
 ReportAcroFormFields( ostream& ofs,
-											itext::PdfReader* reader_p )
+											itext::PdfReader* reader_p,
+											bool utf8_b )
 {
 	itext::PdfDictionary* catalog_p= reader_p->catalog;
 	if( catalog_p && catalog_p->isDictionary() ) {
@@ -926,10 +960,7 @@ ReportAcroFormFields( ostream& ofs,
 
 				// enter recursion
 				FormField root_field_state;
-				ReportAcroFormFields( ofs,
-															fields_p,
-															root_field_state,
-															reader_p );
+				ReportAcroFormFields( ofs, fields_p, root_field_state, reader_p, utf8_b );
 			}
 		}
 	}
@@ -940,7 +971,8 @@ ReportAcroFormFields( ostream& ofs,
 
 void
 ReportOnPdf( ostream& ofs,
-						 itext::PdfReader* reader_p )
+						 itext::PdfReader* reader_p,
+						 bool utf8_b )
 {
 	{ // trailer data
 		itext::PdfDictionary* trailer_p= reader_p->getTrailer();
@@ -951,7 +983,7 @@ ReportOnPdf( ostream& ofs,
 					reader_p->getPdfObject( trailer_p->get( itext::PdfName::INFO ) );
 				if( info_p && info_p->isDictionary() ) {
 						
-					ReportInfo( ofs, info_p, reader_p );
+					ReportInfo( ofs, info_p, utf8_b );
 				}
 				else { // warning
 					cerr << "Warning: no info dictionary found" << endl;
@@ -1026,7 +1058,7 @@ ReportOnPdf( ostream& ofs,
 					reader_p->getPdfObject( outlines_p->get( itext::PdfName::FIRST ) );
 				if( top_outline_p && top_outline_p->isDictionary() ) {
 
-					ReportOutlines( ofs, top_outline_p, 0, reader_p );
+					ReportOutlines( ofs, top_outline_p, 0, reader_p, utf8_b );
 				}
 				else { // error
 					// okay, not a big deal
@@ -1048,9 +1080,7 @@ ReportOnPdf( ostream& ofs,
 				reader_p->getPdfObject( catalog_p->get( itext::PdfName::PAGELABELS ) );
 			if( pagelabels_p && pagelabels_p->isDictionary() ) {
 
-				ReportPageLabels( ofs,
-													pagelabels_p,
-													reader_p );
+				ReportPageLabels( ofs, pagelabels_p, reader_p, utf8_b );
 			}
 		}
 		else { // error
@@ -1113,11 +1143,11 @@ LoadInfoFile( istream& ifs,
 }
 
 void
-string_to_jcharstring( jchar* jvs,
+XmlStringToJcharArray( jchar* jvs,
 											 jsize jvs_size,
 											 jsize* jvs_len_p,
 											 string ss )
-	// our dump_data and burst operations use HTML
+	// our dump_data and burst operations use HTML/XML
 	// entities to represent non-ASCII character codes;
 	// decode these entities and pack them into jvs;
 	// keep in mind that not all input strings will use
@@ -1200,7 +1230,8 @@ string_to_jcharstring( jchar* jvs,
 
 bool
 UpdateInfo( itext::PdfReader* reader_p,
-						istream& ifs )
+						istream& ifs,
+						bool utf8_b )
 {
 	bool ret_val_b= true;
 
@@ -1219,16 +1250,31 @@ UpdateInfo( itext::PdfReader* reader_p,
 							 it!= info_map.end(); ++it )
 						{
 							if( it->second.empty() ) {
-								info_p->remove( new itext::PdfName( JvNewStringLatin1(it->first.c_str()) ) );
+								info_p->remove( new itext::PdfName( JvNewStringUTF(it->first.c_str()) ) );
 							}
 							else {
 								const jsize jvs_size= 4096;
 								jchar jvs[jvs_size];
 								jsize jvs_len= 0;
-								string_to_jcharstring( jvs, jvs_size, &jvs_len, it->second );
+								XmlStringToJcharArray( jvs, jvs_size, &jvs_len, it->second );
 
-								info_p->put( new itext::PdfName( JvNewStringLatin1(it->first.c_str()) ),
-														 new itext::PdfString( JvNewString(jvs, jvs_len), itext::PdfObject::TEXT_UNICODE ) );
+								if( utf8_b ) {
+									info_p->put( new itext::PdfName( JvNewStringUTF(it->first.c_str()) ),
+															 // patch by Quentin Godfroy <godfroy@clipper.ens.fr>, Chris Adams <cadams@salk.edu>
+															 new itext::PdfString( JvNewStringUTF((char* )it->second.c_str()),
+																										 ( strcmp(it->first.c_str(), "ModDate") && 
+																											 strcmp(it->first.c_str(), "CreationDate") ) ?
+																										 itext::PdfObject::TEXT_UNICODE :
+																										 itext::PdfObject::TEXT_PDFDOCENCODING ) );
+								}
+								else {
+									info_p->put( new itext::PdfName( JvNewStringUTF(it->first.c_str()) ),
+															 new itext::PdfString( JvNewString(jvs, jvs_len),
+																										 ( strcmp(it->first.c_str(), "ModDate") && 
+																											 strcmp(it->first.c_str(), "CreationDate") ) ?
+																										 itext::PdfObject::TEXT_UNICODE :
+																										 itext::PdfObject::TEXT_PDFDOCENCODING ) );
+								}
 							}
 						}
 				}
@@ -1249,6 +1295,8 @@ UpdateInfo( itext::PdfReader* reader_p,
 
 	return ret_val_b;
 }
+
+/*
 
 static bool
 copyStdinToFile( const char* fn )
@@ -1400,3 +1448,5 @@ UpdateXmp( itext::PdfReader* reader_p,
 
 	return ret_val_b;
 }
+
+*/
