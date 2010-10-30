@@ -1,3 +1,22 @@
+pdftk (1.44-1) experimental; urgency=low
+
+  * New upstream version. (Closes: #600791)
+  * debian/NEWS: Add notice about the new *_utf8 operations.
+  * Upstream has DFSG-cleaned the bundled itext-paulo library.
+    - debian/{control,rules}: Switch back to usage of bundled libraries.
+      + This fix a problem with generate_fdf. (Closes: #588074)
+    - Repacking is not needed anymore. Change debian/watch accordingly.
+  * debian/patches/*: Drop all patches that are now applied
+    by upstream or adapts pdftk to itext 2.1.7.
+  * debian/copyright: Add copyright information of the bundled libraries and
+    update copyright years.
+  * debian/patches/customise_build_parameters replaces the old
+    build_with_gcc-4.3 patch.
+  * Update debian/(control,copyright,watch) to new upstream homepage.
+  * Install the now with upstream coming man page and changelog.
+
+ -- Johann Felix Soden <johfel@gmx.de>  Sat, 30 Oct 2010 23:30:30 +0200
+
 pdftk (1.41+dfsg-9) unstable; urgency=low
 
   * Fix pdf compression support: Uncompressed files can now be

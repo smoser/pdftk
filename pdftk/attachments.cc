@@ -1,7 +1,8 @@
 /* -*- Mode: C++; tab-width: 2; c-basic-offset: 2 -*- */
 /*
-	pdftk, the PDF Tool Kit
-	Copyright (c) 2003, 2004 Sid Steward
+	pdftk, the PDF Toolkit
+	Copyright (c) 2003, 2004, 2010 Sid Steward
+
 
 	This program is free software; you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -13,13 +14,17 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 	GNU General Public License for more details.
 
-	Visit: http://www.gnu.org/licenses/gpl.txt
-	for more details on this license.
+	You should have received a copy of the GNU General Public License
+	along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-	Visit: http://www.pdftk.com for the latest information on pdftk
 
-	Please contact Sid Steward with bug reports:
-	ssteward at AccessPDF dot com
+	Visit: www.pdftk.com for pdftk information and articles
+	Permalink: http://www.pdflabs.com/tools/pdftk-the-pdf-toolkit/
+
+	Please email Sid Steward with questions or bug reports.
+	Include "pdftk" in the subject line to ensure successful delivery:
+	sid.steward at pdflabs dot com
+
 */
 
 // Tell C++ compiler to use Java-style exceptions.
@@ -51,11 +56,7 @@
 
 #include "com/lowagie/text/Document.h"
 #include "com/lowagie/text/Rectangle.h"
-// Ewww, PdfName has a field called NULL.
-#undef NULL
 #include "com/lowagie/text/pdf/PdfName.h"
-#define NULL __null
-
 #include "com/lowagie/text/pdf/PdfString.h"
 #include "com/lowagie/text/pdf/PdfNumber.h"
 #include "com/lowagie/text/pdf/PdfArray.h"
@@ -100,11 +101,9 @@ namespace itext {
 static string
 	drop_path( string ss )
 {
+	const char path_delim= PATH_DELIM; // given at compile-time
 	string::size_type loc= 0;
-	if( (loc=ss.rfind('/'))!= string::npos && loc!= ss.length()- 1 ) {
-		return string( ss, loc+ 1 );
-	}
-	else if( (loc=ss.rfind('\\'))!= string::npos && loc!= ss.length()- 1 ) {
+	if( (loc=ss.rfind( path_delim ))!= string::npos && loc!= ss.length()- 1 ) {
 		return string( ss, loc+ 1 );
 	}
 	return ss;
@@ -152,8 +151,8 @@ TK_Session::attach_files
 
 					itext::Rectangle* crop_box_p= 
 						input_reader_p->getCropBox( m_input_attach_file_pagenum );
-					float corner_top= crop_box_p->getTop()- margin;
-					float corner_left= crop_box_p->getLeft()+ margin;
+					float corner_top= crop_box_p->top()- margin;
+					float corner_left= crop_box_p->left()+ margin;
 
 					itext::PdfArray* annots_p= (itext::PdfArray*)
 						input_reader_p->getPdfObject( page_p->get( itext::PdfName::ANNOTS ) );
@@ -191,11 +190,11 @@ TK_Session::attach_files
 								string filename= drop_path(*vit);
 
 								// wrap our location over page bounds, if needed
-								if( crop_box_p->getRight() < corner_left+ trans ) {
-									corner_left= crop_box_p->getLeft()+ margin;
+								if( crop_box_p->right() < corner_left+ trans ) {
+									corner_left= crop_box_p->left()+ margin;
 								}
-								if( corner_top- trans< crop_box_p->getBottom() ) {
-									corner_top= crop_box_p->getTop()- margin;
+								if( corner_top- trans< crop_box_p->bottom() ) {
+									corner_top= crop_box_p->top()- margin;
 								}
 
 								itext::Rectangle* annot_bbox_p= 
@@ -243,7 +242,6 @@ TK_Session::attach_files
 			if( catalog_p && catalog_p->isDictionary() ) {
 
 				// the Names dict
-				//itext::PdfIndirectReference* names_ref_p= 0;
 				itext::PdfDictionary* names_p= (itext::PdfDictionary*)
 					input_reader_p->getPdfObject( catalog_p->get( itext::PdfName::NAMES ) );
 				bool names_new_b= false;
@@ -308,7 +306,7 @@ TK_Session::attach_files
 									char buff[256];
 									sprintf( buff, "-%d", counter++ );
 									key_p= 
-										JvNewStringUTF( (*vit + buff ).c_str() );
+										JvNewStringUTF( ( *vit + buff ).c_str() );
 								}
 							}
 
@@ -390,16 +388,26 @@ unpack_file( itext::PdfReader* input_reader_p,
 					input_reader_p->getPdfObject( filespec_p->get( itext::PdfName::EF ) );
 				if( ef_p && ef_p->isDictionary() ) {
 
+					// UF introduced in PDF 1.7
 					itext::PdfString* fn_p= (itext::PdfString*)
+						input_reader_p->getPdfObject( filespec_p->get( itext::PdfName::UF ) );
+					if( !fn_p ) { // try the F key
+						fn_p= (itext::PdfString*)
 						input_reader_p->getPdfObject( filespec_p->get( itext::PdfName::F ) );
+					}
+
 					if( fn_p && fn_p->isString() ) {
 
-						jstring fn_str = fn_p->toString();
-						int fn_str_len = JvGetStringUTFLength( fn_str );
-						char fn_buf[ fn_str_len ];
-						JvGetStringUTFRegion( fn_str, 0, fn_str->length() , fn_buf );
-						string fn= 
-							drop_path( string(fn_buf, fn_str_len ) );
+						// patch by Johann Felix Soden <johfel@gmx.de>
+						// patch tweaked by Sid Steward:
+						// toString() doesn't ensure conversion from internal encoding (e.g., Y+diaeresis)
+						jstring fn_str = fn_p->toUnicodeString();
+						int fn_buff_len = JvGetStringUTFLength( fn_str );
+						char* fn_buff= (char*)malloc( fn_buff_len* sizeof(char) ); // fn_buff not a C string, not NULL terminated
+						JvGetStringUTFRegion( fn_str, 0, fn_str->length(), fn_buff );
+						string fn= drop_path( string( fn_buff, fn_buff_len ) );
+						free( fn_buff );
+
 						// did the user supply a path?
 						if( !output_pathname.empty() ) { // prepend it
 							fn= output_pathname+ fn; // output_pathname has been normalized, already
@@ -415,8 +423,16 @@ unpack_file( itext::PdfReader* input_reader_p,
 							jsize num_bytes= byte_arr_p->length;
 
 							if( ask_about_warnings_b ) {
-								ifstream ifs( fn.c_str() );
-								if( ifs ) {
+								// test for existing file by this name
+								bool output_exists_b= false;
+								{
+									FILE* fp= fopen( fn.c_str(), "rb" );
+									if( fp ) {
+										output_exists_b= true;
+										fclose( fp );
+									}
+								}
+								if( output_exists_b ) {
 									cout << "Warning: the file: " << fn << " already exists.  Overwrite? (y/n)" << endl;
 									char buff[64];
 									cin.getline( buff, 64 );
@@ -426,7 +442,6 @@ unpack_file( itext::PdfReader* input_reader_p,
 									}
 								}
 							}
-
 							ofstream ofs( fn.c_str(), ios_base::binary | ios_base::out );
 							if( ofs ) {
 								ofs.write( (const char*)bytes_p, num_bytes );
@@ -456,7 +471,6 @@ TK_Session::unpack_files
 		if( catalog_p && catalog_p->isDictionary() ) {
 
 			// the Names dict
-			//itext::PdfIndirectReference* names_ref_p= 0;
 			itext::PdfDictionary* names_p= (itext::PdfDictionary*)
 				input_reader_p->getPdfObject( catalog_p->get( itext::PdfName::NAMES ) );
 			if( names_p && names_p->isDictionary() ) {
