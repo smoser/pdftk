@@ -148,7 +148,7 @@ prompt_for_filename( const string message,
 		fn= buff;
 	}
 
-	if( buff_size== fn.size() ) { // might have been too long for buff
+	if( buff_size== (int) fn.size() ) { // might have been too long for buff
 		cout << "The name you entered might have exceeded our internal buffer." << endl;
 		cout << "   Please review it and make sure it wasn't truncated:" << endl;
 		cout << fn << endl;
@@ -857,18 +857,33 @@ TK_Session::TK_Session( int argc,
 	m_valid_b( false ),
 	m_authorized_b( true ),
 	m_input_pdf_readers_opened_b( false ),
-  m_operation( none_k ),
+	m_verbose_reporting_b( false ),
+	m_ask_about_warnings_b( ASK_ABOUT_WARNINGS ), // set default at compile-time
+	m_input_pdf(),
+	m_input_pdf_index(),
+	m_input_attach_file_filename(),
+	m_input_attach_file_pagenum( 0 ),
+	m_update_info_filename(),
+	m_update_xmp_filename(),
+	m_operation( none_k ),
+	m_page_seq(),
+	m_form_data_filename(),
+	m_background_filename(),
+	m_stamp_filename(),
+	m_output_filename(),
+	m_output_owner_pw(),
+	m_output_user_pw(),
 	m_output_user_perms( 0 ),
+	m_multistamp_b ( false ),
+	m_multibackground_b ( false ),
 	m_output_uncompress_b( false ),
 	m_output_compress_b( false ),
 	m_output_flatten_b( false ),
 	m_output_drop_xfa_b( false ),
 	m_output_keep_first_id_b( false ),
 	m_output_keep_final_id_b( false ),
-	m_output_encryption_strength( none_enc ),
-	m_verbose_reporting_b( false ),
-	m_ask_about_warnings_b( ASK_ABOUT_WARNINGS ), // set default at compile-time
-	m_input_attach_file_pagenum( 0 )
+	m_output_encryption_strength( none_enc )
+
 {
 	TK_Session::ArgState arg_state = input_files_e;
 
@@ -1367,7 +1382,7 @@ TK_Session::TK_Session( int argc,
 						if( (!even_pages_b || !(kk % 2)) &&
 								(!odd_pages_b || (kk % 2)) )
 							{
-								if( 0<= kk && kk<= m_input_pdf[range_pdf_index].m_num_pages ) {
+								if( (int) kk<= m_input_pdf[range_pdf_index].m_num_pages ) {
 
 									// look to see if this page of this document
 									// has already been referenced; if it has,
@@ -1607,7 +1622,7 @@ TK_Session::TK_Session( int argc,
 					for( InputPdfIndex ii= 0; ii< m_input_pdf.size(); ++ii ) {
 						InputPdf& input_pdf= m_input_pdf[ii];
 
-						for( PageNumber jj= 1; jj<= input_pdf.m_num_pages; ++jj ) {
+						for( PageNumber jj= 1; (int) jj<= input_pdf.m_num_pages; ++jj ) {
 							m_page_seq.push_back( PageRef( ii, jj ) ); // DF rotate
 							m_input_pdf[ii].m_readers.back().first.insert( jj ); // mark our claim
 						}
@@ -2317,7 +2332,7 @@ TK_Session::create_output()
 				itext::PdfReader* mark_p= 0;
 				bool mark_per_page_b = false;
 				bool background_b= true; // set false for stamp
-				com::lowagie::text::pdf::PdfImportedPage* mark_page_p= 0;
+				//com::lowagie::text::pdf::PdfImportedPage* mark_page_p= 0;
 				//
 				if( !m_background_filename.empty() ) {
 					mark_per_page_b = m_multibackground_b;
@@ -2664,6 +2679,9 @@ TK_Session::create_output()
 
 				this->unpack_files( input_reader_p );
 			}
+			break;
+			default:
+			 // nothing to do
 			break;
 			}
 		}
