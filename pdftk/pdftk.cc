@@ -2193,6 +2193,10 @@ TK_Session::create_output()
 			prompt_for_password( "user", "the output PDF", m_output_user_pw );
 		}
 
+		if( m_output_owner_pw.empty() && !m_output_user_pw.empty() ) {
+			m_output_owner_pw= m_output_user_pw;
+		}
+
 		jbyteArray output_owner_pw_p= JvNewByteArray( m_output_owner_pw.size() ); {
 			jbyte* pw_p= elements(output_owner_pw_p);
 			memcpy( pw_p, m_output_owner_pw.c_str(), m_output_owner_pw.size() ); 
