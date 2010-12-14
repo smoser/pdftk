@@ -2156,9 +2156,10 @@ remove_marks_from_pages( itext::PdfReader* reader_p )
 	}
 }
 
-void
+bool
 TK_Session::create_output()
 {
+	bool ret_val= true;
 	if( is_valid() ) {
 
 		/*
@@ -2212,6 +2213,7 @@ TK_Session::create_output()
 														 m_ask_about_warnings_b );
 
 				if( !ofs_p ) { // file open error
+					ret_val= false;
 					break;
 				}
 				itext::PdfCopy* writer_p= new itext::PdfCopy( output_doc_p, ofs_p );
@@ -2328,11 +2330,13 @@ TK_Session::create_output()
 							else { // error
 								cerr << "Internal Error: no reader found for page: ";
 								cerr << it->m_page_num << " in file: " << input_pdf.m_filename << endl;
+								ret_val= false;
 								break;
 							}
 						}
 						else { // error
 							cerr << "Internal Error: Unable to find handle in m_input_pdf." << endl;
+							ret_val= false;
 							break;
 						}
 					}
@@ -2426,6 +2430,7 @@ TK_Session::create_output()
 				}
 				else { // error
 					cerr << "Error: unable to open file for output: doc_data.txt" << endl;
+					ret_val= false;
 				}
 
 			}
@@ -2438,6 +2443,7 @@ TK_Session::create_output()
 					cerr << "Error: Only one input PDF file may be given for this" << endl;
 					cerr << "   operation.  Maybe you meant to use the \"cat\" operator?" << endl;
 					cerr << "   No output created." << endl;
+					ret_val= false;
 					break;
 				}
 
@@ -2466,6 +2472,7 @@ TK_Session::create_output()
 								cerr << "Error: Failed to open form data file: " << endl;
 								cerr << "   " << m_form_data_filename << endl;
 								cerr << "   No output created." << endl;
+								ret_val= false;
 
 								//ioe_p->printStackTrace(); // debug
 								break;
@@ -2489,6 +2496,7 @@ TK_Session::create_output()
 								cerr << "Error: Failed to open form data file: " << endl;
 								cerr << "   " << m_form_data_filename << endl;
 								cerr << "   No output created." << endl;
+								ret_val= false;
 								
 								//ioe_p->printStackTrace(); // debug
 								break;
@@ -2518,6 +2526,7 @@ TK_Session::create_output()
 						cerr << "Error: Failed to open background PDF file: " << endl;
 						cerr << "   " << m_background_filename << endl;
 						cerr << "   No output created." << endl;
+						ret_val= false;
 						break;
 					}
 				}
@@ -2537,6 +2546,7 @@ TK_Session::create_output()
 						cerr << "Error: Failed to open stamp PDF file: " << endl;
 						cerr << "   " << m_stamp_filename << endl;
 						cerr << "   No output created." << endl;
+						ret_val= false;
 						break;
 					}
 				}
@@ -2546,6 +2556,7 @@ TK_Session::create_output()
 					get_output_stream( m_output_filename,
 														 m_ask_about_warnings_b );
 				if( !ofs_p ) { // file open error
+					ret_val= false;
 					break;
 				}
 
@@ -2591,6 +2602,7 @@ TK_Session::create_output()
 						}
 						else { // error
 							cerr << "Error: unable to open FDF file for input: " << m_update_info_filename << endl;
+							ret_val= false;
 							break;
 						}
 					}
@@ -2778,6 +2790,7 @@ TK_Session::create_output()
 				if( 1< m_input_pdf.size() ) { // error
 					cerr << "Error: Only one input PDF file may be used for the dump_data operation" << endl;
 					cerr << "   No output created." << endl;
+					ret_val= false;
 					break;
 				}
 
@@ -2804,6 +2817,7 @@ TK_Session::create_output()
 					}
 					else { // error
 						cerr << "Error: unable to open file for output: " << m_output_filename << endl;
+						ret_val= false;
 					}
 				}
 			}
@@ -2815,6 +2829,7 @@ TK_Session::create_output()
 				if( 1< m_input_pdf.size() ) { // error
 					cerr << "Error: Only one input PDF file may be used for the generate_fdf operation" << endl;
 					cerr << "   No output created." << endl;
+					ret_val= false;
 					break;
 				}
 
@@ -2833,6 +2848,7 @@ TK_Session::create_output()
 					//delete writer_p; // OK? GC? -- NOT okay!
 				}
 				else { // error: get_output_stream() reports error
+					ret_val= false;
 					break;
 				}
 			}
@@ -2844,6 +2860,7 @@ TK_Session::create_output()
 				if( 1< m_input_pdf.size() ) { // error
 					cerr << "Error: Only one input PDF file may be given for \"unpack_files\" op." << endl;
 					cerr << "   No output created." << endl;
+					ret_val= false;
 					break;
 				}
 
@@ -2871,13 +2888,18 @@ TK_Session::create_output()
 			}
 			cerr << "Java Exception:" << endl;
 			c_p->printStackTrace();
+			ret_val= false;
 		}
 		catch( java::lang::Throwable* t_p )
 			{
 				cerr << "Unhandled Java Exception:" << endl;
 				t_p->printStackTrace();
+				ret_val= false;
 			}
 	}
+	else
+		ret_val= false;
+	return ret_val;
 }
 
 int main(int argc, char** argv)
@@ -2931,7 +2953,8 @@ int main(int argc, char** argv)
 			tk_session.dump_session_data();
 
 			if( tk_session.is_valid() ) {
-				tk_session.create_output();
+				if ( !tk_session.create_output() )
+					ret_val= 1;
 			}
 			else { // error
 				cerr << "Done.  Input errors, so no output created." << endl;
