@@ -1,3 +1,10 @@
+pdftk (1.41+dfsg-10) unstable; urgency=high
+
+  * Do not create a random owner password if only user password should
+    be set. (Closes: #607018)
+
+ -- Johann Felix Soden <johfel@gmx.de>  Tue, 14 Dec 2010 20:36:20 +0100
+
 pdftk (1.41+dfsg-9) unstable; urgency=low
 
   * Fix pdf compression support: Uncompressed files can now be
