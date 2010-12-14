@@ -14,3 +14,4 @@ support_compression
 ignore_locale
 improve_error_message_on_invalid_pdf
 fix_return_code
+fix_random_owner_pw
