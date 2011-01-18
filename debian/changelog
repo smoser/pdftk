@@ -1,3 +1,11 @@
+pdftk (1.44-2) experimental; urgency=low
+
+  * debian/control: 
+    - Re-add dependency on libbcprov-java. (Closes: #610394)
+    - Build-depend on gcj-jdk instead of transitional gcj. (Closes: #606906)
+
+ -- Johann Felix Soden <johfel@gmx.de>  Tue, 18 Jan 2011 23:29:34 +0100
+
 pdftk (1.44-1) experimental; urgency=low
 
   * New upstream version. (Closes: #600791)
