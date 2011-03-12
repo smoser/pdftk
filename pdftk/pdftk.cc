@@ -1073,6 +1073,15 @@ TK_Session::TK_Session( int argc,
     int keyword_len= 0;
     keyword arg_keyword= is_keyword( argv[ii], &keyword_len );
 
+		// these keywords can be false hits because of their loose matching requirements;
+		// since they are suffixes to page ranges, their appearance here is most likely a false match;
+		if( arg_keyword== end_k ||
+				arg_keyword== even_k ||
+				arg_keyword== odd_k )
+			{
+				arg_keyword= none_k;
+			}
+
     switch( arg_state ) {
 
     case input_files_e: 
@@ -1841,7 +1850,7 @@ TK_Session::TK_Session( int argc,
 
 		case output_owner_pw_e: {
 			if( m_output_owner_pw.empty() ) {
-				if( m_output_user_pw!= argv[ii] ) {
+				if( m_output_user_pw!= argv[ii] || strcmp(argv[ii], "PROMPT")== 0 ) {
 					m_output_owner_pw= argv[ii];
 				}
 				else { // error: identical user and owner password
@@ -1872,7 +1881,7 @@ TK_Session::TK_Session( int argc,
 
 		case output_user_pw_e: {
 			if( m_output_user_pw.empty() ) {
-				if( m_output_owner_pw!= argv[ii] ) {
+				if( m_output_owner_pw!= argv[ii] || strcmp( argv[ii], "PROMPT" )== 0 ) {
 					m_output_user_pw= argv[ii];
 				}
 				else { // error: identical user and owner password
@@ -2191,6 +2200,19 @@ TK_Session::create_output()
 		}
 		if( m_output_user_pw== "PROMPT" ) {
 			prompt_for_password( "user", "the output PDF", m_output_user_pw );
+		}
+
+		if( !m_output_user_pw.empty() && m_output_user_pw== m_output_owner_pw ) {
+			// error: identical user and owner password
+			// are interpreted by Acrobat (per the spec.) that
+			// the doc has no owner password
+			cerr << "Error: The user and owner passwords are the same." << endl;
+			cerr << "   PDF Viewers interpret this to mean your PDF has" << endl;
+			cerr << "   no owner password, so they must be different." << endl;
+			cerr << "   Or, supply no owner password to pdftk if this is" << endl;
+			cerr << "   what you desire." << endl;
+			cerr << "Exiting." << endl;
+			return false;
 		}
 
 		if( m_output_owner_pw.empty() && !m_output_user_pw.empty() ) {
