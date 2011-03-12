@@ -2875,6 +2875,8 @@ int main(int argc, char** argv)
 	// set classpath:
 	static char my_classpath[]="CLASSPATH=/usr/share/java/bcprov.jar:/usr/share/java/bcmail.jar:/usr/share/java/itext.jar";
 	putenv(my_classpath);
+	static char my_lang[]="LANG=C";
+	putenv(my_lang);
 
 	for( int ii= 1; ii< argc; ++ii ) {
 		version_b=
