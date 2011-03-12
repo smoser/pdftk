@@ -403,6 +403,12 @@ TK_Session::is_keyword( char* ss, int* keyword_len_p )
 		// (and preserving old behavior for backwards compatibility)
 		return background_k;
 	}
+	else if( strcmp( ss_copy, "multibackground" )== 0 ) {
+		return multibackground_k;
+	}
+	else if( strcmp( ss_copy, "multistamp" )== 0 ) {
+		return multistamp_k;
+	}
 	else if( strcmp( ss_copy, "stamp" )== 0 ) {
 		return stamp_k;
 	}
@@ -956,8 +962,18 @@ TK_Session::TK_Session( int argc,
 				m_operation= filter_k;
 				arg_state= background_filename_e;
 			}
+			else if( arg_keyword== multibackground_k ) {
+				m_operation= filter_k;
+				m_multibackground_b = true;
+				arg_state= background_filename_e;
+			}
 			else if( arg_keyword== stamp_k ) {
 				m_operation= filter_k;
+				arg_state= stamp_filename_e;
+			}
+			else if( arg_keyword== multistamp_k ) {
+				m_operation= filter_k;
+				m_multistamp_b = true;
 				arg_state= stamp_filename_e;
 			}
 			else if( arg_keyword== output_k ) { // we reached the output section
@@ -2299,10 +2315,12 @@ TK_Session::create_output()
 
 				// try opening the PDF background or stamp before we get too involved
 				itext::PdfReader* mark_p= 0;
+				bool mark_per_page_b = false;
 				bool background_b= true; // set false for stamp
 				com::lowagie::text::pdf::PdfImportedPage* mark_page_p= 0;
 				//
 				if( !m_background_filename.empty() ) {
+					mark_per_page_b = m_multibackground_b;
 					if( m_background_filename== "PROMPT" ) {
 						prompt_for_filename( "Please enter a filename for the background PDF:", 
 																 m_background_filename );
@@ -2320,6 +2338,7 @@ TK_Session::create_output()
 					}
 				}
 				else if( !m_stamp_filename.empty() ) { // stamp
+					mark_per_page_b = m_multistamp_b;
 					background_b= false;
 					if( m_stamp_filename== "PROMPT" ) {
 						prompt_for_filename( "Please enter a filename for the stamp PDF:", 
@@ -2489,15 +2508,19 @@ TK_Session::create_output()
 
 					// create a PdfTemplate from the first page of mark
 					// (PdfImportedPage is derived from PdfTemplate)
-					com::lowagie::text::pdf::PdfImportedPage* mark_page_p=
-						writer_p->getImportedPage( mark_p, 1 );
+					com::lowagie::text::pdf::PdfImportedPage* mark_page_p=0;
+					if( !mark_per_page_b )
+						mark_page_p = writer_p->getImportedPage( mark_p, 1 );
 
           // iterate over document's pages, adding mark_page as
           // a layer 'underneath' the page content; scale mark_page
           // and move it so it fits within the document's page;
 					jint num_pages= input_reader_p->getNumberOfPages();
+					jint mark_num_pages= mark_p->getNumberOfPages();
 					for( jint ii= 0; ii< num_pages; ) {
 						++ii;
+						if( mark_per_page_b && ( ii == 1 || ii <= mark_num_pages ) )
+							mark_page_p = writer_p->getImportedPage( mark_p, ii );
 						com::lowagie::text::Rectangle* doc_page_size_p= 
 							input_reader_p->getCropBox( ii );
 						jint doc_page_rotation= input_reader_p->getPageRotation( ii );
@@ -2748,7 +2771,8 @@ describe_synopsis() {
        Where:\n\
 	    <operation> may be empty, or:\n\
 	    [cat | attach_files | unpack_files | burst |\n\
-	     fill_form | background | stamp | generate_fdf\n\
+	     fill_form | background | stamp | generate_fdf |\n\
+	     multibackground | multistamp |\n\
 	     dump_data | dump_data_fields | update_info]\n\
 \n\
        For Complete Help: pdftk --help\n";
@@ -2974,11 +2998,20 @@ OPTIONS\n\
 		 as  a	PDF  created from page scans) then the resulting back-\n\
 		 ground won't be visible -- use the stamp feature instead.\n\
 \n\
+	  multibackground <background PDF filename | - | PROMPT>\n\
+		 Same  as the background feature, but applies each page of the\n\
+		 the  background PDF to  the corresponding  page of  the input\n\
+		 PDF.\n\
+\n\
 	  stamp <stamp PDF filename | - | PROMPT>\n\
 		 This behaves just like the background feature except it over-\n\
 		 lays  the  stamp  PDF page on top of the input PDF document's\n\
 		 pages.  This works best if the stamp PDF page has a transpar-\n\
 		 ent background.\n\
+\n\
+	  multistamp <stamp PDF filename | - | PROMPT>\n\
+		 Same  as stamp,  but stamps  different  pages with  different\n\
+		 pages (not only the first pages) of the stamp PDF file.\n\
 \n\
 	  dump_data\n\
 		 Reads	a  single,  input PDF file and reports various statis-\n\
