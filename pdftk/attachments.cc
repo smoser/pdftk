@@ -208,10 +208,10 @@ TK_Session::attach_files
 									itext::PdfAnnotation::createFileAttachment
 									( writer_p,
 										annot_bbox_p,
-										JvNewStringLatin1( filename.c_str() ), // contents
+										JvNewStringUTF( filename.c_str() ), // contents
 										0,
-										JvNewStringLatin1( vit->c_str() ), // the file path
-										JvNewStringLatin1( filename.c_str() ) ); // display name
+										JvNewStringUTF( vit->c_str() ), // the file path
+										JvNewStringUTF( filename.c_str() ) ); // display name
 
 								itext::PdfIndirectReference* ref_p=
 									writer_p->addToBody( annot_p )->getIndirectReference();
@@ -284,8 +284,8 @@ TK_Session::attach_files
 								filespec_p= 
 									itext::PdfFileSpecification::fileEmbedded
 									( writer_p,
-										JvNewStringLatin1( vit->c_str() ), // the file path
-										JvNewStringLatin1( filename.c_str() ), // the display name
+										JvNewStringUTF( vit->c_str() ), // the file path
+										JvNewStringUTF( filename.c_str() ), // the display name
 										0 );
 							}
 							catch( java::io::IOException* ioe_p ) { // file open error
@@ -301,14 +301,14 @@ TK_Session::attach_files
 
 							// contruct a name, if necessary, to prevent possible key collision on the name tree
 							java::String* key_p= 
-								JvNewStringLatin1( vit->c_str() );
+								JvNewStringUTF( vit->c_str() );
 							{
 								int counter= 1;
 								while( emb_files_map_p->containsKey( key_p ) ) { // append a unique suffix
 									char buff[256];
 									sprintf( buff, "-%d", counter++ );
 									key_p= 
-										JvNewStringLatin1( (*vit + buff ).c_str() );
+										JvNewStringUTF( (*vit + buff ).c_str() );
 								}
 							}
 
@@ -394,11 +394,12 @@ unpack_file( itext::PdfReader* input_reader_p,
 						input_reader_p->getPdfObject( filespec_p->get( itext::PdfName::F ) );
 					if( fn_p && fn_p->isString() ) {
 
-						const jbyteArray fn_array_p= 
-							itext::PdfEncodings::convertToBytes( fn_p->toString(),
-																									 itext::BaseFont::WINANSI );
+						jstring fn_str = fn_p->toString();
+						int fn_str_len = JvGetStringUTFLength( fn_str );
+						char fn_buf[ fn_str_len ];
+						JvGetStringUTFRegion( fn_str, 0, fn_str->length() , fn_buf );
 						string fn= 
-							drop_path( string((const char*)elements(fn_array_p), fn_array_p->length) );
+							drop_path( string(fn_buf, fn_str_len ) );
 						// did the user supply a path?
 						if( !output_pathname.empty() ) { // prepend it
 							fn= output_pathname+ fn; // output_pathname has been normalized, already
