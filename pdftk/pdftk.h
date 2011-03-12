@@ -43,7 +43,7 @@ public:
 
 		jint m_num_pages;
 
-		InputPdf() : m_authorized_b(true), m_num_pages(0) {}
+		InputPdf() : m_filename(), m_password(), m_authorized_b(true), m_readers(), m_num_pages(0)  {}
 	};
 	// pack input PDF in the order they're given on the command line
 	vector< InputPdf > m_input_pdf;
