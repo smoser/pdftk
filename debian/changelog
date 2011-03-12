@@ -1,3 +1,12 @@
+pdftk (1.41+dfsg-10+squeeze1) stable; urgency=low
+
+  * Support PROMPT for user_pw and owner_pw simultaneously.
+    (Closes: #614071)
+  * Backport from 1.43: Support filenames starting with the keywords 'odd',
+    'even', 'end'. (Closes: #609471)
+
+ -- Johann Felix Soden <johfel@gmx.de>  Sat, 12 Mar 2011 16:09:23 +0100
+
 pdftk (1.41+dfsg-10) unstable; urgency=high
 
   * Do not create a random owner password if only user password should
