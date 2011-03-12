@@ -1073,6 +1073,15 @@ TK_Session::TK_Session( int argc,
     int keyword_len= 0;
     keyword arg_keyword= is_keyword( argv[ii], &keyword_len );
 
+		// these keywords can be false hits because of their loose matching requirements;
+		// since they are suffixes to page ranges, their appearance here is most likely a false match;
+		if( arg_keyword== end_k ||
+				arg_keyword== even_k ||
+				arg_keyword== odd_k )
+			{
+				arg_keyword= none_k;
+			}
+
     switch( arg_state ) {
 
     case input_files_e: 
