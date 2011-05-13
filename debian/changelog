@@ -1,6 +1,20 @@
+pdftk (1.44-3) unstable; urgency=low
+
+  * Upload to unstable.
+  * Build-Depend (temporary) on gcj-jdk/g++ 4.6 to fix FTBFS. (Closes: #624778)
+  * debian/{control,rules}: Remove (now unneeded) dependency on libgcj-bc.
+  * Remove dependency on libbcprov-java again since ClassNotFoundException is
+    just produced by removed but not purged java security packages.
+  * Bump Standards-Version to 3.9.2.
+  * Merge 1.41+dfsg-10 and 1.41+dfsg-11:
+    - Support PROMPT for user_pw and owner_pw simultaneously.
+      (Closes: #614071)
+
+ -- Johann Felix Soden <johfel@gmx.de>  Sat, 14 May 2011 01:00:57 +0200
+
 pdftk (1.44-2) experimental; urgency=low
 
-  * debian/control: 
+  * debian/control:
     - Re-add dependency on libbcprov-java. (Closes: #610394)
     - Build-depend on gcj-jdk instead of transitional gcj. (Closes: #606906)
 
@@ -24,6 +38,22 @@ pdftk (1.44-1) experimental; urgency=low
   * Install the now with upstream coming man page and changelog.
 
  -- Johann Felix Soden <johfel@gmx.de>  Sat, 30 Oct 2010 23:30:30 +0200
+
+pdftk (1.41+dfsg-11) unstable; urgency=low
+
+  * Support PROMPT for user_pw and owner_pw simultaneously.
+    (Closes: #614071)
+  * Backport from 1.43: Support filenames starting with the keywords 'odd',
+    'even', 'end'. (Closes: #609471)
+
+ -- Johann Felix Soden <johfel@gmx.de>  Sat, 19 Feb 2011 23:19:50 +0100
+
+pdftk (1.41+dfsg-10) unstable; urgency=high
+
+  * Do not create a random owner password if only user password should
+    be set. (Closes: #607018)
+
+ -- Johann Felix Soden <johfel@gmx.de>  Tue, 14 Dec 2010 20:36:20 +0100
 
 pdftk (1.41+dfsg-9) unstable; urgency=low
 

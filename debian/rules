@@ -1,12 +1,11 @@
 #!/usr/bin/make -f
 # -*- makefile -*-
 
-GCJ_BC_MAIN_VERSION_A=$(shell dpkg-query -W -f'$${Version}' libgcj-bc | egrep -o "^[0-9]+" )
-GCJ_BC_MAIN_VERSION_B=$(shell dpkg-query -W -f'$${Version}' libgcj-bc | sed -r -e '1s/[0-9]+\.([0-9]+).*/\1/;q')
-GCJ_BC_MAIN_VERSION_B_NEXT=$(shell expr $(GCJ_BC_MAIN_VERSION_B) + 1)
-
 # extract version suffix from gcj
-VERSUFF=-$(shell gcj --version | sed -r -e '1s/.* ([0-9]+\.[0-9]+).*/\1/;q')
+# VERSUFF=-$(shell gcj --version | sed -r -e '1s/.* ([0-9]+\.[0-9]+).*/\1/;q')
+
+# use (temporary) fixed gcj/g++ version from debian/control
+VERSUFF=$(shell grep -oP '(?<=gcj)-[0-9.]*' debian/control)
 
 %:
 	dh $@
@@ -27,9 +26,6 @@ override_dh_auto_clean:
 override_dh_auto_install:
 	install -o root -g root -m 755 -d $(CURDIR)/debian/pdftk/usr/bin
 	install -o root -g root -m 755 $(CURDIR)/pdftk/pdftk $(CURDIR)/debian/pdftk/usr/bin
-	# generate right java-gcj depends
-	echo -n 'libgcj-bc:Depends=libgcj-bc (>= '$(GCJ_BC_MAIN_VERSION_A)'.'$(GCJ_BC_MAIN_VERSION_B)'~)' >> debian/pdftk.substvars
-	echo    ', libgcj-bc (<< '$(GCJ_BC_MAIN_VERSION_A)'.'$(GCJ_BC_MAIN_VERSION_B_NEXT)'~)'  >> debian/pdftk.substvars
 	dh_auto_install
 
 get-orig-source:

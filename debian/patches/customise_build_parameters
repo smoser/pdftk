@@ -18,8 +18,8 @@ Author: Johann Felix Soden <johfel@gmx.de>
  export CPPFLAGS= -DPATH_DELIM=0x2f -DASK_ABOUT_WARNINGS=false -DUNBLOCK_SIGNALS -fdollars-in-identifiers
 -export CXXFLAGS= -Wall -Wextra -Weffc++ -O2
 -export GCJFLAGS= -Wall -Wextra -fsource=1.3 -O2
-+export CXXFLAGS= -Wall -Wextra -Weffc++ -O2 -g -Wl,--as-needed -Wl,-rpath,/usr/lib/gcj
-+export GCJFLAGS= -Wall -Wextra -fsource=1.3 -O2
++export CXXFLAGS= -Wall -Wextra -Weffc++ -O2 -g -Wl,--as-needed
++export GCJFLAGS= -fsource=1.3 -O2 -g
  export GCJHFLAGS= -force
  export LDLIBS= -lgcj
  
