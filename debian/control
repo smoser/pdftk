@@ -2,8 +2,8 @@ Source: pdftk
 Section: text
 Priority: optional
 Maintainer: Johann Felix Soden <johfel@gmx.de>
-Build-Depends: debhelper (>= 7.0.50~), gcj-jdk, g++-4.4 [hppa]
-Standards-Version: 3.9.1
+Build-Depends: debhelper (>= 7.0.50~), gcj-4.6-jdk, g++-4.6
+Standards-Version: 3.9.2
 Homepage: http://www.pdflabs.com/tools/pdftk-the-pdf-toolkit/
 DM-Upload-Allowed: yes
 Vcs-Git: git://git.debian.org/git/collab-maint/pdftk.git
@@ -11,7 +11,7 @@ Vcs-Browser: http://git.debian.org/?p=collab-maint/pdftk.git;a=summary
 
 Package: pdftk
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, ${libgcj-bc:Depends}, libbcprov-java
+Depends: ${shlibs:Depends}, ${misc:Depends}
 Suggests: xpdf-utils
 Description: tool for manipulating PDF documents
  If PDF is electronic paper, then pdftk is an electronic stapler-remover,
