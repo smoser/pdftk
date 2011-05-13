@@ -1720,7 +1720,7 @@ TK_Session::TK_Session( int argc,
 
 		case output_owner_pw_e: {
 			if( m_output_owner_pw.empty() ) {
-				if( m_output_user_pw!= argv[ii] ) {
+				if( m_output_user_pw!= argv[ii] || strcmp(argv[ii], "PROMPT")== 0 ) {
 					m_output_owner_pw= argv[ii];
 				}
 				else { // error: identical user and owner password
@@ -1751,7 +1751,7 @@ TK_Session::TK_Session( int argc,
 
 		case output_user_pw_e: {
 			if( m_output_user_pw.empty() ) {
-				if( m_output_owner_pw!= argv[ii] ) {
+				if( m_output_owner_pw!= argv[ii] || strcmp( argv[ii], "PROMPT" )== 0 ) {
 					m_output_user_pw= argv[ii];
 				}
 				else { // error: identical user and owner password
@@ -2584,6 +2584,19 @@ TK_Session::create_output()
 					}
 				}
 				*/
+
+		if( !m_output_user_pw.empty() && m_output_user_pw== m_output_owner_pw ) {
+			// error: identical user and owner password
+			// are interpreted by Acrobat (per the spec.) that
+			// the doc has no owner password
+			cerr << "Error: The user and owner passwords are the same." << endl;
+			cerr << "   PDF Viewers interpret this to mean your PDF has" << endl;
+			cerr << "   no owner password, so they must be different." << endl;
+			cerr << "   Or, supply no owner password to pdftk if this is" << endl;
+			cerr << "   what you desire." << endl;
+			cerr << "Exiting." << endl;
+			return false;
+		}
 
 
 				// un/compress output streams?
