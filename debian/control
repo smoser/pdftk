@@ -2,7 +2,7 @@ Source: pdftk
 Section: text
 Priority: optional
 Maintainer: Johann Felix Soden <johfel@gmx.de>
-Build-Depends: debhelper (>= 7.0.50~), gcj-4.6-jdk, g++-4.6
+Build-Depends: debhelper (>= 8.9), gcj-4.6-jdk, g++-4.6
 Standards-Version: 3.9.2
 Homepage: http://www.pdflabs.com/tools/pdftk-the-pdf-toolkit/
 DM-Upload-Allowed: yes
