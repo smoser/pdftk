@@ -1,3 +1,13 @@
+pdftk (1.44-4) unstable; urgency=low
+
+  * Warn instead of fail processing a DRM protected pdf file if there is no
+    owner password supplied. (Closes: #531529)
+  * Support dpkg-buildflags, update patches/customise_build_parameters.
+  * Switch to debhelper compat v8
+  * debian/copyright: Update to latest DEP5 format and update years.
+
+ -- Johann Felix Soden <johfel@gmx.de>  Sun, 25 Sep 2011 19:46:52 +0200
+
 pdftk (1.44-3) unstable; urgency=low
 
   * Upload to unstable.
