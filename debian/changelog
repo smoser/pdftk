@@ -1,3 +1,9 @@
+pdftk (1.44-4build1) precise; urgency=low
+
+  * No-change rebuild to drop spurious libsfgcc1 dependency on armhf.
+
+ -- Adam Conrad <adconrad@0c3.net>  Fri, 02 Dec 2011 21:04:21 -0700
+
 pdftk (1.44-4) unstable; urgency=low
 
   * Warn instead of fail processing a DRM protected pdf file if there is no
