@@ -1,4 +1,4 @@
-Format: http://anonscm.debian.org/viewvc/dep/web/deps/dep5.mdwn?revision=174
+Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: pdftk
 Upstream-Contact: 
  Sid Steward <sid.steward at pdflabs dot com> with "pdftk" in the subject.
@@ -140,7 +140,7 @@ License: other
 Files: debian/*
 Copyright: 2004-2006 Aurelien Jarno <aurel32@debian.org>
            2006-2008 Aurélien GÉRÔME <ag@roxor.cx>
-           2009-2011 Johann Felix Soden <johfel@gmx.de>
+           2009-2012 Johann Felix Soden <johfel@gmx.de>
 License: GPL
  The Debian packaging information is under the GPL.
  On Debian systems, the complete text of the GNU General Public

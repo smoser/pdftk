@@ -1,3 +1,17 @@
+pdftk (1.44-5) unstable; urgency=medium
+
+  * Add patches to fix
+    - infinite loop with non-standard-conform pdf files.
+    - NullPointerException on some pdf files.
+    Thanks to Robin Houston <robin@mysociety.org>.
+    (side-effect: Closes: #650628)
+  * Overwrite additionally LC_ALL and LC_MESSAGES to circumvent
+    libgcj problems with de_AT.UTF-8.
+  * debian/copyright: Use copyright-format/1.0 and update years.
+  * Bump Standards-Version to 3.9.2.
+
+ -- Johann Felix Soden <johfel@gmx.de>  Thu, 23 Feb 2012 23:48:48 +0100
+
 pdftk (1.44-4) unstable; urgency=low
 
   * Warn instead of fail processing a DRM protected pdf file if there is no

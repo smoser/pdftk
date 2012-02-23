@@ -3,7 +3,7 @@ Section: text
 Priority: optional
 Maintainer: Johann Felix Soden <johfel@gmx.de>
 Build-Depends: debhelper (>= 8.9), gcj-4.6-jdk, g++-4.6
-Standards-Version: 3.9.2
+Standards-Version: 3.9.3
 Homepage: http://www.pdflabs.com/tools/pdftk-the-pdf-toolkit/
 DM-Upload-Allowed: yes
 Vcs-Git: git://git.debian.org/git/collab-maint/pdftk.git
