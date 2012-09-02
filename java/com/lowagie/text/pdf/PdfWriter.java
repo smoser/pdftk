@@ -555,7 +555,7 @@ public class PdfWriter extends DocWriter {
          */
         public void toPdf(PdfWriter writer, OutputStream os) throws IOException {
             os.write(getISOBytes("trailer\n")); // ssteward: 1.44 - preserve newline after trailer
-            super.toPdf(null, os);
+            super.toPdf(writer, os);
             os.write(getISOBytes("\nstartxref\n"));
             os.write(getISOBytes(String.valueOf(offset)));
             os.write(getISOBytes("\n%%EOF\n"));
