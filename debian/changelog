@@ -1,3 +1,11 @@
+pdftk (1.44-6) unstable; urgency=medium
+
+  * Fix burst command. It produced non-standard-conform pdf files whose unused
+    xref entries were wrongly marked as used. (Closes: #685983)
+  * debian/*: Change my e-mail address and remove DM upload rights.
+
+ -- Johann Felix Soden <johfel@debian.org>  Mon, 03 Sep 2012 01:17:35 +0200
+
 pdftk (1.44-5) unstable; urgency=medium
 
   * Add patches to fix

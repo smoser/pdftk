@@ -1,11 +1,10 @@
 Source: pdftk
 Section: text
 Priority: optional
-Maintainer: Johann Felix Soden <johfel@gmx.de>
+Maintainer: Johann Felix Soden <johfel@debian.org>
 Build-Depends: debhelper (>= 8.9), gcj-4.6-jdk, g++-4.6
 Standards-Version: 3.9.3
 Homepage: http://www.pdflabs.com/tools/pdftk-the-pdf-toolkit/
-DM-Upload-Allowed: yes
 Vcs-Git: git://git.debian.org/git/collab-maint/pdftk.git
 Vcs-Browser: http://git.debian.org/?p=collab-maint/pdftk.git;a=summary
 
