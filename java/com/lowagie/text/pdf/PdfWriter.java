@@ -309,7 +309,7 @@ public class PdfWriter extends DocWriter {
         
         int getIndirectReferenceNumber() {
             int n = refnum++;
-            xrefs.add(new PdfCrossReference(n, 0, 65536));
+            xrefs.add(new PdfCrossReference(n, 0, 65535));
             return n;
         }
         
