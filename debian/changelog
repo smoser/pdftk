@@ -1,3 +1,12 @@
+pdftk (1.44-7) unstable; urgency=low
+
+  * Add patch to solve failures with particular PDF 1.5 documents generated
+    e.g. by newer pdflatex versions: Do not fail if an ObjStm ends with a
+    number. (Closes: #687669)
+    Thanks to Robin Houston <robin.houston@gmail.com>.
+
+ -- Johann Felix Soden <johfel@debian.org>  Tue, 08 Jan 2013 00:36:58 +0100
+
 pdftk (1.44-6) unstable; urgency=medium
 
   * Fix burst command. It produced non-standard-conform pdf files whose unused
