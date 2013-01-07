@@ -1421,18 +1421,18 @@ public class PdfReader {
 					// ssteward - 6/21/10
 					// stream should be followed by a LF or a CRLF, but not just a CR, per the PDF spec.
 					// however, I have encountered a generated PDF (Microsoft Reporting Services 10.0.0.0)
-					// that added a space after "stream" but before the CR; so gobble up unexpected chars
-					// until we find a LF
+					// that added a space after "stream" but before the CR; and also one (HP Digital
+                                        // Sending Device) that follows the stream with just a CR, so handle these cases too.
                     int ch = tokens.read();
-					/*
-                    if (ch != '\n')
+                    if (ch == ' ')
                         ch = tokens.read();
-                    if (ch != '\n')
-                        tokens.backOnePosition(ch);
-					*/
-					// ssteward
-					while (ch != '\n')
-						ch = tokens.read();
+                    if (ch == '\r') {
+                        ch = tokens.read();
+                        if (ch != '\n')
+                            tokens.backOnePosition(ch);
+                    }
+                    if (ch == -1)
+                        tokens.throwError("Unexpected end of file");
 
                     PRStream stream = new PRStream(this, tokens.getFilePointer());
                     stream.putAll(dic);
