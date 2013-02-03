@@ -30,6 +30,22 @@
  * Boston, MA  02110-1301, USA.
  *
  *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Library General Public
+ * License as published by the Free Software Foundation; either
+ * version 2 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Library General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Library General Public
+ * License along with this library; if not, write to the
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA  02110-1301, USA.
+ *
+ *
  * If you didn't download this code from the following link, you should check if
  * you aren't using an obsolete version:
  * http://www.lowagie.com/iText/
@@ -124,7 +140,7 @@ public class PdfEncodings {
     /** Converts a <CODE>String</CODE> to a </CODE>byte</CODE> array according
      * to the font's encoding.
      * @return an array of <CODE>byte</CODE> representing the conversion according to the font's encoding
-     * @param encoding the encoding
+     * @param encoding the encoding fo the return byte array
      * @param text the <CODE>String</CODE> to be converted
      */
     public static final byte[] convertToBytes(String text, String encoding) {
@@ -133,8 +149,9 @@ public class PdfEncodings {
         if (encoding == null || encoding.length() == 0) {
             int len = text.length();
             byte b[] = new byte[len];
-            for (int k = 0; k < len; ++k)
+            for (int k = 0; k < len; ++k) {
                 b[k] = (byte)text.charAt(k);
+	    }
             return b;
         }
         ExtraEncoding extra = null;
@@ -198,52 +215,79 @@ public class PdfEncodings {
     /** Converts a </CODE>byte</CODE> array to a <CODE>String</CODE> according
      * to the some encoding.
      * @param bytes the bytes to convert
-     * @param encoding the encoding
+     * @param encoding the encoding of input bytes
      * @return the converted <CODE>String</CODE>
-     */    
-    public static final String convertToString(byte bytes[], String encoding) {
-        if (bytes == null)
-            return PdfObject.NOTHING;
-        if (encoding == null || encoding.length() == 0) {
-            char c[] = new char[bytes.length];
-            for (int k = 0; k < bytes.length; ++k)
-                c[k] = (char)(bytes[k] & 0xff);
-            return new String(c);
-        }
-        ExtraEncoding extra = null;
-        synchronized (extraEncodings) {
-            extra = (ExtraEncoding)extraEncodings.get(encoding.toLowerCase());
-        }
-        if (extra != null) {
-            String text = extra.byteToChar(bytes, encoding);
-            if (text != null)
-                return text;
-        }
-        char ch[] = null;
-        if (encoding.equals(BaseFont.WINANSI))
-            ch = winansiByteToChar;
-        else if (encoding.equals(PdfObject.TEXT_PDFDOCENCODING))
-            ch = pdfEncodingByteToChar;
-        if (ch != null) {
-            int len = bytes.length;
-            char c[] = new char[len];
-            for (int k = 0; k < len; ++k) {
-                c[k] = ch[bytes[k] & 0xff];
-            }
-            return new String(c);
-        }
-        try {
-            return new String(bytes, encoding);
-        }
-        catch (UnsupportedEncodingException e) {
-            throw new ExceptionConverter(e);
-        }
+     */
+    // ssteward: reorganized for 1.45, added TEXT_UNICODE case
+    public static final String convertToString( byte bytes[], String encoding ) {
+
+	String ret_val= PdfObject.NOTHING;
+	char[] ch= null;
+
+        if( bytes!= null ) {
+
+	    if( encoding== null || encoding.length()== 0 ) {
+		char cc[]= new char[bytes.length];
+		for( int ii = 0; ii < bytes.length; ++ii ) {
+		    cc[ii]= (char)(bytes[ii] & 0xff);
+		}
+		ret_val=new String( cc );
+	    }
+	    else if( encoding== PdfObject.TEXT_UNICODE ) {
+		// ssteward: we aren't really decoding UTF-16, but simply converting 8-bit splits into UTF-16;
+		// added this in 1.45 because of trouble with String( byte, encoding ) in older gcj (3.4.5)
+
+		int jj= 0;
+		if( bytes.length>= 2 && bytes[0]== (byte)254 && bytes[1]== (byte)255 ) {
+		    jj= 2;
+		}
+		int cc_len= (int)Math.floor( (bytes.length- jj)/ 2 );
+		char cc[]= new char[cc_len];
+		for( int ii= 0; ii< cc_len; ++ii, ++jj ) {
+		    cc[ii]= (char)( (((int)bytes[  jj] & 0xff) << 8) +
+				     ((int)bytes[++jj] & 0xff) );
+		}
+		ret_val= new String( cc );
+	    }
+	    else if( encoding== PdfObject.TEXT_PDFDOCENCODING && (ch= pdfEncodingByteToChar)!= null ||
+		     encoding== BaseFont.WINANSI && (ch= winansiByteToChar)!= null )
+		{
+		    char cc[]= new char[bytes.length];
+		    for( int ii= 0; ii< bytes.length; ++ii ) {
+			cc[ii]= ch[ bytes[ii] & 0xff ];
+		    }
+		    ret_val= new String( cc );
+		}
+	    else {
+		ExtraEncoding extra= null;
+		synchronized (extraEncodings) {
+		    extra = (ExtraEncoding)extraEncodings.get( encoding.toLowerCase() );
+		}
+
+		if( extra!= null ) {
+		    String text = extra.byteToChar(bytes, encoding);
+		    if (text != null)
+			ret_val= text;
+		}
+		else {
+		    try {
+			ret_val= new String( bytes, encoding );
+		    }
+		    catch( UnsupportedEncodingException e ) {
+			throw new ExceptionConverter( e );
+		    }
+		}
+	    }
+	}
+
+	return ret_val;
     }
     
     /** Checks is <CODE>text</CODE> only has PdfDocEncoding characters.
      * @param text the <CODE>String</CODE> to test
      * @return <CODE>true</CODE> if only PdfDocEncoding characters are present
      */    
+    // text is unicode, right?
     public static boolean isPdfDocEncoding(String text) {
         if (text == null)
             return true;

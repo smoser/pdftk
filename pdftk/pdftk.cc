@@ -1,7 +1,7 @@
 /* -*- Mode: C++; tab-width: 2; c-basic-offset: 2 -*- */
 /*
 	pdftk, the PDF Toolkit
-	Copyright (c) 2003-2010 Sid Steward
+	Copyright (c) 2003-2012 Sid Steward
 
 
 	This program is free software; you can redistribute it and/or modify
@@ -52,6 +52,7 @@
 #include <java/io/IOException.h>
 #include <java/io/PrintStream.h>
 #include <java/io/FileOutputStream.h>
+#include <java/util/Set.h> // for barcode_burst
 #include <java/util/Vector.h>
 #include <java/util/ArrayList.h>
 #include <java/util/Iterator.h>
@@ -64,6 +65,7 @@
 #include "com/lowagie/text/pdf/PdfNumber.h"
 #include "com/lowagie/text/pdf/PdfArray.h"
 #include "com/lowagie/text/pdf/PdfDictionary.h"
+#include "com/lowagie/text/pdf/PdfStream.h" // for barcode_burst
 #include "com/lowagie/text/pdf/PdfOutline.h"
 #include "com/lowagie/text/pdf/PdfCopy.h"
 #include "com/lowagie/text/pdf/PdfReader.h"
@@ -95,6 +97,10 @@ namespace itext {
 	using namespace com::lowagie::text;
 	using namespace com::lowagie::text::pdf;
 }
+
+#ifdef WIN32
+#include <windows.h>
+#endif
 
 #include "pdftk.h"
 #include "attachments.h"
@@ -145,6 +151,42 @@ prompt_for_filename( const string message,
 	cout << message << endl;
 
   while( cin.get( cc ) && cc!= '\n' ) { fn+= cc; }
+}
+
+void
+copy_argv_as_utf8( string& ss, char** argv, int ii )
+{
+#ifdef WIN32
+	// Windows-only logic; convert wide-char unicode to UTF-8
+	// zero-based index, just as you'd use for argv
+
+	static const int utf8_buff_len= 32767;
+	static char utf8_buff[utf8_buff_len];
+
+	ss= "";
+	int nArgs= 0;
+	LPWSTR* szWideArgv= CommandLineToArgvW( GetCommandLineW(), &nArgs );
+
+	if( szWideArgv!= NULL && ii< nArgs ) {
+		int sBuffWritten= 
+			WideCharToMultiByte( CP_UTF8, 0, // no flags permitted for CP_UTF8
+													 szWideArgv[ii], -1, // calculate length from null-term input
+													 utf8_buff, utf8_buff_len,
+													 NULL, // must be NULL for CP_UTF8
+													 NULL ); // must be NULL for CP_UTF8
+
+		if( 0< sBuffWritten ) {
+			// success
+			ss= utf8_buff;
+		}
+
+		LocalFree( szWideArgv );
+	}
+
+#else // argv already UTF-8
+	ss= argv[ii];
+
+#endif
 }
 
 bool
@@ -281,6 +323,7 @@ copy_downcase( char* ll, int ll_len,
 	return ii;
 }
 
+/*
 static bool
 detect_rotate_arg( char cc,
 									 TK_Session::PageRotate& page_rotate,
@@ -334,6 +377,8 @@ detect_rotate_arg( char cc,
 
 	return ret_val_b;
 }
+*/
+
 
 TK_Session::keyword
 TK_Session::is_keyword( char* ss, int* keyword_len_p )
@@ -356,6 +401,11 @@ TK_Session::is_keyword( char* ss, int* keyword_len_p )
 	else if( strcmp( ss_copy, "burst" )== 0 ) {
 		return burst_k;
 	}
+#ifdef BARCODE_BURST
+	else if( strcmp( ss_copy, "barcode_burst" )== 0 ) { // barcode_burst project
+		return barcode_burst_k;
+	}
+#endif
 	else if( strcmp( ss_copy, "filter" )== 0 ) {
 		return filter_k;
 	}
@@ -542,7 +592,36 @@ TK_Session::is_keyword( char* ss, int* keyword_len_p )
 	else if( strcmp( ss_copy, "do_ask" )== 0 ) {
 		return do_ask_k;
 	}
-	
+
+	// more cat range keywords
+	else if( strcmp( ss_copy, "north" )== 0 ) {
+    *keyword_len_p= 5; // note: fixed size
+		return rot_north_k;
+	}
+	else if( strcmp( ss_copy, "south" )== 0 ) {
+    *keyword_len_p= 5; // note: fixed size
+		return rot_south_k;
+	}
+	else if( strcmp( ss_copy, "east" )== 0 ) {
+    *keyword_len_p= 4; // note: fixed size
+		return rot_east_k;
+	}
+	else if( strcmp( ss_copy, "west" )== 0 ) {
+    *keyword_len_p= 4; // note: fixed size
+		return rot_west_k;
+	}
+	else if( strcmp( ss_copy, "left" )== 0 ) {
+    *keyword_len_p= 4; // note: fixed size
+		return rot_left_k;
+	}
+	else if( strcmp( ss_copy, "right" )== 0 ) {
+    *keyword_len_p= 5; // note: fixed size
+		return rot_right_k;
+	}
+	else if( strcmp( ss_copy, "down" )== 0 ) {
+    *keyword_len_p= 4; // note: fixed size
+		return rot_upside_down_k;
+	}
 	
   return none_k;
 }
@@ -565,11 +644,17 @@ TK_Session::is_valid() const
 
 					// these op.s require a single input PDF file
 					( !( m_operation== burst_k ||
+#ifdef BARCODE_BURST
+							 m_operation== barcode_burst_k || // barcode_burst project
+#endif
 							 m_operation== filter_k ) ||
 						( m_input_pdf.size()== 1 ) ) &&
 
 					// these op.s do not require an output filename
 					( m_operation== burst_k ||
+#ifdef BARCODE_BURST
+					  m_operation== barcode_burst_k ||
+#endif
 					  m_operation== dump_data_k ||
 						m_operation== dump_data_fields_k ||
 						m_operation== generate_fdf_k ||
@@ -632,6 +717,12 @@ TK_Session::dump_session_data() const
 	case burst_k:
 		cout << "   burst - Split a single, input PDF into individual pages." << endl;
 		break;
+#ifdef BARCODE_BURST
+	case barcode_burst_k: // barcode_burst project
+		cout << "   barcode_burst - Split a single, input PDF into individual pages" << endl;
+		cout << "      based on the presence of barcode." << endl;
+		break;
+#endif
 	case filter_k:
 		cout << "   filter - Apply 'filters' to a single, input PDF based on output args." << endl;
 		cout << "      (When the operation is omitted, this is the default.)" << endl;
@@ -903,8 +994,11 @@ TK_Session::TK_Session( int argc,
 
 	g_dont_collect_p= new java::Vector();
 
+	// set one and only one to true when p/w used; use to
+	// enforce rule that either all p/w use handles or no p/w use handles
   bool password_using_handles_not_b= false;
   bool password_using_handles_b= false;
+
 	InputPdfIndex password_input_pdf_index= 0;
 
   bool fail_b= false;
@@ -959,6 +1053,12 @@ TK_Session::TK_Session( int argc,
 				m_operation= burst_k;
 				arg_state= output_args_e; // makes "output <fn>" bit optional
       }
+#ifdef BARCODE_BURST
+      else if( arg_keyword== barcode_burst_k ) { // barcode_burst project
+				m_operation= barcode_burst_k;
+				arg_state= output_args_e; // makes "output <fn>" bit optional
+      }
+#endif
 			else if( arg_keyword== filter_k ) {
 				m_operation= filter_k;
 				arg_state= output_e; // look for an output filename
@@ -1041,16 +1141,35 @@ TK_Session::TK_Session( int argc,
       else if( arg_keyword== none_k ) {
 				// here is where the two cases (input_files_e, input_pw_e) diverge
 
-				char* eq_loc= strchr( argv[ii], '=' );
-				// if present, handle must be single, upper-case char;
-				// if it isn't, assume that the given equals sign is part of the filename or password
-				// (before ver. 1.42 it was an error to have an eq. sign if it wasn't assoc. w/ a handle)
-				if( eq_loc &&
-						( ( argv[ii]+ 1< eq_loc ) ||
-							!( 'A'<= argv[ii][0] && argv[ii][0]<= 'Z' ) ) )
-					{
-						eq_loc= 0;
+				string handle; {
+					char* eq_loc= strchr( argv[ii], '=' );
+					// if doc p/w has '=', then
+					// command-line must use handles; init. '=' processed, following '=' treated
+					// as part of p/w
+
+					if( eq_loc!= 0 ) {
+						for( char* pp= argv[ii]; pp< eq_loc; ++pp ) {
+							if( 'A'<= *pp && *pp<= 'Z' )
+								handle+= *pp;
+							else { // not a handle
+								eq_loc= 0;
+								handle= "";
+								break;
+							}
+						}
 					}
+				}
+
+				string handle_and_data; // used for messages
+				copy_argv_as_utf8( handle_and_data, argv, ii ); // default: assume no handle
+				//
+				string data= handle_and_data;
+				if( !handle.empty() ) { // remove handle
+					if( data.find( '=' )+ 1< data.length() )
+						data= data.substr( data.find( '=' )+ 1 );
+					else
+						data= "";
+				}
 
 				if( arg_state== input_files_e ) {
 					// input_files_e:
@@ -1060,36 +1179,33 @@ TK_Session::TK_Session( int argc,
 					// treat argv[ii] like an optional input handle and filename
 					// like this: [<handle>=]<filename>
 
-					if( eq_loc== 0 ) { // no equal sign; no handle
-							InputPdf input_pdf;
-							input_pdf.m_filename= argv[ii];
-							m_input_pdf.push_back( input_pdf );
+					InputPdf input_pdf;
+					input_pdf.m_filename= data;
+
+					if( handle.empty() ) { // no handle
+						m_input_pdf.push_back( input_pdf );
 					}
 					else { // use given handle for filename; test, first
 						
 						// look up handle
 						map< string, InputPdfIndex >::const_iterator it= 
-							m_input_pdf_index.find( string(1, argv[ii][0]) );
-
+							m_input_pdf_index.find( handle );
 						if( it!= m_input_pdf_index.end() ) { // error: alreay in use
+
 							cerr << "Error: Handle given here: " << endl;
-							cerr << "      " << argv[ii] << endl;
+							cerr << "      " << handle_and_data << endl;
 							cerr << "   is already associated with: " << endl;
 							cerr << "      " << m_input_pdf[it->second].m_filename << endl;
 							cerr << "   Exiting." << endl;
 							fail_b= true;
 						}
 						else { // add handle/filename association
-							*eq_loc= 0;
-
-							InputPdf input_pdf;
-							input_pdf.m_filename= eq_loc+ 1;
 							m_input_pdf.push_back( input_pdf );
-
-							m_input_pdf_index[ string(1, argv[ii][0]) ]= m_input_pdf.size()- 1;
+							m_input_pdf_index[ handle ]= m_input_pdf.size()- 1;
 						}
 					}
 				} // end: arg_state== input_files_e
+
 				else if( arg_state== input_pw_e ) {
 					// expecting input handle=password pairs, or
 					// an input PDF password w/o a handle
@@ -1101,13 +1217,15 @@ TK_Session::TK_Session( int argc,
 					// if handles not used for input PDFs, then assume
 					// any equals signs found in p/w are part of p/w
 					if( m_input_pdf_index.size()== 0 ) {
-						eq_loc= 0;
+						handle= "";
+						data= handle_and_data;
 					}
 
-					if( eq_loc== 0 ) { // no equal sign; try using default handles
+					if( handle.empty() ) { // no equal sign; try using default handles
 						if( password_using_handles_b ) { // error: expected a handle
+
 							cerr << "Error: Expected a user-supplied handle for this input" << endl;
-							cerr << "   PDF password: " << argv[ii] << endl << endl;
+							cerr << "   PDF password: " << handle_and_data << endl << endl;
 							cerr << "   Handles must be supplied with ~all~ input" << endl;
 							cerr << "   PDF passwords, or with ~no~ input PDF passwords." << endl;
 							cerr << "   If no handles are supplied, then passwords are applied" << endl;
@@ -1120,7 +1238,8 @@ TK_Session::TK_Session( int argc,
 							password_using_handles_not_b= true;
 
 							if( password_input_pdf_index< m_input_pdf.size() ) {
-								m_input_pdf[password_input_pdf_index++].m_password= argv[ii]; // set
+								m_input_pdf[ password_input_pdf_index ].m_password= handle_and_data;
+								++password_input_pdf_index;
 							}
 							else { // error
 								cerr << "Error: more input passwords than input PDF documents." << endl;
@@ -1129,10 +1248,11 @@ TK_Session::TK_Session( int argc,
 							}
 						}
 					}
-					else { // use given handle for password
+					else { // handle given; use for password
 						if( password_using_handles_not_b ) { // error; remark and set fail_b
+
 							cerr << "Error: Expected ~no~ user-supplied handle for this input" << endl;
-							cerr << "   PDF password: " << argv[ii] << endl << endl;
+							cerr << "   PDF password: " << handle_and_data << endl << endl;
 							cerr << "   Handles must be supplied with ~all~ input" << endl;
 							cerr << "   PDF passwords, or with ~no~ input PDF passwords." << endl;
 							cerr << "   If no handles are supplied, then passwords are applied" << endl;
@@ -1146,15 +1266,16 @@ TK_Session::TK_Session( int argc,
 
 							// look up this handle
 							map< string, InputPdfIndex >::const_iterator it= 
-								m_input_pdf_index.find( string(1, argv[ii][0]) );
+								m_input_pdf_index.find( handle );
 							if( it!= m_input_pdf_index.end() ) { // found
 
 								if( m_input_pdf[it->second].m_password.empty() ) {
-									m_input_pdf[it->second].m_password= eq_loc+ 1; // set
+									m_input_pdf[it->second].m_password= data; // set
 								}
 								else { // error: password already given
+
 									cerr << "Error: Handle given here: " << endl;
-									cerr << "      " << argv[ii] << endl;
+									cerr << "      " << handle_and_data << endl;
 									cerr << "   is already associated with this password: " << endl;
 									cerr << "      " << m_input_pdf[it->second].m_password << endl;
 									cerr << "   Exiting." << endl;
@@ -1162,7 +1283,8 @@ TK_Session::TK_Session( int argc,
 								}
 							}
 							else { // error: no input file matches this handle
-								cerr << "Error: Password handle: " << argv[ii] << endl;
+
+								cerr << "Error: Password handle: " << handle_and_data << endl;
 								cerr << "   is not associated with an input PDF file." << endl;
 								cerr << "   Exiting." << endl;
 								fail_b= true;
@@ -1176,8 +1298,11 @@ TK_Session::TK_Session( int argc,
 				}
 			}
 			else { // error: unexpected keyword; remark and set fail_b
+				string argv_ss;
+				copy_argv_as_utf8( argv_ss, argv, ii );
+
 				cerr << "Error: Unexpected command-line data: " << endl;
-				cerr << "      " << argv[ii] << endl;
+				cerr << "      " << argv_ss << endl;
 				if( arg_state== input_files_e ) {
 					cerr << "   where we were expecting an input PDF filename," << endl;
 					cerr << "   operation (e.g. \"cat\") or \"input_pw\".  Exiting." << endl;
@@ -1221,21 +1346,18 @@ TK_Session::TK_Session( int argc,
 
 					InputPdfIndex range_pdf_index= 0; { // defaults to first input document
 						string handle;
-						// in anticipation of multi-character handles (?)
-						//for( ; argv[ii][jj] && isupper(argv[ii][jj]); ++jj ) {
-						//handle.push_back( argv[ii][jj] );
-						//}
-						// more suitable for handles + orientation operations
-						if( argv[ii][jj] && isupper(argv[ii][jj]) ) {
-							handle= argv[ii][jj];
-							++jj;
+						for( ; argv[ii][jj] && isupper(argv[ii][jj]); ++jj ) {
+							handle.push_back( argv[ii][jj] );
 						}
 						if( !handle.empty() ) {
 							// validate handle
 							map< string, InputPdfIndex >::const_iterator it= m_input_pdf_index.find( handle );
 							if( it== m_input_pdf_index.end() ) { // error
+								string argv_ss;
+								copy_argv_as_utf8( argv_ss, argv, ii );
+
 								cerr << "Error: Given handle has no associated file: " << endl;
-								cerr << "   " << handle << ", used here: " << argv[ii] << endl;
+								cerr << "   " << handle << ", used here: " << argv_ss << endl;
 								cerr << "   Exiting." << endl;
 								fail_b= true;
 								break;
@@ -1255,143 +1377,144 @@ TK_Session::TK_Session( int argc,
 					PageRotateAbsolute page_rotate_absolute= false;
 
 					////
-					// start of page range
+					// beginning of page range
 
+					bool reverse_b= ( argv[ii][jj]== 'r' ); // single lc 'r' before page range
+					if( reverse_b )
+						++jj;
+
+					// parse digits
 					PageNumber page_num_beg= 0;
-					for( ; argv[ii][jj] && isdigit(argv[ii][jj]); ++jj ) {
+					for( ; argv[ii][jj] && isdigit( argv[ii][jj] ); ++jj ) { // read any digits
 						page_num_beg= page_num_beg* 10+ argv[ii][jj]- '0';
 					}
+					if( !page_num_beg && argv[ii][jj] ) { // look for usable keyword
+						int keyword_len= 0;
+						keyword arg_keyword= is_keyword( argv[ii]+ jj, &keyword_len );
 
-					// DF detect rotate arg; on success sets page_rotate, page_rotate_absolute
-					// catch case where rotation follows range number, e.g. 1W
-					if( argv[ii][jj] && detect_rotate_arg( argv[ii][jj], page_rotate, page_rotate_absolute ) ) {
-						++jj;
+						if( arg_keyword== end_k ) { // may be a single page ref or beg of range
+							page_num_beg= m_input_pdf[range_pdf_index].m_num_pages;
+							jj+= keyword_len; // consume keyword
+						}
+						// else leave keyword
 					}
 
-					if( argv[ii][jj] ) { // process possible text keyword in page range start
+					if( argv[ii][jj] && hyphen_loc ) { // test state
+						// error: can't have numbers ~and~ a keyword at the beginning of range
 
-						if( page_num_beg ) { // error: can't have numbers ~and~ a keyword at the beginning
-							cerr << "Error: Unexpected combination of digits and text in" << endl;
-							cerr << "   page range start, here: " << argv[ii] << endl;
+						string argv_ss;
+						copy_argv_as_utf8( argv_ss, argv, ii );
+
+						cerr << "Error: Unexpected combination of digits and text in" << endl;
+						cerr << "   page range start, here: " << argv_ss << endl;
+						cerr << "   Exiting." << endl;
+						fail_b= true;
+						break;
+					}
+
+					if( reverse_b )
+						page_num_beg= m_input_pdf[range_pdf_index].m_num_pages- page_num_beg+ 1;
+
+					////
+					// end of page range
+
+					PageNumber page_num_end= page_num_beg; // default value
+					if( hyphen_loc ) { // process second half of page range
+
+						// jump over hyphen, which we nulled out
+						while( argv[ii][jj] ) // this shouldn't be necessary
+							++jj;
+						++jj;
+
+						bool reverse_b= ( argv[ii][jj]== 'r' ); // single lc 'r' before page range
+						if( reverse_b )
+							++jj;
+
+						// parse digits
+						page_num_end= 0;
+						for( ; argv[ii][jj] && isdigit( argv[ii][jj] ); ++jj ) {
+							page_num_end= page_num_end* 10+ argv[ii][jj]- '0';
+						}
+						if( !page_num_end && argv[ii][jj] ) { // look for usable keyword
+							int keyword_len= 0;
+							keyword arg_keyword= is_keyword( argv[ii]+ jj, &keyword_len );
+							
+							if( arg_keyword== end_k ) {
+								page_num_end= m_input_pdf[range_pdf_index].m_num_pages;
+								jj+= keyword_len; // consume keyword
+							}
+							// else leave keyword
+						}
+
+						if( !page_num_end ) { // error: hyphen but no range end
+							string argv_ss;
+							copy_argv_as_utf8( argv_ss, argv, ii );
+
+							cerr << "Error: Unexpected range end; expected a page" << endl;
+							cerr << "   number or legal keyword, here: " << argv_ss << endl;
 							cerr << "   Exiting." << endl;
 							fail_b= true;
 							break;
 						}
-					
+
+						if( reverse_b )
+							page_num_end= m_input_pdf[range_pdf_index].m_num_pages- page_num_end+ 1;
+					}
+
+					// trailing keywords (excluding "end" which should have been handled above)
+					while( argv[ii][jj] ) { // possibly more than one keyword, e.g., 3-endevenwest
+
 						// read keyword
 						int keyword_len= 0;
 						keyword arg_keyword= is_keyword( argv[ii]+ jj, &keyword_len );
 
-						if( arg_keyword== end_k ) {
-							page_num_beg= m_input_pdf[range_pdf_index].m_num_pages;
+						if( arg_keyword== even_k ) {
+							even_pages_b= true;
 						}
-						else if( !hyphen_loc ) { // no end of page range given
+						else if( arg_keyword== odd_k ) {
+							odd_pages_b= true;
+						}
+						else if( arg_keyword== rot_north_k ) {
+							page_rotate= TK_Session::NORTH; // rotate 0
+							page_rotate_absolute= true;
+						}
+						else if( arg_keyword== rot_east_k ) {
+							page_rotate= TK_Session::EAST; // rotate 90
+							page_rotate_absolute= true;
+						}
+						else if( arg_keyword== rot_south_k ) {
+							page_rotate= TK_Session::SOUTH; // rotate 180
+							page_rotate_absolute= true;
+						}
+						else if( arg_keyword== rot_west_k ) {
+							page_rotate= TK_Session::WEST; // rotate 270
+							page_rotate_absolute= true;
+						}
+						else if( arg_keyword== rot_left_k ) {
+							page_rotate= TK_Session::WEST; // rotate -90
+							page_rotate_absolute= false;
+						}
+						else if( arg_keyword== rot_right_k ) {
+							page_rotate= TK_Session::EAST; // rotate +90
+							page_rotate_absolute= false;
+						}
+						else if( arg_keyword== rot_upside_down_k ) {
+							page_rotate= TK_Session::SOUTH; // rotate +180
+							page_rotate_absolute= false;
+						}
+						else { // error
+							string argv_ss;
+							copy_argv_as_utf8( argv_ss, argv, ii );
 
-							// even and odd keywords could be used when referencing
-							// an entire document by handle, e.g. Aeven, Aodd
-							//
-							if( arg_keyword== even_k ) {
-								even_pages_b= true;
-							}
-							else if( arg_keyword== odd_k ) {
-								odd_pages_b= true;
-							}
-							else { // error; unexpected keyword or string
-								cerr << "Error: Unexpected text in page reference, here: " << endl;
-								cerr << "   " << (argv[ii]+ jj) << endl;
-								cerr << "   Exiting." << endl;
-								cerr << "   Acceptable keywords, here, are: \"even\", \"odd\", or \"end\"." << endl;
-								fail_b= true;
-								break;
-							}
-						}
-						else { // error; unexpected keyword or string
-							cerr << "Error: Unexpected letters in page range start, here: " << endl;
-							cerr << "   " << (argv[ii]+ jj) << endl;
+							cerr << "Error: Unexpected text in page range end, here: " << endl;
+							cerr << "   " << argv_ss /*(argv[ii]+ jj)*/ << endl;
 							cerr << "   Exiting." << endl;
-							cerr << "   The acceptable keyword, here, is \"end\"." << endl;
+							cerr << "   Acceptable keywords, for example: \"even\" or \"odd\"." << endl;
 							fail_b= true;
 							break;
 						}
 
 						jj+= keyword_len;
-
-						// DF detect rotate arg; on success sets page_rotate, page_rotate_absolute
-						// catch case where rotation follows range keyword, e.g. endW, AevenS
-						if( argv[ii][jj] && detect_rotate_arg( argv[ii][jj], page_rotate, page_rotate_absolute ) ) {
-							++jj;
-						}
-					}
-	
-					// advance to end of token
-					while( argv[ii][jj] ) { 
-						++jj;
-					}
-
-					////
-					// end of page range
-
-					PageNumber page_num_end= 0;
-
-					if( hyphen_loc ) { // process second half of page range
-						++jj; // jump over hyphen
-
-						// digits
-						for( ; argv[ii][jj] && isdigit(argv[ii][jj]); ++jj ) {
-							page_num_end= page_num_end* 10+ argv[ii][jj]- '0';
-						}
-
-						// DF detect rotate arg; on success sets page_rotate, page_rotate_absolute
-						// catch case where rotation follows range number end, e.g. 1-5W
-						if( argv[ii][jj] && detect_rotate_arg( argv[ii][jj], page_rotate, page_rotate_absolute ) ) {
-							++jj;
-						}
-
-						// trailing text
-						while( argv[ii][jj] ) { // possibly more than one keyword, e.g., 3-endeven
-
-							// read keyword
-							int keyword_len= 0;
-							keyword arg_keyword= is_keyword( argv[ii]+ jj, &keyword_len );
-
-							if( page_num_end ) {
-								if( arg_keyword== even_k ) {
-									even_pages_b= true;
-								}
-								else if( arg_keyword== odd_k ) {
-									odd_pages_b= true;
-								}
-								else { // error
-									cerr << "Error: Unexpected text in page range end, here: " << endl;
-									cerr << "   " << (argv[ii]+ jj) << endl;
-									cerr << "   Exiting." << endl;
-									cerr << "   Acceptable keywords, here, are: \"even\" or \"odd\"." << endl;
-									fail_b= true;
-									break;
-								}
-							}
-							else { // !page_num_end
-								if( arg_keyword== end_k ) {
-									page_num_end= m_input_pdf[range_pdf_index].m_num_pages;
-								}
-								else { // error
-									cerr << "Error: Unexpected text in page range end, here: " << endl;
-									cerr << "   " << (argv[ii]+ jj) << endl;
-									cerr << "   Exiting." << endl;
-									cerr << "   The acceptable keyword, here, is \"end\"." << endl;
-									fail_b= true;
-									break;
-								}
-							}
-
-							jj+= keyword_len;
-
-							// DF detect rotate arg; on success sets page_rotate, page_rotate_absolute
-							// catch case where rotation follows range keyword, e.g. 1-endW, 5-endevenN
-							if( argv[ii][jj] && detect_rotate_arg( argv[ii][jj], page_rotate, page_rotate_absolute ) ) {
-								++jj;
-							}
-						}
 					}
 
 					////
@@ -1400,9 +1523,6 @@ TK_Session::TK_Session( int argc,
 					if( page_num_beg== 0 && page_num_end== 0 ) { // ref the entire document
 						page_num_beg= 1;
 						page_num_end= m_input_pdf[range_pdf_index].m_num_pages;
-					}
-					else if( page_num_end== 0 ) { // a single page ref
-						page_num_end= page_num_beg;
 					}
 
 					vector< PageRef > temp_page_seq;
@@ -1469,8 +1589,11 @@ TK_Session::TK_Session( int argc,
 
 				}
 			else { // error
+				string argv_ss;
+				copy_argv_as_utf8( argv_ss, argv, ii );
+
 				cerr << "Error: expecting page ranges.  Instead, I got:" << endl;
-				cerr << "   " << argv[ii] << endl;
+				cerr << "   " << argv_ss << endl;
 				fail_b= true;
 				break;
 			}
@@ -1482,11 +1605,14 @@ TK_Session::TK_Session( int argc,
 				{ // treat argv[ii] like an FDF file filename
 					
 					if( m_form_data_filename.empty() ) {
-						m_form_data_filename= argv[ii];
+						copy_argv_as_utf8( m_form_data_filename, argv, ii );
 					}
 					else { // error
+						string argv_ss;
+						copy_argv_as_utf8( argv_ss, argv, ii );
+
 						cerr << "Error: Multiple fill_form filenames given: " << endl;
-						cerr << "   " << m_form_data_filename << " and " << argv[ii] << endl;
+						cerr << "   " << m_form_data_filename << " and " << argv_ss << endl;
 						cerr << "Exiting." << endl;
 						fail_b= true;
 						break;
@@ -1496,8 +1622,11 @@ TK_Session::TK_Session( int argc,
 					arg_state= output_e; // look for an output filename
 				}
 			else { // error
+				string argv_ss;
+				copy_argv_as_utf8( argv_ss, argv, ii );
+
 				cerr << "Error: expecting a form data filename," << endl;
-				cerr << "   instead I got this keyword: " << argv[ii] << endl;
+				cerr << "   instead I got this keyword: " << argv_ss << endl;
 				cerr << "Exiting." << endl;
 				fail_b= true;
 				break;
@@ -1516,11 +1645,17 @@ TK_Session::TK_Session( int argc,
 			}
 			else if( arg_keyword== none_k ) { 
 				// pack argv[ii] into our list of attachment filenames
-				m_input_attach_file_filename.push_back( argv[ii] );
+				string argv_ss;
+				copy_argv_as_utf8( argv_ss, argv, ii );
+
+				m_input_attach_file_filename.push_back( argv_ss );
 			}
 			else { // error
+				string argv_ss;
+				copy_argv_as_utf8( argv_ss, argv, ii );
+
 				cerr << "Error: expecting an attachment filename," << endl;
-				cerr << "   instead I got this keyword: " << argv[ii] << endl;
+				cerr << "   instead I got this keyword: " << argv_ss << endl;
 				cerr << "Exiting." << endl;
 				fail_b= true;
 				break;
@@ -1539,8 +1674,11 @@ TK_Session::TK_Session( int argc,
 				m_input_attach_file_pagenum= 0;
 				for( int jj= 0; argv[ii][jj]; ++jj ) {
 					if( !isdigit(argv[ii][jj]) ) { // error
+						string argv_ss;
+						copy_argv_as_utf8( argv_ss, argv, ii );
+
 						cerr << "Error: expecting a (1-based) page number.  Instead, I got:" << endl;
-						cerr << "   " << argv[ii] << endl;
+						cerr << "   " << argv_ss << endl;
 						cerr << "Exiting." << endl;
 						fail_b= true;
 						break;
@@ -1560,19 +1698,25 @@ TK_Session::TK_Session( int argc,
 		case update_info_filename_e : {
 			if( arg_keyword== none_k ) {
 					if( m_update_info_filename.empty() ) {
-						m_update_info_filename= argv[ii];
+						copy_argv_as_utf8( m_update_info_filename, argv, ii );
 					}
 					else { // error
+						string argv_ss;
+						copy_argv_as_utf8( argv_ss, argv, ii );
+
 						cerr << "Error: Multiple update_info filenames given: " << endl;
-						cerr << "   " << m_update_info_filename << " and " << argv[ii] << endl;
+						cerr << "   " << m_update_info_filename << " and " << argv_ss << endl;
 						cerr << "Exiting." << endl;
 						fail_b= true;
 						break;
 					}
 				}
 			else { // error
+				string argv_ss;
+				copy_argv_as_utf8( argv_ss, argv, ii );
+
 				cerr << "Error: expecting an INFO file filename," << endl;
-				cerr << "   instead I got this keyword: " << argv[ii] << endl;
+				cerr << "   instead I got this keyword: " << argv_ss << endl;
 				cerr << "Exiting." << endl;
 				fail_b= true;
 				break;
@@ -1624,8 +1768,11 @@ TK_Session::TK_Session( int argc,
 				arg_state= output_filename_e; // advance state
       }
 			else { // error
+				string argv_ss;
+				copy_argv_as_utf8( argv_ss, argv, ii );
+
 				cerr << "Error: expecting \"output\" keyword.  Instead, I got:" << endl;
-				cerr << "   " << argv[ii] << endl;
+				cerr << "   " << argv_ss << endl;
 				fail_b= true;
 				break;
 			}
@@ -1669,7 +1816,7 @@ TK_Session::TK_Session( int argc,
 				}
 
 			if( m_output_filename.empty() ) {
-				m_output_filename= argv[ii];
+				copy_argv_as_utf8( m_output_filename, argv, ii );
 
 				if( m_output_filename!= "-" ) { // input and output may both be "-" (stdin and stdout)
 					// simple-minded test to see if output matches an input filename
@@ -1686,8 +1833,11 @@ TK_Session::TK_Session( int argc,
 				}
 			}
 			else { // error
+				string argv_ss;
+				copy_argv_as_utf8( argv_ss, argv, ii );
+
 				cerr << "Error: Multiple output filenames given: " << endl;
-				cerr << "   " << m_output_filename << " and " << argv[ii] << endl;
+				cerr << "   " << m_output_filename << " and " << argv_ss << endl;
 				cerr << "Exiting." << endl;
 				fail_b= true;
 				break;
@@ -1709,8 +1859,11 @@ TK_Session::TK_Session( int argc,
 				break;
 			}
 			else {
+				string argv_ss;
+				copy_argv_as_utf8( argv_ss, argv, ii );
+
 				cerr << "Error: Unexpected data in output section: " << endl;
-				cerr << "      " << argv[ii] << endl;
+				cerr << "      " << argv_ss << endl;
 				cerr << "Exiting." << endl;
 				fail_b= true;
 				break;
@@ -1720,8 +1873,12 @@ TK_Session::TK_Session( int argc,
 
 		case output_owner_pw_e: {
 			if( m_output_owner_pw.empty() ) {
-				if( m_output_user_pw!= argv[ii] ) {
-					m_output_owner_pw= argv[ii];
+
+				string argv_ss;
+				copy_argv_as_utf8( argv_ss, argv, ii );
+				if( argv_ss!= m_output_user_pw ) {
+					m_output_owner_pw= argv_ss;
+
 				}
 				else { // error: identical user and owner password
 					// are interpreted by Acrobat (per the spec.) that
@@ -1737,8 +1894,11 @@ TK_Session::TK_Session( int argc,
 				}
 			}
 			else { // error: we already have an output owner pw
+				string argv_ss;
+				copy_argv_as_utf8( argv_ss, argv, ii );
+
 				cerr << "Error: Multiple output owner passwords given: " << endl;
-				cerr << "   " << m_output_owner_pw << " and " << argv[ii] << endl;
+				cerr << "   " << m_output_owner_pw << " and " << argv_ss << endl;
 				cerr << "Exiting." << endl;
 				fail_b= true;
 				break;
@@ -1751,8 +1911,11 @@ TK_Session::TK_Session( int argc,
 
 		case output_user_pw_e: {
 			if( m_output_user_pw.empty() ) {
-				if( m_output_owner_pw!= argv[ii] ) {
-					m_output_user_pw= argv[ii];
+				string argv_ss;
+				copy_argv_as_utf8( argv_ss, argv, ii );
+
+				if( m_output_owner_pw!= argv_ss ) {
+					m_output_user_pw= argv_ss;
 				}
 				else { // error: identical user and owner password
 					// are interpreted by Acrobat (per the spec.) that
@@ -1768,8 +1931,11 @@ TK_Session::TK_Session( int argc,
 				}
 			}
 			else { // error: we already have an output user pw
+				string argv_ss;
+				copy_argv_as_utf8( argv_ss, argv, ii );
+
 				cerr << "Error: Multiple output user passwords given: " << endl;
-				cerr << "   " << m_output_user_pw << " and " << argv[ii] << endl;
+				cerr << "   " << m_output_user_pw << " and " << argv_ss << endl;
 				cerr << "Exiting." << endl;
 				fail_b= true;
 				break;
@@ -1844,8 +2010,11 @@ TK_Session::TK_Session( int argc,
 				break;
 
 			default: // error: unexpected matter
+				string argv_ss;
+				copy_argv_as_utf8( argv_ss, argv, ii );
+
 				cerr << "Error: Unexpected data in output section: " << endl;
-				cerr << "      " << argv[ii] << endl;
+				cerr << "      " << argv_ss << endl;
 				cerr << "Exiting." << endl;
 				fail_b= true;
 				break;
@@ -1856,19 +2025,25 @@ TK_Session::TK_Session( int argc,
 		case background_filename_e : {
 			if( arg_keyword== none_k ) {
 				if( m_background_filename.empty() ) {
-					m_background_filename= argv[ii];
+					copy_argv_as_utf8( m_background_filename, argv, ii );
 				}
 				else { // error
+					string argv_ss;
+					copy_argv_as_utf8( argv_ss, argv, ii );
+
 					cerr << "Error: Multiple background filenames given: " << endl;
-					cerr << "   " << m_background_filename << " and " << argv[ii] << endl;
+					cerr << "   " << m_background_filename << " and " << argv_ss << endl;
 					cerr << "Exiting." << endl;
 					fail_b= true;
 					break;
 				}
 			}
 			else { // error
+				string argv_ss;
+				copy_argv_as_utf8( argv_ss, argv, ii );
+
 				cerr << "Error: expecting a PDF filename for background operation," << endl;
-				cerr << "   instead I got this keyword: " << argv[ii] << endl;
+				cerr << "   instead I got this keyword: " << argv_ss << endl;
 				cerr << "Exiting." << endl;
 				fail_b= true;
 				break;
@@ -1886,19 +2061,25 @@ TK_Session::TK_Session( int argc,
 		case stamp_filename_e : {
 			if( arg_keyword== none_k ) {
 				if( m_stamp_filename.empty() ) {
-					m_stamp_filename= argv[ii];
+					copy_argv_as_utf8( m_stamp_filename, argv, ii );
 				}
 				else { // error
+					string argv_ss;
+					copy_argv_as_utf8( argv_ss, argv, ii );
+
 					cerr << "Error: Multiple stamp filenames given: " << endl;
-					cerr << "   " << m_stamp_filename << " and " << argv[ii] << endl;
+					cerr << "   " << m_stamp_filename << " and " << argv_ss << endl;
 					cerr << "Exiting." << endl;
 					fail_b= true;
 					break;
 				}
 			}
 			else { // error
+				string argv_ss;
+				copy_argv_as_utf8( argv_ss, argv, ii );
+
 				cerr << "Error: expecting a PDF filename for stamp operation," << endl;
-				cerr << "   instead I got this keyword: " << argv[ii] << endl;
+				cerr << "   instead I got this keyword: " << argv_ss << endl;
 				cerr << "Exiting." << endl;
 				fail_b= true;
 				break;
@@ -2391,6 +2572,244 @@ TK_Session::create_output()
 			}
 			break;
 
+#ifdef BARCODE_BURST
+			case barcode_burst_k : { // burst input into pages based on presence of barcode
+
+				// we should have been given only a single, input file
+				if( 1< m_input_pdf.size() ) { // error
+					cerr << "Error: Only one input PDF file may be given for \"barcode_burst\" op." << endl;
+					cerr << "   No output created." << endl;
+					break;
+				}
+
+				// grab the first reader, since there's only one
+				itext::PdfReader* input_reader_p= 
+					m_input_pdf.begin()->m_readers.front().second;
+				jint input_num_pages= 
+					m_input_pdf.begin()->m_num_pages;
+
+				if( m_output_filename== "PROMPT" ) {
+					prompt_for_filename( "Please enter a filename pattern for the PDF pages (e.g. pg_%04d.pdf):",
+															 m_output_filename );
+				}
+				if( m_output_filename.empty() ) {
+					m_output_filename= "sec_%04d.pdf";
+				}
+
+				// read page image stream lengths; if not present, read page contents stream length
+				vector< int > stream_lengths;
+				int stream_length_min= 0;
+				int stream_length_mid= 0;
+				int stream_length_max= 0;
+				//
+				jint ii= 0;
+				for( ; ii< input_num_pages; ++ii ) {
+					int stream_length= -1; // set upon succes
+					// cerr << "Page: " << (int)ii << endl; // debug
+
+					itext::PdfDictionary* page_p= input_reader_p->getPageN( ii+ 1 );
+					if( page_p && page_p->isDictionary() ) {
+
+						// look for single page resource stream length
+						// Page > Resources > XObject > ? > Length
+						itext::PdfDictionary* page_res_p= (itext::PdfDictionary*)
+							input_reader_p->getPdfObject( page_p->get( itext::PdfName::RESOURCES ) );
+						if( page_res_p && page_res_p->isDictionary() ) {
+							itext::PdfDictionary* res_xobj_p= (itext::PdfDictionary*)
+								input_reader_p->getPdfObject( page_res_p->get( itext::PdfName::XOBJECT ) );
+							if( res_xobj_p && res_xobj_p->isDictionary() ) {
+								// there should be only one resource
+								java::Set* xobj_keys_p= res_xobj_p->getKeys();
+								if( xobj_keys_p->size()== 1 ) {
+									itext::PdfName* image_key_p= (itext::PdfName*)
+										input_reader_p->getPdfObject( (itext::PdfObject*)(xobj_keys_p->iterator()->next()) );
+									if( image_key_p && image_key_p->isName() ) {
+										itext::PdfStream* image_p= (itext::PdfStream*)
+											input_reader_p->getPdfObject( res_xobj_p->get( image_key_p ) );
+										if( image_p && image_p->isStream() ) {
+											itext::PdfNumber* image_len_p= (itext::PdfNumber*)
+												input_reader_p->getPdfObject( image_p->get( itext::PdfName::LENGTH ) );
+											if( image_len_p && image_len_p->isNumber() ) {
+												// success
+												stream_length= (int)image_len_p->intValue();
+												// cerr << "Found Length using Image: " << stream_length << endl; // debug
+											}/*
+											else { // error
+												cerr << "Error: barcode_burst - didn't find image length" << endl;
+												break;
+											}
+										*/}/*
+										else { // error
+											cerr << "Error: barcode_burst - didn't find image" << endl;
+											break;
+										}
+									*/}/*
+									else { // error
+										cerr << "Error: barcode_burst - didn't find xobj key name" << endl;
+										break;
+									}
+								*/}/*
+								else { // error
+									cerr << "Error: barcode_burst - not one xobj resource" << endl;
+									break;
+								}
+							*/}/*
+							else { // error
+								cerr << "Error: barcode_burst - didn't find xobject resources" << endl;
+								break;
+							}
+						*/}/*
+						else { // error
+							cerr << "Error: barcode_burst - didn't find page resources" << endl;
+							break;
+						}*/
+						
+						if( stream_length== -1 ) {
+							// look for page stream length
+							// Page > Contents > Length
+							itext::PdfStream* page_cont_p= (itext::PdfStream*)
+								input_reader_p->getPdfObject( page_p->get( itext::PdfName::CONTENTS ) );
+							if( page_cont_p && page_cont_p->isStream() ) {
+								itext::PdfNumber* cont_len_p= (itext::PdfNumber*)
+									input_reader_p->getPdfObject( page_cont_p->get( itext::PdfName::LENGTH ) );
+								if( cont_len_p && cont_len_p->isNumber() ) {
+									// success
+									stream_length= (int)cont_len_p->intValue();
+									// cerr << "Found Length using Page Content: " << stream_length << endl; // debug
+								}
+							}
+						}
+
+					}
+					else { // error
+						cerr << "Error: barcode_burst - didn't find page." << endl;
+						break;
+					}
+
+					if( stream_length!= -1 ) {
+						// store length for this page
+						stream_lengths.push_back( stream_length );
+												
+						// tally max and min length
+						if( stream_length_min== 0 && stream_length_max== 0 ) {
+							stream_length_min= stream_length;
+							stream_length_max= stream_length;
+						}
+						else {
+							// use the first page as the model barcode (stream_length_min)
+							//stream_length_min= (stream_length< stream_length_min) ? stream_length : stream_length_min;
+							stream_length_max= (stream_length_max< stream_length) ? stream_length : stream_length_max;
+						}
+					}
+					else { // error
+						cerr << "Error: barcode_burst - didn't find page image/content." << endl;
+						break;
+					}
+
+				}
+				if( ii< input_num_pages ) { // report error
+					cerr << "Error: Unable to find document information needed for" << endl;
+					cerr << "    the barcode_burst.  Maybe the input PDF isn't from a scan?" << endl;
+					ret_val= 1;
+					break;
+				}
+				//stream_length_mid= (int)((stream_length_max- stream_length_min)/2)+ stream_length_min;
+				stream_length_mid= (int)(stream_length_min* 1.15);
+				// report; debug
+				//cerr << "stream_length_min: " << stream_length_min << endl;
+				//cerr << "stream_length_mid: " << stream_length_mid << endl;
+				//cerr << "stream_length_max: " << stream_length_max << endl;
+
+				// locate the input PDF Info dictionary that holds metadata
+				itext::PdfDictionary* input_info_p= 0; {
+					itext::PdfDictionary* input_trailer_p= input_reader_p->getTrailer();
+					if( input_trailer_p && input_trailer_p->isDictionary() ) {
+						input_info_p= (itext::PdfDictionary*)
+							input_reader_p->getPdfObject( input_trailer_p->get( itext::PdfName::INFO ) );
+						if( input_info_p && input_info_p->isDictionary() ) {
+							// success
+						}
+						else {
+							input_info_p= 0;
+						}
+					}
+				}
+
+				int jj= 0; // section number
+				for( jint ii= 0; ii< input_num_pages; ++jj ) { // increment section number
+					jint num_sec_pages= 0;
+
+					// the filename
+					char buff[4096]= "";
+					sprintf( buff, m_output_filename.c_str(), jj+ 1 );
+
+					java::String* jv_output_filename_p= JvNewStringUTF( buff );
+
+					itext::Document* output_doc_p= new itext::Document();
+					java::FileOutputStream* ofs_p= new java::FileOutputStream( jv_output_filename_p );
+					itext::PdfCopy* writer_p= new itext::PdfCopy( output_doc_p, ofs_p );
+
+					output_doc_p->addCreator( jv_creator_p );
+
+					// un/compress output streams?
+					if( m_output_uncompress_b ) {
+						writer_p->filterStreams= true;
+						writer_p->compressStreams= false;
+					}
+					else if( m_output_compress_b ) {
+						writer_p->filterStreams= false;
+						writer_p->compressStreams= true;
+					}
+
+					// encrypt output?
+					if( m_output_encryption_strength!= none_enc ||
+							!m_output_owner_pw.empty() || 
+							!m_output_user_pw.empty() )
+						{
+							// if no stregth is given, default to 128 bit,
+							// (which is incompatible w/ Acrobat 4)
+							bool bit128_b=
+								( m_output_encryption_strength!= bits40_enc );
+
+							writer_p->setEncryption( output_user_pw_p,
+																			 output_owner_pw_p,
+																			 m_output_user_perms,
+																			 bit128_b );
+						}
+
+					{ // copy the Info dictionary metadata
+						if( input_info_p ) {
+							itext::PdfDictionary* writer_info_p= writer_p->getInfo();
+							itext::PdfDictionary* info_copy_p= writer_p->copyDictionary( input_info_p );
+							if( writer_info_p && info_copy_p ) {
+								writer_info_p->putAll( info_copy_p );
+							}
+						}
+						jbyteArray input_reader_xmp_p= input_reader_p->getMetadata();
+						if( input_reader_xmp_p ) {
+							writer_p->setXmpMetadata( input_reader_xmp_p );
+						}
+					}
+
+					output_doc_p->open();
+
+					while( num_sec_pages== 0 || 
+								 ( ii< input_num_pages && stream_length_mid< stream_lengths[ii] ) )
+						{
+							itext::PdfImportedPage* page_p= 
+								writer_p->getImportedPage( input_reader_p, ii+ 1 ); // one-based
+							writer_p->addPage( page_p );
+							++ii; ++num_sec_pages;
+						}
+
+					output_doc_p->close();
+					writer_p->close();
+				}
+
+			}
+			break;
+#endif // BARCODE_BURST
+
 			case filter_k: { // apply operations to given PDF file
 
 				// we should have been given only a single, input file
@@ -2739,6 +3158,7 @@ TK_Session::create_output()
 				}
 
 				// done; write output
+				input_reader_p->removeUnusedObjects();
 				writer_p->close();
 			}
 			break;
@@ -2959,7 +3379,7 @@ static void
 describe_header() {
 	cout << endl;
 	cout << "pdftk " << PDFTK_VER << " a Handy Tool for Manipulating PDF Documents" << endl;
-	cout << "Copyright (C) 2003-10, Sid Steward - Please Visit: www.pdftk.com" << endl;
+	cout << "Copyright (C) 2003-12, Sid Steward - Please Visit: www.pdftk.com" << endl;
 	cout << "This is free software; see the source code for copying conditions. There is" << endl;
 	cout << "NO warranty, not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE." << endl;
 }
@@ -3015,8 +3435,8 @@ describe_full() {
        * Fill PDF Forms with X/FDF Data and/or Flatten Forms\n\
        * Generate FDF Data Stencils from PDF Forms\n\
        * Apply a Background Watermark or a Foreground Stamp\n\
-       * Report PDF Metrics such as Metadata and Bookmarks\n\
-       * Update PDF Metadata\n\
+       * Report PDF Metrics, Bookmarks and Metadata\n\
+       * Add/Update PDF Bookmarks or Metadata\n\
        * Attach Files to PDF Pages or the PDF Document\n\
        * Unpack PDF Attachments\n\
        * Burst a PDF Document into Single Pages\n\
@@ -3027,21 +3447,21 @@ OPTIONS\n\
        A summary of options is included below.\n\
 \n\
        --help, -h\n\
-	      Show summary of options.\n\
+	      Show this summary of options.\n\
 \n\
        <input PDF files | - | PROMPT>\n\
 	      A list of the input PDF files. If you plan to combine these PDFs\n\
 	      (without using handles) then list files in the order you want\n\
 	      them combined.  Use - to pass a single PDF into pdftk via stdin.\n\
-	      Input files can be associated with handles, where a handle is a\n\
-	      single, upper-case letter:\n\
+	      Input files can be associated with handles, where a handle is\n\
+	      one or more upper-case letters:\n\
 \n\
 	      <input PDF handle>=<input PDF filename>\n\
 \n\
 	      Handles are often omitted.  They are useful when specifying PDF\n\
 	      passwords or page ranges, later.\n\
 \n\
-	      For example: A=input1.pdf B=input2.pdf\n\
+	      For example: A=input1.pdf QT=input2.pdf M=input3.pdf\n\
 \n\
        [input_pw <input PDF owner passwords | PROMPT>]\n\
 	      Input PDF owner passwords, if necessary, are associated with\n\
@@ -3061,11 +3481,6 @@ OPTIONS\n\
 	      word if the supplied password is incorrect or none was given.\n\
 \n\
        [<operation> <operation arguments>]\n\
-	      If this optional argument is omitted, then pdftk runs in 'fil-\n\
-	      ter' mode.  Filter mode takes only one PDF input and creates a\n\
-	      new PDF after applying all of the output options, like encryp-\n\
-	      tion and compression.\n\
-\n\
 	      Available operations are: cat, shuffle, burst, generate_fdf,\n\
 	      fill_form, background, multibackground, stamp, multistamp,\n\
 	      dump_data, dump_data_utf8, dump_data_fields,\n\
@@ -3073,18 +3488,24 @@ OPTIONS\n\
 	      attach_files, unpack_files. Some operations takes additional\n\
 	      arguments, described below.\n\
 \n\
+	      If this optional argument is omitted, then pdftk runs in 'fil-\n\
+	      ter' mode.  Filter mode takes only one PDF input and creates a\n\
+	      new PDF after applying all of the output options, like encryp-\n\
+	      tion and compression.\n\
+\n\
 	  cat [<page ranges>]\n\
-		 Catenates pages from input PDFs to create a new PDF.  Page\n\
-		 order in the new PDF is specified by the order of the given\n\
-		 page ranges.  Page ranges are described like this:\n\
+		 Assembles (catenates) pages from input PDFs to create a new\n\
+		 PDF.  Page order in the new PDF is specified by the order of\n\
+		 the given page ranges.  Page ranges are described like this:\n\
 \n\
 		 <input PDF handle>[<begin page number>[-<end page num-\n\
 		 ber>[<qualifier>]]][<page rotation>]\n\
 \n\
 		 Where the handle identifies one of the input PDF files, and\n\
 		 the beginning and ending page numbers are one-based refer-\n\
-		 ences to pages in the PDF file, and the qualifier can be even\n\
-		 or odd, and the page rotation can be N, S, E, W, L, R, or D.\n\
+		 ences to pages in the PDF file.  The qualifier can be even or\n\
+		 odd, and the page rotation can be north, south, east, west,\n\
+		 left, right, or down.\n\
 \n\
 		 If the handle is omitted from the page range, then the pages\n\
 		 are taken from the first input PDF.\n\
@@ -3097,9 +3518,9 @@ OPTIONS\n\
 \n\
 		 The page rotation setting can cause pdftk to rotate pages and\n\
 		 documents.  Each option sets the page rotation as follows (in\n\
-		 degrees): N: 0, E: 90, S: 180, W: 270, L: -90, R: +90, D:\n\
-		 +180. L, R, and D make relative adjustments to a page's rota-\n\
-		 tion.\n\
+		 degrees): north: 0, east: 90, south: 180, west: 270, left:\n\
+		 -90, right: +90, down: +180. left, right, and down make rela-\n\
+		 tive adjustments to a page's rotation.\n\
 \n\
 		 If no arguments are passed to cat, then pdftk combines all\n\
 		 input PDFs in the order they were given to create the output.\n\
@@ -3111,11 +3532,17 @@ OPTIONS\n\
 		 * Reference a single page by omitting the ending page number.\n\
 		 * The handle may be used alone to represent the entire PDF\n\
 		 document, e.g., B1-end is the same as B.\n\
+		 * You can reference page numbers in reverse order by prefix-\n\
+		 ing them with the letter r. For example, page r1 is the last\n\
+		 page of the document, r2 is the next-to-last page of the doc-\n\
+		 ument, and rend is the first page of the document. You can\n\
+		 use this prefix in ranges, too, for example r3-r1 is the last\n\
+		 three pages of a PDF.\n\
 \n\
-		 Page Range Examples w/o Handles:\n\
-		 1-endE - rotate entire document 90 degrees\n\
+		 Page Range Examples without Handles:\n\
+		 1-endeast - rotate entire document 90 degrees\n\
 		 5 11 20 - take single pages from input PDF\n\
-		 5-25oddW - take odd pages in range, rotate 90 degrees\n\
+		 5-25oddwest - take odd pages in range, rotate 90 degrees\n\
 		 6-1 - reverse pages in range from input PDF\n\
 \n\
 		 Page Range Examples Using Handles:\n\
@@ -3125,14 +3552,14 @@ OPTIONS\n\
 		 A72 - take a single page from in1.pdf\n\
 		 A1-21 Beven A72 - assemble pages from both in1.pdf and\n\
 		 in2.pdf\n\
-		 AW - rotate entire in1.pdf document 90 degrees\n\
+		 Awest - rotate entire in1.pdf document 90 degrees\n\
 		 B - use all of in2.pdf\n\
-		 A2-30evenL - take the even pages from the range, remove 90\n\
+		 A2-30evenleft - take the even pages from the range, remove 90\n\
 		 degrees from each page's rotation\n\
 		 A A - catenate in1.pdf with in1.pdf\n\
-		 AevenW AoddE - apply rotations to even pages, odd pages from\n\
-		 in1.pdf\n\
-		 AW BW BD - catenate rotated documents\n\
+		 Aevenwest Aoddeast - apply rotations to even pages, odd pages\n\
+		 from in1.pdf\n\
+		 Awest Bwest Bdown - catenate rotated documents\n\
 \n\
 	  shuffle [<page ranges>]\n\
 		 Collates pages from input PDFs to create a new PDF.  Works\n\
@@ -3252,12 +3679,12 @@ OPTIONS\n\
 		 as UTF-8.\n\
 \n\
 	  update_info <info data filename | - | PROMPT>\n\
-		 Changes the metadata stored in a single PDF's Info dictionary\n\
-		 to match the input data file. The input data file uses the\n\
-		 same syntax as the output from dump_data. Non-ASCII charac-\n\
-		 ters should be encoded as XML numerical entities. This does\n\
-		 not change the metadata stored in the PDF's XMP stream, if it\n\
-		 has one. For example:\n\
+		 Changes the bookmarks and metadata in a single PDF's Info\n\
+		 dictionary to match the input data file. The input data file\n\
+		 uses the same syntax as the output from dump_data. Non-ASCII\n\
+		 characters should be encoded as XML numerical entities. This\n\
+		 does not change the metadata stored in the PDF's XMP stream,\n\
+		 if it has one. For example:\n\
 \n\
 		 pdftk in.pdf update_info in.info output out.pdf\n\
 \n\
@@ -3416,7 +3843,7 @@ EXAMPLES\n\
 	 or (using wildcards):\n\
 	 pdftk *.pdf cat output combined.pdf\n\
 \n\
-       Remove 'page 13' from in1.pdf to create out1.pdf\n\
+       Remove page 13 from in1.pdf to create out1.pdf\n\
 	 pdftk in.pdf cat 1-12 14-end output out1.pdf\n\
 	 or:\n\
 	 pdftk A=in1.pdf cat A1-12 A14-end output out1.pdf\n\
@@ -3448,10 +3875,10 @@ EXAMPLES\n\
 	 pdftk in.pdf dump_data output report.txt\n\
 \n\
        Rotate the first PDF page to 90 degrees clockwise\n\
-	 pdftk in.pdf cat 1E 2-end output out.pdf\n\
+	 pdftk in.pdf cat 1east 2-end output out.pdf\n\
 \n\
        Rotate an entire PDF document to 180 degrees\n\
-	 pdftk in.pdf cat 1-endS output out.pdf\n\
+	 pdftk in.pdf cat 1-endsouth output out.pdf\n\
 \n\
 NOTES\n\
        The pdftk home page permalink is:\n\
@@ -3462,5 +3889,4 @@ AUTHOR\n\
        Sid Steward (sid.steward at pdflabs dot com) maintains pdftk.  Please\n\
        email him with questions or bug reports.  Include pdftk in the subject\n\
        line to ensure successful delivery.  Thank you.\n";
-
 }

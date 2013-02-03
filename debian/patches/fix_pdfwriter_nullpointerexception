@@ -7,7 +7,7 @@ Origin: https://github.com/robinhouston/pdftk/commit/43f936c6244b7a06bb99913fc97
 
 --- a/java/com/lowagie/text/pdf/PdfWriter.java
 +++ b/java/com/lowagie/text/pdf/PdfWriter.java
-@@ -555,7 +555,7 @@
+@@ -571,7 +571,7 @@
           */
          public void toPdf(PdfWriter writer, OutputStream os) throws IOException {
              os.write(getISOBytes("trailer\n")); // ssteward: 1.44 - preserve newline after trailer

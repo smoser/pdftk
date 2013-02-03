@@ -1,7 +1,7 @@
 /* -*- Mode: C++; tab-width: 2; c-basic-offset: 2 -*- */
 /*
 	pdftk, the PDF Toolkit
-	Copyright (c) 2003, 2004, 2010 Sid Steward
+	Copyright (c) 2003-2012 Sid Steward
 
 
 	This program is free software; you can redistribute it and/or modify
@@ -147,7 +147,16 @@ public:
 		// pdftk options
 		verbose_k,
 		dont_ask_k,
-		do_ask_k
+		do_ask_k,
+
+		// page rotation
+		rot_north_k,
+		rot_east_k,
+		rot_south_k,
+		rot_west_k,
+		rot_left_k,
+		rot_right_k,
+		rot_upside_down_k
   };
   static keyword is_keyword( char* ss, int* keyword_len_p );
 

@@ -1,7 +1,7 @@
 /* -*- Mode: C++; tab-width: 2; c-basic-offset: 2 -*- */
 /*
 	pdftk, the PDF Toolkit
-	Copyright (c) 2003, 2004, 2010 Sid Steward
+	Copyright (c) 2003-2012 Sid Steward
 
 
 	This program is free software; you can redistribute it and/or modify
@@ -61,6 +61,7 @@
 #include "com/lowagie/text/pdf/PdfNumber.h"
 #include "com/lowagie/text/pdf/PdfArray.h"
 #include "com/lowagie/text/pdf/PdfDictionary.h"
+#include "com/lowagie/text/pdf/PdfDestination.h"
 #include "com/lowagie/text/pdf/PdfOutline.h"
 #include "com/lowagie/text/pdf/PdfCopy.h"
 #include "com/lowagie/text/pdf/PdfReader.h"
@@ -92,6 +93,114 @@ namespace itext {
 
 #include "pdftk.h"
 #include "report.h"
+
+//////
+////
+// created for data import, maybe useful for export, too
+
+static const string pdftkEmptyString= "PdftkEmptyString";
+
+//
+class PdfInfo {
+public:
+	static const string m_prefix;
+	static const string m_begin_mark;
+	static const string m_key_label;
+	static const string m_value_label;
+
+	string m_key;
+	string m_value;
+
+	PdfInfo() : m_key(pdftkEmptyString), m_value(pdftkEmptyString) {}
+	bool valid() { return( m_key!= pdftkEmptyString && m_value!= pdftkEmptyString ); }
+};
+const string PdfInfo::m_prefix= "Info";
+const string PdfInfo::m_begin_mark= "InfoBegin";
+const string PdfInfo::m_key_label= "InfoKey:";
+const string PdfInfo::m_value_label= "InfoValue:";
+
+ostream& operator<<( ostream& ss, const PdfInfo& ii ) {
+	ss << PdfInfo::m_begin_mark << endl;
+	ss << PdfInfo::m_key_label << " " << ii.m_key << endl;
+	ss << PdfInfo::m_value_label << " " << ii.m_value << endl;
+	return ss;
+}
+
+//
+class PdfBookmark {
+public:
+	static const string m_prefix;
+	static const string m_begin_mark;
+	static const string m_title_label;
+	static const string m_level_label;
+	static const string m_page_number_label;
+
+	string m_title;
+	int m_level;
+	int m_page_num; // zero means no destination
+	
+	PdfBookmark() : m_title(pdftkEmptyString), m_level(-1), m_page_num(-1) {}
+
+	bool valid() { return( 0< m_level && 0<= m_page_num && m_title!= pdftkEmptyString ); }
+};
+const string PdfBookmark::m_prefix= "Bookmark";
+const string PdfBookmark::m_begin_mark= "BookmarkBegin";
+const string PdfBookmark::m_title_label= "BookmarkTitle:";
+const string PdfBookmark::m_level_label= "BookmarkLevel:";
+const string PdfBookmark::m_page_number_label= "BookmarkPageNumber:";
+
+ostream& operator<<( ostream& ss, const PdfBookmark& bb ) {
+	ss << PdfBookmark::m_begin_mark << endl;
+	ss << PdfBookmark::m_title_label << " " << bb.m_title << endl;
+	ss << PdfBookmark::m_level_label << " " << bb.m_level << endl;
+	ss << PdfBookmark::m_page_number_label << " " << bb.m_page_num << endl;
+	return ss;
+}
+
+//
+class PdfPageLabel {
+public:
+	static const string m_prefix;
+	static const string m_begin_mark;
+	// TODO
+};
+const string PdfPageLabel::m_prefix= "PageLabel";
+const string PdfPageLabel::m_begin_mark= "PageLabelBegin";
+
+////
+//
+class PdfData {
+public:
+	vector<PdfInfo> m_info;
+	vector<PdfBookmark> m_bookmarks;
+
+	int m_num_pages;
+
+	string m_id_0;
+	string m_id_1;
+
+	PdfData() : m_info(), m_bookmarks(), m_num_pages(-1), 
+							m_id_0( pdftkEmptyString ), m_id_1( pdftkEmptyString ) {}
+};
+
+ostream& operator<<( ostream& ss, const PdfData& dd ) {
+	for( vector<PdfInfo>::const_iterator vit= dd.m_info.begin(); vit!= dd.m_info.end(); ++vit ) {
+		ss << *vit;
+	}
+	ss << "PdfID0: " << dd.m_id_0 << endl;
+	ss << "PdfID1: " << dd.m_id_1 << endl;
+	ss << "NumberOfPages: " << dd.m_num_pages << endl;
+	for( vector<PdfBookmark>::const_iterator vit= dd.m_bookmarks.begin(); 
+			 vit!= dd.m_bookmarks.end(); ++vit )
+		{
+			ss << *vit;
+		}
+	return ss;
+}
+
+///////
+////
+//
 
 static void 
 OutputXmlString( ostream& ofs,
@@ -170,18 +279,6 @@ OutputPdfName( ostream& ofs,
 	}
 }
 
-static void
-OutputID( ostream& ofs,
-					java::lang::String* id_p )
-{
-	ofs << hex;
-	for( jint ii= 0; ii< id_p->length(); ++ii ) {
-		unsigned int jc= (unsigned int)id_p->charAt(ii);
-		ofs << jc;
-	}
-	ofs << dec;
-}
-
 static int
 GetPageNumber( itext::PdfDictionary* dict_p,
 							 itext::PdfReader* reader_p )
@@ -242,34 +339,34 @@ GetPageNumber( itext::PdfDictionary* dict_p,
 
 										}
 										else { // error
-											cerr << "Internal Error: invalid count in GetPageNumber" << endl;
+											cerr << "pdftk Error in GetPageNumber(): invalid count;" << endl;
 										}
 									}
 									else { // error
-										cerr << "Internal Error: unexpected kid type in GetPageNumber" << endl;
+										cerr << "pdftk Error in GetPageNumber(): unexpected kid type;" << endl;
 									}
 								}
 								else { // error
-									cerr << "Internal Error: invalid kid_type_p in GetPageNumber" << endl;
+									cerr << "pdftk Error in GetPageNumber(): invalid kid_type_p;" << endl;
 								}
 							}
 						}
 						else { // error
-							cerr << "Internal Error: invalid kid_p in GetPageNumber" << endl;
+							cerr << "pdftk Error in GetPageNumber(): invalid kid_p;" << endl;
 						}
 					} // done iterating over kids
 
 				}
 				else { // error
-					cerr << "Internal Error: invalid kids_p in GetPageNumber" << endl;
+					cerr << "pdftk Error in GetPageNumber(): invalid kids_p;" << endl;
 				}
 			}
 			else { // error
-				cerr << "Internal Error: invalid kids array GetPageNumber" << endl;
+				cerr << "pdftk Error in GetPageNumber(): invalid kids array;" << endl;
 			}
 		}
 		else { // error
-			cerr << "Internal Error: invalid parent in GetPageNumber" << endl;
+			cerr << "pdftk Error in GetPageNumber(): invalid parent;" << endl;
 		}
 	}
 	else {
@@ -278,7 +375,7 @@ GetPageNumber( itext::PdfDictionary* dict_p,
 	}
 
 	// error: should have recursed
-	cerr << "Internal Error: recursion case skipped in GetPageNumber" << endl;
+	cerr << "pdftk Error in GetPageNumber(): recursion case skipped;" << endl;
 
 	return 0;
 }
@@ -290,6 +387,9 @@ ReportOutlines( ostream& ofs,
 								itext::PdfReader* reader_p,
 								bool utf8_b )
 {
+	// mark beginning of record
+	ofs << "BookmarkBegin" << endl;
+
 	// the title; HTML-compatible
 	ofs << "BookmarkTitle: ";
 	itext::PdfString* title_p= (itext::PdfString*)
@@ -301,7 +401,7 @@ ReportOutlines( ostream& ofs,
 		ofs << endl;
 	}
 	else { // error
-		ofs << "[ERROR: TITLE NOT FOUND]" << endl;
+		ofs << "[PDFTK ERROR: TITLE NOT FOUND]" << endl;
 	}
 
 	// the level; 1-based to jive with HTML heading level concept
@@ -327,7 +427,6 @@ ReportOutlines( ostream& ofs,
 					reader_p->getPdfObject( outline_p->get( itext::PdfName::A ) );
 				if( action_p && action_p->isDictionary() ) {
 
-					// TODO: confirm action subtype of GoTo
 					itext::PdfName* s_p= (itext::PdfName*)
 						reader_p->getPdfObject( action_p->get( itext::PdfName::S ) );
 					if( s_p && s_p->isName() ) {
@@ -338,8 +437,7 @@ ReportOutlines( ostream& ofs,
 						}
 						else { // immediate action is not a link in this document;
 							// not an error
-
-							fail_b= true;
+							// fail_b= true;
 						}
 					}
 					else { // error
@@ -409,6 +507,7 @@ ReportOutlines( ostream& ofs,
 
 static void
 ReportInfo( ostream& ofs,
+						itext::PdfReader* reader_p,
 						itext::PdfDictionary* info_p,
 						bool utf8_b )
 {
@@ -421,31 +520,20 @@ ReportInfo( ostream& ofs,
 			itext::PdfName* key_p= (itext::PdfName*)it->next();
 			int key_len= JvGetArrayLength( key_p->getBytes() )- 1; // minus one for init. slash
 
-			itext::PdfObject* value_p= (itext::PdfObject*)info_p->get( key_p );
+			itext::PdfObject* value_p= (itext::PdfObject*)reader_p->getPdfObject( info_p->get( key_p ) );
 
 			// don't output empty keys or values
 			if( 0< key_len &&
 					value_p->isString() && 
-					0< ((itext::PdfString*)value_p)->toString()->length() ) 
+					0< ((itext::PdfString*)value_p)->toUnicodeString()->length() ) 
 				{ // ouput
-					/*
-					const int buff_size= 128;
-					char buff[buff_size];
-					memset( buff, 0, buff_size );
+					ofs << PdfInfo::m_begin_mark << endl;
 
-					// convert the PdfName into a c-string; omit initial slash
-					// TODO: invoke PdfName::decodeName()
-					strncpy( buff, 
-									 (char*)elements( key_p->getBytes() )+ 1,
-									 ( key_len< buff_size- 1 ) ? key_len : buff_size- 1 );
-
-					ofs << "InfoKey: " << buff << endl;
-					*/
-					ofs << "InfoKey: ";
+					ofs << PdfInfo::m_key_label << " ";
 					OutputPdfName( ofs, key_p );
 					ofs << endl;
 
-					ofs << "InfoValue: ";
+					ofs << PdfInfo::m_value_label << " ";
 					OutputPdfString( ofs, (itext::PdfString*)value_p, utf8_b );
 					ofs << endl;
 				}
@@ -485,6 +573,8 @@ ReportPageLabels( ostream& ofs,
 				if( index_p && index_p->isNumber() &&
 						label_p && label_p->isDictionary() )
 					{
+						ofs << PdfPageLabel::m_begin_mark << endl;
+
 						// PageLabelNewIndex
 						ofs << "PageLabelNewIndex: " << (long)(index_p->intValue())+ 1 << endl;
 						
@@ -534,7 +624,7 @@ ReportPageLabels( ostream& ofs,
 									ofs << "LowercaseLetters" << endl;
 								}
 								else { // error
-									ofs << "[ERROR]" << endl;
+									ofs << "[PDFTK ERROR]" << endl;
 								}
 							}
 							else { // default
@@ -544,12 +634,12 @@ ReportPageLabels( ostream& ofs,
 
 					}
 				else { // error
-					ofs << "[ERROR: INVALID label_p IN ReportPageLabelNode]" << endl;
+					ofs << "[PDFTK ERROR: INVALID label_p IN ReportPageLabelNode]" << endl;
 				}
 			}
 		}
 		else { // error
-			ofs << "[ERROR: INVALID labels_p IN ReportPageLabelNode]" << endl;
+			ofs << "[PDFTK ERROR: INVALID labels_p IN ReportPageLabelNode]" << endl;
 		}
 	}
 	else { // try recursing
@@ -569,16 +659,16 @@ ReportPageLabels( ostream& ofs,
 						ReportPageLabels( ofs, kid_p, reader_p, utf8_b );
 					}
 					else { // error
-						ofs << "[ERROR: INVALID kid_p]" << endl;
+						ofs << "[PDFTK ERROR: INVALID kid_p]" << endl;
 					}
 				}
 			}
 			else { // error
-				ofs << "[ERROR: INVALID kids_ar_p]" << endl;
+				ofs << "[PDFTK ERROR: INVALID kids_ar_p]" << endl;
 			}
 		}
 		else { // error; a number tree must have one or the other
-			ofs << "[ERROR: INVALID PAGE LABEL NUMBER TREE]" << endl;
+			ofs << "[PDFTK ERROR: INVALID PAGE LABEL NUMBER TREE]" << endl;
 		}
 	}
 }
@@ -691,8 +781,8 @@ ReportAcroFormFields( ostream& ofs,
 						else if( ft_p->equals( itext::PdfName::SIG ) ) { // signature
 							acc_state.m_ft= "Signature";
 						}
-						else { // error
-							cerr << "Internal Error: unexpected field type in ReportAcroFormFields()" << endl;
+						else { // warning
+							cerr << "pdftk Warning in ReportAcroFormFields(): unexpected field type;" << endl;
 						}
 					}
 				}
@@ -935,8 +1025,8 @@ ReportAcroFormFields( ostream& ofs,
 			}
 		}
 	}
-	else { // error
-		cerr << "Internal Error: unable to get ArrayList in ReportAcroFormFields()" << endl;
+	else { // warning
+		cerr << "pdftk Warning in ReportAcroFormFields(): unable to get ArrayList;" << endl;
 	}
 
 	return ret_val_b;
@@ -965,7 +1055,7 @@ ReportAcroFormFields( ostream& ofs,
 		}
 	}
 	else { // error
-		cerr << "Internal Error: unable to access PDF catalog from ReportAcroFormFields()" << endl;
+		cerr << "pdftk Error in ReportAcroFormFields(): unable to access PDF catalog;" << endl;
 	}
 }
 
@@ -983,7 +1073,7 @@ ReportOnPdf( ostream& ofs,
 					reader_p->getPdfObject( trailer_p->get( itext::PdfName::INFO ) );
 				if( info_p && info_p->isDictionary() ) {
 						
-					ReportInfo( ofs, info_p, utf8_b );
+					ReportInfo( ofs, reader_p, info_p, utf8_b );
 				}
 				else { // warning
 					cerr << "Warning: no info dictionary found" << endl;
@@ -1004,25 +1094,34 @@ ReportOnPdf( ostream& ofs,
 							itext::PdfString* id_ss_p= (itext::PdfString*)
 								reader_p->getPdfObject( (itext::PdfObject*)id_al_p->get(ii) );
 							if( id_ss_p && id_ss_p->isString() ) {
-									
-								OutputID( ofs, id_ss_p->toString() );
+								
+								jbyteArray bb= id_ss_p->getBytes();
+								if( bb && bb->length ) {
+									jbyte* bb_ss= elements( bb );
+
+									char buff[8]= "";
+									for( jint ii= 0; ii< bb->length; ++ii ) {
+										sprintf( buff, "%02x", (unsigned char)bb_ss[ii] );
+										ofs << buff;
+									}
+								}
 							}
 							else { // error
-								cerr << "Internal Error: invalid pdf id array string" << endl;
+								cerr << "pdftk Error in ReportOnPdf(): invalid pdf id array string;" << endl;
 							}
 
 							ofs << endl;
 						}
 					}
 					else { // error
-						cerr << "Internal Error: invalid ID ArrayList" << endl;
+						cerr << "pdftk Error in ReportOnPdf(): invalid ID ArrayList" << endl;
 					}
 				}
 			}
 
 		}
 		else { // error
-			cerr << "InternalError: invalid trailer" << endl;
+			cerr << "pdftk Error in ReportOnPdf(): invalid trailer;" << endl;
 		}
 	}
 
@@ -1042,11 +1141,11 @@ ReportOnPdf( ostream& ofs,
 					ofs << "NumberOfPages: " << (unsigned int)count_p->intValue() << endl;
 				}
 				else { // error
-					cerr << "Internal Error: invalid count_p in ReportOnPdf()" << endl;
+					cerr << "pdftk Error in ReportOnPdf(): invalid count_p;" << endl;
 				}
 			}
 			else { // error
-				cerr << "Internal Error: invalid pages_p in ReportOnPdf()" << endl;
+				cerr << "pdftk Error in ReportOnPdf(): invalid pages_p;" << endl;
 			}
 
 			// outlines; optional
@@ -1068,7 +1167,7 @@ ReportOnPdf( ostream& ofs,
 
 		}
 		else { // error
-			cerr << "InternalError:" << endl;
+			cerr << "pdftk Error in ReportOnPdf(): couldn't find catalog;" << endl;
 		}
 	}
 
@@ -1084,62 +1183,208 @@ ReportOnPdf( ostream& ofs,
 			}
 		}
 		else { // error
-			cerr << "InternalError:" << endl;
+			cerr << "pdftk Error in ReportOnPdf(): couldn't find catalog (2);" << endl;
 		}
 	}
 
 } // end: ReportOnPdf
 
 //////
-////  writing data to PDF
+////  import data to PDF
 // 
 
-static bool
-LoadInfoFile( istream& ifs,
-							map< string, string >* info_map_p )
+static const char empty_string[]= ""; // TODO: maybe this should be pdftkEmptyString?
+static const char*
+BufferString( const char* buff, int buff_ii= 0 ) 
 {
-  if( ifs ) {
-    string infokey, infovalue;
+	//while( buff[buff_ii] && isspace(buff[buff_ii]) ) { ++buff_ii; }
+	if( isspace( buff[buff_ii] ) ) // one or no spaces before data
+		++buff_ii;
+	return( buff[buff_ii] ? (buff+ buff_ii) : empty_string );
+}
+static int
+BufferInt( const char* buff, int buff_ii= 0 )
+{
+	int ret_val= 0;
+	//while( buff[buff_ii] && isspace(buff[buff_ii]) ) { ++buff_ii; }
+	if( isspace( buff[buff_ii] ) ) // one or no spaces before data
+		++buff_ii;
+	while( buff[buff_ii] ) {
+		ret_val*= 10;
+		ret_val+= (buff[buff_ii++]- '0');
+	}
+	return ret_val;
+}
+
+static bool
+LoadString( string& ss, const char* buff, const char* label ) {
+	int label_len= strlen( label );
+	if( strncmp( buff, label, label_len )== 0 ) {
+		if( ss== pdftkEmptyString ) {
+			ss= BufferString( buff, label_len );
+		}
+		else { // warning
+			cerr << "pdftk Warning: " << label << " (" << ss << ") not empty when reading new " << label << " (" << BufferString( buff, label_len ) << ") -- skipping newer item" << endl;
+		}
+		return true;
+	}
+	return false;
+}
+static bool
+LoadInt( int& ii, const char* buff, const char* label ) {
+	int label_len= strlen( label );
+	if( strncmp( buff, label, label_len )== 0 ) {
+		if( ii< 0 ) { // uninitialized ints are -1
+			ii= BufferInt( buff, label_len );
+		}
+		else { // warning
+			cerr << "pdftk Warning: " << label << " (" << ii << ") not empty when reading new " << label << " (" << BufferInt( buff, label_len ) << ") -- skipping newer item" << endl;
+		}
+		return true;
+	}
+	return false;
+}
+
+static int
+LoadDataFile( istream& ifs,
+							PdfData* pdf_data_p )
+{
+	if( ifs ) {
 		const int buff_size= 4096;
 		char buff[buff_size];
 
-    while( ifs ) {
+		char buff_prev[buff_size];
+		int buff_prev_len= 0;
+
+		PdfInfo info;
+		bool info_b= false;
+
+		PdfBookmark bookmark;
+		bool bookmark_b= false;
+
+		while( ifs ) {
 			ifs.getline( buff, buff_size );
-			int buff_i= 0;
-			if( strncmp( buff, "InfoKey:", 8 )== 0 ) {
-				buff_i= 8;
-				while( buff[buff_i] && isspace(buff[buff_i]) ) { ++buff_i; }
-				if( buff[buff_i] ) {
-					infokey= buff+ buff_i;
+
+			if( !ifs ||
+					strncmp( buff, PdfInfo::m_begin_mark.c_str(), PdfInfo::m_begin_mark.length() )== 0 ||
+					strncmp( buff, PdfBookmark::m_begin_mark.c_str(), PdfBookmark::m_begin_mark.length() )== 0 ||
+					strncmp( buff, PdfPageLabel::m_begin_mark.c_str(), PdfPageLabel::m_begin_mark.length() )== 0 ||
+					buff_prev_len && strncmp( buff, buff_prev, buff_prev_len )!= 0 )
+			{ // start of a new record or end of file
+				// pack data and reset
+
+				if( info_b ) {
+					if( info.valid() ) {
+						pdf_data_p->m_info.push_back( info );
+					}
+					else { // warning
+						cerr << "pdftk Warning: data info record not valid -- skipped; data:" << endl;
+						cerr << info;
+					}
+				}
+				else if( bookmark_b ) {
+					if( bookmark.valid() ) {
+						pdf_data_p->m_bookmarks.push_back( bookmark );
+					}
+					else { // warning
+						cerr << "pdftk Warning: data bookmark record not valid -- skipped; data:" << endl;
+						cerr << bookmark;
+					}
+				}
+
+				// reset
+				buff_prev[0]= 0;
+				buff_prev_len= 0;
+				//
+				info= PdfInfo();
+				info_b= false;
+				//
+				bookmark= PdfBookmark();
+				bookmark_b= false;
+			}
+
+			// whitespace or comment; skip
+			if( buff[0]== 0 || buff[0]== '#' ) {
+				continue;
+			}
+
+			// info record
+			else if( strncmp( buff, PdfInfo::m_prefix.c_str(), PdfInfo::m_prefix.length() )== 0 ) {
+				buff_prev_len= PdfInfo::m_prefix.length();
+				info_b= true;
+
+				if( strncmp( buff, PdfInfo::m_begin_mark.c_str(), PdfInfo::m_begin_mark.length() )== 0 ||
+						LoadString( info.m_key, buff, PdfInfo::m_key_label.c_str() ) ||
+						LoadString( info.m_value, buff, PdfInfo::m_value_label.c_str() ) )
+					{
+						// success
+					}
+				else { // warning
+					cerr << "pdftk Warning: unexpected Info case in LoadDataFile(); continuing" << endl;
 				}
 			}
-			else if( strncmp( buff, "InfoValue:", 10 )== 0 ) {
-				buff_i= 10;
-				while( buff[buff_i] && isspace(buff[buff_i]) ) { ++buff_i; }
-				if( buff[buff_i] ) {
-					infovalue= buff+ buff_i;
-				}
-				// empty infovalue OK
 
-				if( !infokey.empty() ) {
-					(*info_map_p)[infokey]= infovalue;
+			// bookmark record
+			else if( strncmp( buff, PdfBookmark::m_prefix.c_str(), PdfBookmark::m_prefix.length() )== 0 ) {
+				buff_prev_len= PdfBookmark::m_prefix.length();
+				bookmark_b= true;
 
-					infokey.erase();
-					infovalue.erase();
+				if( strncmp( buff, PdfBookmark::m_begin_mark.c_str(), PdfBookmark::m_begin_mark.length() )== 0 ||
+						LoadString( bookmark.m_title, buff, PdfBookmark::m_title_label.c_str() ) ||
+						LoadInt( bookmark.m_level, buff, PdfBookmark::m_level_label.c_str() ) ||
+						LoadInt( bookmark.m_page_num, buff, PdfBookmark::m_page_number_label.c_str() ) )
+					{
+						// success
+					}
+				else { // warning
+					cerr << "pdftk Warning: unexpected Bookmark case in LoadDataFile(); continuing" << endl;
 				}
 			}
-			else {
-        infokey.erase();
-        infovalue.erase();
-			}
-    }
-  }
-  else { // error
-    cerr << "Error: Unable to read Info data" << endl;
-    return false;
-  }
 
-  return true;
+			// page label record
+			else if( strncmp( buff, PdfPageLabel::m_prefix.c_str(), PdfPageLabel::m_prefix.length() )== 0 ) {
+				buff_prev_len= 0;
+				// TODO
+			}
+
+			// pdf id
+			else if( strncmp( buff, "PdfID", 5 )== 0 ) {
+				buff_prev_len= 0; // not a record
+
+				if( LoadString( pdf_data_p->m_id_0, buff, "PdfID0:" ) ||
+						LoadString( pdf_data_p->m_id_1, buff, "PdfID1:" ) )
+					{
+						// success
+					}
+				else { // warning
+					cerr << "pdftk Warning: unexpected PdfID case in LoadDataFile(); continuing" << endl;
+				}
+			}
+
+			// number of pages
+			else if( LoadInt( pdf_data_p->m_num_pages, buff, "NumberOfPages:" ) ) {
+				buff_prev_len= 0; // not a record
+			}
+
+			else { // warning
+				cerr << "pdftk Warning: unexpected case 1 in LoadDataFile(); continuing" << endl;
+			}
+			
+			if( buff_prev_len )
+				strncpy( buff_prev, buff, buff_prev_len );
+			else
+				buff_prev[0]= 0;
+		}
+
+		if( buff_prev_len!= 0 ) { // warning; some incomplete record hasn't been packed
+			cerr << "pdftk Warning in LoadDataFile(): incomplete record;" << endl;
+		}
+	}
+	else { // error
+		cerr << "pdftk Error in LoadDataFile(): invalid istream;" << endl;
+	}
+
+	return 0; // success
 }
 
 void
@@ -1228,6 +1473,153 @@ XmlStringToJcharArray( jchar* jvs,
 	*jvs_len_p= jvs_i;
 }
 
+int
+RemoveBookmarks( itext::PdfReader* reader_p,
+								 itext::PdfDictionary* bookmark_p )
+// call reader_p->removeUnusedObjects() afterward
+{
+	int ret_val= 0;
+
+	if( bookmark_p->contains( itext::PdfName::FIRST ) ) { // recurse
+		itext::PdfDictionary* first_p= (itext::PdfDictionary*)
+			reader_p->getPdfObject( bookmark_p->get( itext::PdfName::FIRST ) );
+		RemoveBookmarks( reader_p, first_p );
+
+		bookmark_p->remove( itext::PdfName::FIRST );
+	}
+
+	if( bookmark_p->contains( itext::PdfName::NEXT ) ) { // recurse
+		itext::PdfDictionary* next_p= (itext::PdfDictionary*)
+			reader_p->getPdfObject( bookmark_p->get( itext::PdfName::NEXT ) );
+		RemoveBookmarks( reader_p, next_p );
+
+		bookmark_p->remove( itext::PdfName::NEXT );
+	}
+
+	bookmark_p->remove( itext::PdfName::PARENT );
+	bookmark_p->remove( itext::PdfName::PREV );
+	bookmark_p->remove( itext::PdfName::LAST );
+
+	return ret_val;
+}
+
+
+int
+BuildBookmarks( itext::PdfReader* reader_p,
+								vector<PdfBookmark>::const_iterator& it,
+								vector<PdfBookmark>::const_iterator it_end,
+								itext::PdfDictionary* parent_p,
+								itext::PRIndirectReference* parent_ref_p,
+								int parent_level,
+								int& num_bookmarks_total,
+								bool utf8_b )
+{
+	int ret_val= 0;
+
+	itext::PdfDictionary* bookmark_prev_p= 0;
+	itext::PRIndirectReference* bookmark_first_ref_p= 0;
+	itext::PRIndirectReference* bookmark_prev_ref_p= 0;
+	int num_bookmarks= 0;
+
+	if( parent_level+ 1< it->m_level ) { // first child jumping levels
+
+		////
+		// add missing level
+
+		++num_bookmarks; ++num_bookmarks_total;
+		itext::PdfDictionary* bookmark_p= new itext::PdfDictionary();
+		itext::PRIndirectReference* bookmark_ref_p= reader_p->getPRIndirectReference( bookmark_p );
+		bookmark_first_ref_p= bookmark_ref_p;
+
+		bookmark_p->put( itext::PdfName::PARENT, (itext::PdfObject*)parent_ref_p );
+
+		itext::PdfString* title_p= new itext::PdfString( JvNewStringUTF("") );
+		bookmark_p->put( itext::PdfName::TITLE, title_p );
+
+		bookmark_prev_p= bookmark_p;
+		bookmark_prev_ref_p= bookmark_ref_p;
+
+		// recurse in loop
+	}
+
+	for( ;it!= it_end; ++it ) {
+	
+		if( parent_level+ 1< it->m_level ) { // encountered child; recurse
+			ret_val= BuildBookmarks( reader_p,
+															 it,
+															 it_end,
+															 bookmark_prev_p, // parent
+															 bookmark_prev_ref_p,
+															 parent_level+ 1,
+															 num_bookmarks_total,
+															 utf8_b );
+			--it;
+			continue;
+		}
+		else if( it->m_level< parent_level+ 1 ) {
+			break; // no more children; add children to parent and return
+		}
+
+		////
+		// create child
+
+		++num_bookmarks; ++num_bookmarks_total;
+		itext::PdfDictionary* bookmark_p= new itext::PdfDictionary();
+		itext::PRIndirectReference* bookmark_ref_p= reader_p->getPRIndirectReference( bookmark_p );
+		if( !bookmark_first_ref_p )
+			bookmark_first_ref_p= bookmark_ref_p;
+
+		bookmark_p->put( itext::PdfName::PARENT, (itext::PdfObject*)parent_ref_p );
+
+		if( bookmark_prev_ref_p ) {
+			bookmark_p->put( itext::PdfName::PREV, (itext::PdfObject*)bookmark_prev_ref_p );
+			bookmark_prev_p->put( itext::PdfName::NEXT, (itext::PdfObject*)bookmark_ref_p );
+		}
+
+		if( utf8_b ) { // UTF-8 encoded input
+			bookmark_p->put( itext::PdfName::TITLE,
+											 new itext::PdfString( JvNewStringUTF(it->m_title.c_str()) /*,
+											 itext::PdfObject::TEXT_UNICODE*/ ) );
+		}
+		else { // XML entities input
+			const jsize jvs_size= 4096;
+			jchar jvs[jvs_size];
+			jsize jvs_len= 0;
+			XmlStringToJcharArray( jvs, jvs_size, &jvs_len, it->m_title );
+
+			bookmark_p->put( itext::PdfName::TITLE,
+											 new itext::PdfString( JvNewString(jvs, jvs_len) /*,
+											 itext::PdfObject::TEXT_UNICODE*/ ) );
+		}
+
+		if( 0< it->m_page_num ) { // destination
+			itext::PdfDestination* dest_p= new itext::PdfDestination(itext::PdfDestination::FIT);
+			itext::PRIndirectReference* page_ref_p= reader_p->getPageOrigRef( it->m_page_num );
+			if( page_ref_p ) {
+				dest_p->addPage( (itext::PdfIndirectReference*)page_ref_p );
+			}
+			bookmark_p->put( itext::PdfName::DEST, dest_p );
+		}
+
+		bookmark_prev_p= bookmark_p;
+		bookmark_prev_ref_p= bookmark_ref_p;
+	}
+
+	if( bookmark_first_ref_p && bookmark_prev_ref_p ) {
+		// pack these children into parent before returning
+		parent_p->put( itext::PdfName::FIRST, (itext::PdfObject*)bookmark_first_ref_p );
+		parent_p->put( itext::PdfName::LAST, (itext::PdfObject*)bookmark_prev_ref_p );
+		if( parent_level== 0 ) {
+			parent_p->put( itext::PdfName::COUNT, new itext::PdfNumber( (jint)num_bookmarks_total ) );
+		}
+		else {
+			parent_p->put( itext::PdfName::COUNT, new itext::PdfNumber( (jint)num_bookmarks ) );
+		}
+	}
+
+	return ret_val;
+}
+
 bool
 UpdateInfo( itext::PdfReader* reader_p,
 						istream& ifs,
@@ -1235,63 +1627,91 @@ UpdateInfo( itext::PdfReader* reader_p,
 {
 	bool ret_val_b= true;
 
-	map< string, string > info_map;
-	if( LoadInfoFile( ifs, &info_map ) ) 
+	PdfData pdf_data;
+	if( LoadDataFile( ifs, &pdf_data )== 0 ) {
+		
 		{ // trailer data
 			itext::PdfDictionary* trailer_p= reader_p->getTrailer();
 			if( trailer_p && trailer_p->isDictionary() ) {
-				
+
+				// bookmarks
+				if( !pdf_data.m_bookmarks.empty() ) {
+					
+					// build bookmarks
+					itext::PdfDictionary* outlines_p= new itext::PdfDictionary( itext::PdfName::OUTLINES );
+					itext::PRIndirectReference* outlines_ref_p= reader_p->getPRIndirectReference( outlines_p );
+					if( outlines_p ) {
+
+						vector<PdfBookmark>::const_iterator bit= pdf_data.m_bookmarks.begin();
+						int num_bookmarks_total= 0;
+						BuildBookmarks( reader_p,
+														bit,
+														pdf_data.m_bookmarks.end(),
+														outlines_p,
+														outlines_ref_p,
+														0,
+														num_bookmarks_total,
+														utf8_b );
+						
+						itext::PdfDictionary* root_p= (itext::PdfDictionary*)
+							reader_p->getPdfObject( trailer_p->get( itext::PdfName::ROOT ) );
+						if( root_p->contains( itext::PdfName::OUTLINES ) ) {
+							// erase old bookmarks
+							itext::PdfDictionary* old_outlines_p= (itext::PdfDictionary*)
+								reader_p->getPdfObject( root_p->get( itext::PdfName::OUTLINES ) );
+							RemoveBookmarks( reader_p, old_outlines_p );
+						}
+						// insert into document
+						root_p->put( itext::PdfName::OUTLINES, (itext::PdfObject*)outlines_ref_p );
+					}
+				}
+
 				// metadata
-				itext::PdfDictionary* info_p= (itext::PdfDictionary*)
-					reader_p->getPdfObject( trailer_p->get( itext::PdfName::INFO ) );
-				if( info_p && info_p->isDictionary() ) {
-	
-					for( map< string, string >::const_iterator it= info_map.begin();
-							 it!= info_map.end(); ++it )
-						{
-							if( it->second.empty() ) {
-								info_p->remove( new itext::PdfName( JvNewStringUTF(it->first.c_str()) ) );
+				if( !pdf_data.m_info.empty() ) {
+					itext::PdfDictionary* info_p= (itext::PdfDictionary*)
+						reader_p->getPdfObject( trailer_p->get( itext::PdfName::INFO ) );
+					if( info_p && info_p->isDictionary() ) {
+
+						for( vector<PdfInfo>::const_iterator it= pdf_data.m_info.begin(); it!= pdf_data.m_info.end(); ++it ) {
+							if( it->m_value.empty() ) {
+								info_p->remove( new itext::PdfName( JvNewStringUTF(it->m_key.c_str()) ) );
 							}
 							else {
-								const jsize jvs_size= 4096;
-								jchar jvs[jvs_size];
-								jsize jvs_len= 0;
-								XmlStringToJcharArray( jvs, jvs_size, &jvs_len, it->second );
 
-								if( utf8_b ) {
-									info_p->put( new itext::PdfName( JvNewStringUTF(it->first.c_str()) ),
+								if( utf8_b ) { // UTF-8 encoded input
+									info_p->put( new itext::PdfName( JvNewStringUTF(it->m_key.c_str()) ),
 															 // patch by Quentin Godfroy <godfroy@clipper.ens.fr>, Chris Adams <cadams@salk.edu>
-															 new itext::PdfString( JvNewStringUTF((char* )it->second.c_str()),
-																										 ( strcmp(it->first.c_str(), "ModDate") && 
-																											 strcmp(it->first.c_str(), "CreationDate") ) ?
-																										 itext::PdfObject::TEXT_UNICODE :
-																										 itext::PdfObject::TEXT_PDFDOCENCODING ) );
+															 new itext::PdfString( JvNewStringUTF((char* )it->m_value.c_str()) ) );
 								}
-								else {
-									info_p->put( new itext::PdfName( JvNewStringUTF(it->first.c_str()) ),
-															 new itext::PdfString( JvNewString(jvs, jvs_len),
-																										 ( strcmp(it->first.c_str(), "ModDate") && 
-																											 strcmp(it->first.c_str(), "CreationDate") ) ?
-																										 itext::PdfObject::TEXT_UNICODE :
-																										 itext::PdfObject::TEXT_PDFDOCENCODING ) );
+								else { // XML entities input
+									const jsize jvs_size= 4096;
+									jchar jvs[jvs_size];
+									jsize jvs_len= 0;
+									XmlStringToJcharArray( jvs, jvs_size, &jvs_len, it->m_value );
+									
+									info_p->put( new itext::PdfName( JvNewStringUTF(it->m_key.c_str()) ),
+															 new itext::PdfString( JvNewString(jvs, jvs_len) ) );
 								}
 							}
 						}
-				}
-				else { // error
-					cerr << "Internal Error: no Info dictionary found, so no Info added." << endl;
-					ret_val_b= false;
+					}
+					else { // error
+						cerr << "pdftk Error in UpdateInfo(): no Info dictionary found;" << endl;
+						ret_val_b= false;
+					}
 				}
 			}
 			else { // error
-				cerr << "Internal Error: no document trailer found, so no Info added." << endl;
+				cerr << "pdftk Error in UpdateInfo(): no document trailer found;" << endl;
 				ret_val_b= false;
 			}
 		}
-	else { // error
-		cerr << "Error: unable to load Info data" << endl;
-		ret_val_b= false;
+
 	}
+	else { // error
+		cerr << "pdftk Error in UpdateInfo(): LoadDataFile() failure;" << endl;
+	}
+	// cerr << pdf_data; // debug
 
 	return ret_val_b;
 }
@@ -1449,4 +1869,57 @@ UpdateXmp( itext::PdfReader* reader_p,
 	return ret_val_b;
 }
 
+*/
+
+// old; retire
+/*
+static bool
+LoadInfoFile( istream& ifs,
+							map< string, string >* info_map_p )
+{
+	bool ret_val_b= true;
+
+  if( ifs ) {
+    string infokey, infovalue;
+		const int buff_size= 4096;
+		char buff[buff_size];
+
+    while( ifs ) {
+			ifs.getline( buff, buff_size );
+			int buff_i= 0;
+			if( strncmp( buff, PdfInfo::m_key_label.c_str(), 8 )== 0 ) {
+				buff_i= 8;
+				while( buff[buff_i] && isspace(buff[buff_i]) ) { ++buff_i; }
+				if( buff[buff_i] ) {
+					infokey= buff+ buff_i;
+				}
+			}
+			else if( strncmp( buff, PdfInfo::m_value_label.c_str(), 10 )== 0 ) {
+				buff_i= 10;
+				while( buff[buff_i] && isspace(buff[buff_i]) ) { ++buff_i; }
+				if( buff[buff_i] ) {
+					infovalue= buff+ buff_i;
+				}
+				// empty infovalue OK
+
+				if( !infokey.empty() ) {
+					(*info_map_p)[infokey]= infovalue;
+
+					infokey.erase();
+					infovalue.erase();
+				}
+			}
+			else {
+        infokey.erase();
+        infovalue.erase();
+			}
+    }
+  }
+  else { // error
+    cerr << "pdftk Error in LoadInfoFile(): invalid istream;" << endl;
+		ret_val_b= false;
+  }
+
+  return ret_val_b;
+}
 */

@@ -1,6 +1,6 @@
 # -*- Mode: Makefile -*-
 # Makefile.Base
-# Copyright 2003, 2004, 2006, 2010 Sid Steward, Updated by Andre Gompel
+# Copyright 2003-2012 Sid Steward, Updated by Andre Gompel
 # This is part of pdftk
 #
 # Visit: www.pdftk.com for pdftk information and articles
@@ -27,7 +27,7 @@ endif
 # this must already be set according to your platform Makefile;
 # we're just appending to it, here
 #
-CPPFLAGS+= -DPDFTK_VER=\"1.44\"
+CPPFLAGS+= -DPDFTK_VER=\"1.45\"
 
 all : javalib pdftk
 

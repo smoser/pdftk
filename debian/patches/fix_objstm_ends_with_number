@@ -15,7 +15,7 @@ Bug-Debian: http://bugs.debian.org/687669
 
 --- a/java/com/lowagie/text/pdf/PRTokeniser.java
 +++ b/java/com/lowagie/text/pdf/PRTokeniser.java
-@@ -272,6 +272,12 @@
+@@ -288,6 +288,12 @@
                  }
              }
          }

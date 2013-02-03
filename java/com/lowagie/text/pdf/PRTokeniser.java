@@ -34,6 +34,22 @@
  * Boston, MA  02110-1301, USA.
  *
  *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Library General Public
+ * License as published by the Free Software Foundation; either
+ * version 2 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Library General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Library General Public
+ * License along with this library; if not, write to the
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA  02110-1301, USA.
+ *
+ *
  * If you didn't download this code from the following link, you should check if
  * you aren't using an obsolete version:
  * http://www.lowagie.com/iText/
@@ -486,56 +502,58 @@ public class PRTokeniser {
         boolean eol = false;
         int ptr = 0;
         int len = input.length;
-	// ssteward, pdftk-1.10, 040922: 
-	// skip initial whitespace; added this because PdfReader.rebuildXref()
-	// assumes that line provided by readLineSegment does not have init. whitespace;
-	if ( ptr < len ) {
-	    while ( isWhitespace( (c = read()) ) );
-	}
-	while ( !eol && ptr < len ) {
-	    switch (c) {
-                case -1:
-                case '\n':
-                    eol = true;
-                    break;
-                case '\r':
-                    eol = true;
-                    int cur = getFilePointer();
-                    if ((read()) != '\n') {
-                        seek(cur);
-                    }
-                    break;
-                default:
-                    input[ptr++] = (byte)c;
-                    break;
-            }
 
-	    // break loop? do it before we read() again
-	    if( eol || len <= ptr ) {
-		break;
-	    }
-	    else {
-		c = read();
-	    }
-        }
-        if (ptr >= len) {
-            eol = false;
-            while (!eol) {
-                switch (c = read()) {
-                    case -1:
-                    case '\n':
-                        eol = true;
-                        break;
-                    case '\r':
-                        eol = true;
-                        int cur = getFilePointer();
-                        if ((read()) != '\n') {
-                            seek(cur);
-                        }
-                        break;
-                }
-            }
-        }
+		// ssteward, pdftk-1.10, 040922: 
+		// skip initial whitespace; added this because PdfReader.rebuildXref()
+		// assumes that line provided by readLineSegment does not have init. whitespace;
+		if ( ptr < len ) {
+			while ( isWhitespace( (c = read()) ) );
+		}
+		while ( !eol && ptr < len ) {
+			switch (c) {
+			case -1:
+			case '\n':
+				eol = true;
+			break;
+			case '\r':
+				eol = true;
+				int cur = getFilePointer();
+				if ((read()) != '\n') {
+					seek(cur);
+				}
+				break;
+			default:
+				input[ptr++] = (byte)c;
+				break;
+			}
+
+			// break loop? do it before we read() again
+			if( eol || len <= ptr ) {
+				break;
+			}
+			else {
+				c = read();
+			}
+		}
+
+		if( len <= ptr  ) {
+			eol = false;
+			while (!eol) {
+				switch (c = read()) {
+				case -1:
+				case '\n':
+					eol = true;
+				break;
+				case '\r':
+					eol = true;
+					int cur = getFilePointer();
+					if ((read()) != '\n') {
+						seek(cur);
+					}
+					break;
+				}
+			}
+		}
         
         if ((c == -1) && (ptr == 0)) {
             return false;

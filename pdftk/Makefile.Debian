@@ -1,6 +1,6 @@
 # -*- Mode: Makefile -*-
 # Makefile.Debian
-# Copyright 2004, 2010 Sid Steward
+# Copyright (c) 2004-2012 Sid Steward
 # This is part of pdftk.
 #
 # Visit: www.pdftk.com for pdftk information and articles
@@ -29,7 +29,7 @@
 # tools
 # need direct path to libgcj for gcjh (starting in gcj 4.1.2 per Aurélien GÉRÔME)
 TOOLPATH=
-export VERSUFF=-4.4
+export VERSUFF=-4.6
 export CXX= $(TOOLPATH)g++$(VERSUFF)
 export GCJ= $(TOOLPATH)gcj$(VERSUFF)
 export GCJH= $(TOOLPATH)gcjh$(VERSUFF)
@@ -78,3 +78,6 @@ export GCJHFLAGS= -force
 export LDLIBS= -lgcj
 
 include Makefile.Base
+
+# required packages (xubuntu 12.04)
+# gcj-jdk, g++

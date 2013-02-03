@@ -3,45 +3,46 @@ Description: Support PROMPT for user_pw and owner_pw simultaneously
 Author: Johann Felix Soden <johfel@gmx.de>
 Bug-Debian: http://bugs.debian.org/614071
 
-
-
+diff --git a/pdftk/pdftk.cc b/pdftk/pdftk.cc
+index 1e5587f..4f70ffa 100755
 --- a/pdftk/pdftk.cc
 +++ b/pdftk/pdftk.cc
-@@ -1720,7 +1720,7 @@
+@@ -1876,7 +1876,7 @@ TK_Session::TK_Session( int argc,
  
- 		case output_owner_pw_e: {
- 			if( m_output_owner_pw.empty() ) {
--				if( m_output_user_pw!= argv[ii] ) {
-+				if( m_output_user_pw!= argv[ii] || strcmp(argv[ii], "PROMPT")== 0 ) {
- 					m_output_owner_pw= argv[ii];
+ 				string argv_ss;
+ 				copy_argv_as_utf8( argv_ss, argv, ii );
+-				if( argv_ss!= m_output_user_pw ) {
++				if( argv_ss!= m_output_user_pw || argv_ss=="PROMPT" ) {
+ 					m_output_owner_pw= argv_ss;
+ 
+ 				}
+@@ -1914,7 +1914,7 @@ TK_Session::TK_Session( int argc,
+ 				string argv_ss;
+ 				copy_argv_as_utf8( argv_ss, argv, ii );
+ 
+-				if( m_output_owner_pw!= argv_ss ) {
++				if( m_output_owner_pw!= argv_ss || argv_ss=="PROMPT" ) {
+ 					m_output_user_pw= argv_ss;
  				}
  				else { // error: identical user and owner password
-@@ -1751,7 +1751,7 @@
+@@ -2327,12 +2327,17 @@ TK_Session::create_output()
+ 		java::String* jv_creator_p= 
+ 			JvNewStringUTF( creator.c_str() );
  
- 		case output_user_pw_e: {
- 			if( m_output_user_pw.empty() ) {
--				if( m_output_owner_pw!= argv[ii] ) {
-+				if( m_output_owner_pw!= argv[ii] || strcmp( argv[ii], "PROMPT" )== 0 ) {
- 					m_output_user_pw= argv[ii];
- 				}
- 				else { // error: identical user and owner password
-@@ -2585,6 +2585,19 @@
- 				}
- 				*/
- 
-+		if( !m_output_user_pw.empty() && m_output_user_pw== m_output_owner_pw ) {
-+			// error: identical user and owner password
-+			// are interpreted by Acrobat (per the spec.) that
-+			// the doc has no owner password
-+			cerr << "Error: The user and owner passwords are the same." << endl;
-+			cerr << "   PDF Viewers interpret this to mean your PDF has" << endl;
-+			cerr << "   no owner password, so they must be different." << endl;
-+			cerr << "   Or, supply no owner password to pdftk if this is" << endl;
-+			cerr << "   what you desire." << endl;
-+			cerr << "Exiting." << endl;
-+			return false;
+-		if( m_output_owner_pw== "PROMPT" ) {
+-			prompt_for_password( "owner", "the output PDF", m_output_owner_pw );
+-		}
+ 		if( m_output_user_pw== "PROMPT" ) {
+ 			prompt_for_password( "user", "the output PDF", m_output_user_pw );
+ 		}
++		if( m_output_owner_pw== "PROMPT" ) {
++			prompt_for_password( "owner", "the output PDF", m_output_owner_pw );
++			if( m_output_user_pw == m_output_owner_pw ) {
++				cerr << "Warning: The user and owner passwords are the same." << endl;
++				cerr << "   PDF Viewers interpret this to mean your PDF has" << endl;
++				cerr << "   no owner password." << endl;
++			}
 +		}
-+
  
- 				// un/compress output streams?
- 				if( m_output_uncompress_b ) {
+ 		jbyteArray output_owner_pw_p= JvNewByteArray( m_output_owner_pw.size() ); {
+ 			jbyte* pw_p= elements(output_owner_pw_p);

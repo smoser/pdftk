@@ -2,6 +2,19 @@
 <body>
 <ul>
 
+<li><p>1.45 - December 6, 2012</p>
+<ul>
+<li><p>You can now add or change a PDF's bookmarks using <tt>update_info</tt>.</p></li>
+<li><p>Added record delimiters to <tt>dump_data</tt> output to help make parsing more reliable.</p></li>
+<li><p>The changes to <tt>dump_data</tt> output (described above) are also now required for the input to <tt>update_info</tt>.</p></li>
+<li><p>You can now use multi-character input handles. Prior versions were limited to a single character, imposing an arbitrary limitation on the number of input PDFs when using handles.  Handles still must be all upper-case ASCII.</p></li>
+<li><p>Added means of referring to PDF pages in reverse order. By prefixing a page number with an <tt>r</tt>, it counts from the end of the document. For example, <tt>r1</tt> is the last page, <tt>r2</tt> is the next-to-last page, etc.</p></li>
+<li><p>Changed the syntax for page rotation. Instead of <tt>N</tt>, <tt>S</tt>, <tt>E</tt>, <tt>W</tt>, <tt>L</tt>, <tt>R</tt> and <tt>D</tt>, now use: <tt>north</tt>, <tt>south</tt>, <tt>east</tt>, <tt>west</tt>, <tt>left</tt>, <tt>right</tt> and <tt>down</tt>.</p></li>
+<li><p>Fixed a problem reading input PDF filenames that have non-ASCII characters on Windows 7.</p></li>
+<li><p>Fixed a stream parsing issue with troublesome PDFs that don't strictly follow the PDF specification.</p></li>
+</ul>
+</li>
+
 <li><p>1.44 - October 28, 2010</p>
 <ul>
 <li><p>Added new feature for collating PDF page scans: <tt>shuffle</tt>.  Please see the man page for usage details.</p></li>

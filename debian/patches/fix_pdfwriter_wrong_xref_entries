@@ -8,7 +8,7 @@ Bug-Debian: http://bugs.debian.org/685983
 
 --- a/java/com/lowagie/text/pdf/PdfWriter.java
 +++ b/java/com/lowagie/text/pdf/PdfWriter.java
-@@ -309,7 +309,7 @@
+@@ -325,7 +325,7 @@
          
          int getIndirectReferenceNumber() {
              int n = refnum++;

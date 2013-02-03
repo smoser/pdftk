@@ -43,7 +43,17 @@
 # sid.steward (at) pdflabs (dot) com
 #
 
-for file in `ls */*/*.java */*/*/*.java */*/*/*/*.java */*/*/*/*/*.java`
+for file in `find . -name "*.java"`
+do
+echo $file
+sed -n -e '/ * The contents of this file are subject to the Mozilla Public License Version 1.1/,/limitations under the License.$/!p' $file | \
+sed -n -e '/ * Alternatively, the contents of this file may be used under the terms of the/,/ * details.$/!p' | \
+sed '/ * where applicable./r itext_lgpl_header.txt' > $file.foo
+mv $file.foo $file
+done
+
+# run again for special file
+for file in `find . -name "*.java.c"`
 do
 echo $file
 sed -n -e '/ * The contents of this file are subject to the Mozilla Public License Version 1.1/,/limitations under the License.$/!p' $file | \

@@ -34,6 +34,22 @@
  * Boston, MA  02110-1301, USA.
  *
  *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Library General Public
+ * License as published by the Free Software Foundation; either
+ * version 2 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Library General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Library General Public
+ * License along with this library; if not, write to the
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA  02110-1301, USA.
+ *
+ *
  * If you didn't download this code from the following link, you should check if
  * you aren't using an obsolete version:
  * http://www.lowagie.com/iText/
@@ -545,18 +561,15 @@ public class PdfReader {
         String s;
         PdfObject o;
         
+		// ssteward: updated to suit modified PdfString
         PdfArray documentIDs = (PdfArray)getPdfObject(trailer.get(PdfName.ID));
         byte documentID[] = null;
         if (documentIDs != null) {
             o = (PdfObject)documentIDs.getArrayList().get(0);
-            s = o.toString();
-            documentID = com.lowagie.text.DocWriter.getISOBytes(s);
+			documentID= o.getBytes(); // ssteward
         }
-        
-        s = enc.get(PdfName.U).toString();
-        byte uValue[] = com.lowagie.text.DocWriter.getISOBytes(s);
-        s = enc.get(PdfName.O).toString();
-        byte oValue[] = com.lowagie.text.DocWriter.getISOBytes(s);
+		byte uValue[]= enc.get(PdfName.U).getBytes(); // ssteward
+ 		byte oValue[]= enc.get(PdfName.O).getBytes(); // ssteward
         
         o = enc.get(PdfName.R);
         if (!o.isNumber()) throw new IOException("Illegal R value.");
@@ -981,6 +994,11 @@ public class PdfReader {
     private void checkPRStreamLength(PRStream stream) throws IOException {
         int fileLength = tokens.length();
         int start = stream.getOffset();
+
+		// debug -- is this working okay?
+		//System.out.println( "   stream start: "+ start );
+		//System.out.flush();
+
         boolean calc = false;
         int streamLength = 0;
         PdfObject obj = getPdfObjectRelease(stream.get(PdfName.LENGTH));
@@ -1000,6 +1018,7 @@ public class PdfReader {
         }
         else
             calc = true;
+
         if (calc) {
             byte tline[] = new byte[16];
             tokens.seek(start);
@@ -1423,16 +1442,30 @@ public class PdfReader {
 					// however, I have encountered a generated PDF (Microsoft Reporting Services 10.0.0.0)
 					// that added a space after "stream" but before the CR; so gobble up unexpected chars
 					// until we find a LF
+					// ssteward - 10/30/12
+					// I have been given a PDF with a stream with a CR but no LF -- I should have foreseen this case;
                     int ch = tokens.read();
-					/*
+					/* original code
                     if (ch != '\n')
                         ch = tokens.read();
                     if (ch != '\n')
                         tokens.backOnePosition(ch);
 					*/
-					// ssteward
-					while (ch != '\n')
-						ch = tokens.read();
+					// ssteward -- 6/21/10 fix
+					//while (ch != '\n')
+					//	ch = tokens.read();
+					// ssteward -- 10/31/12 fix
+					// eat whitespace until we hit a LF, which is supposed to mark the beginning of the stream;
+					// this logic should work even if there is no w/s padding around the stream data
+					while( PRTokeniser.isWhitespace( ch ) ) {
+						if( ch== '\n' )
+							break;
+						ch= tokens.read();
+					}
+					// PRStream(), below, seems to assume that our position is one before the data; testing for
+					// whitespace catches case where there is a CR no LF used to delim stream data
+					if( !PRTokeniser.isWhitespace( ch ) )
+						tokens.backOnePosition( ch );
 
                     PRStream stream = new PRStream(this, tokens.getFilePointer());
                     stream.putAll(dic);
@@ -1449,7 +1482,9 @@ public class PdfReader {
             case PRTokeniser.TK_NUMBER:
                 return new PdfNumber(tokens.getStringValue());
             case PRTokeniser.TK_STRING:
-                PdfString str = new PdfString(tokens.getStringValue(), null).setHexWriting(tokens.isHexString());
+				// ssteward: change from String to byte array input to PdfString()
+                //PdfString str = new PdfString(tokens.getStringValue(), null).setHexWriting(tokens.isHexString());
+                PdfString str = new PdfString( PdfEncodings.convertToBytes( tokens.getStringValue(), null) ).setHexWriting(tokens.isHexString());
                 str.setObjNum(objNum, objGen);
                 if (strings != null)
                     strings.add(str);

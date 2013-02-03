@@ -1,3 +1,23 @@
+    * 1.45 - December 6, 2012
+          o You can now add or change a PDF's bookmarks using update_info.
+          o Added record delimiters to dump_data output to help make parsing
+            more reliable.
+          o The changes to dump_data output (described above) are also now
+            required for the input to update_info.
+          o You can now use multi-character input handles. Prior versions were
+            limited to a single character, imposing an arbitrary limitation on
+            the number of input PDFs when using handles. Handles still must be
+            all upper-case ASCII.
+          o Added means of referring to PDF pages in reverse order. By
+            prefixing a page number with an r, it counts from the end of the
+            document. For example, r1 is the last page, r2 is the next-to-last
+            page, etc.
+          o Changed the syntax for page rotation. Instead of N, S, E, W, L, R
+            and D, now use: north, south, east, west, left, right and down.
+          o Fixed a problem reading input PDF filenames that have non-ASCII
+            characters on Windows 7.
+          o Fixed a stream parsing issue with troublesome PDFs that don't
+            strictly follow the PDF specification.
     * 1.44 - October 28, 2010
           o Added new feature for collating PDF page scans: shuffle. Please see
             the man page for usage details.

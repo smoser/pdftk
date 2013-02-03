@@ -7,12 +7,12 @@ Author: Johann Felix Soden <johfel@gmx.de>
  # tools
  # need direct path to libgcj for gcjh (starting in gcj 4.1.2 per Aurélien GÉRÔME)
  TOOLPATH=
--export VERSUFF=-4.4
+-export VERSUFF=-4.6
 +export VERSUFF=
  export CXX= $(TOOLPATH)g++$(VERSUFF)
  export GCJ= $(TOOLPATH)gcj$(VERSUFF)
  export GCJH= $(TOOLPATH)gcjh$(VERSUFF)
-@@ -71,10 +71,10 @@
+@@ -71,13 +71,13 @@
  # only effects libraries following option on the command line
  #
  #  
@@ -27,6 +27,11 @@ Author: Johann Felix Soden <johfel@gmx.de>
  export LDLIBS= -lgcj
  
  include Makefile.Base
+ 
+ # required packages (xubuntu 12.04)
+-# gcj-jdk, g++
+\ No newline at end of file
++# gcj-jdk, g++
 --- a/pdftk/Makefile.Base
 +++ b/pdftk/Makefile.Base
 @@ -44,7 +44,7 @@

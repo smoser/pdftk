@@ -33,6 +33,22 @@
  * Boston, MA  02110-1301, USA.
  *
  *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Library General Public
+ * License as published by the Free Software Foundation; either
+ * version 2 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Library General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Library General Public
+ * License along with this library; if not, write to the
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA  02110-1301, USA.
+ *
+ *
  * If you didn't download this code from the following link, you should check if
  * you aren't using an obsolete version:
  * http://www.lowagie.com/iText/
@@ -138,7 +154,7 @@ class PdfDocument extends Document implements DocListener {
          */
         
         void addTitle(String title) {
-            put(PdfName.TITLE, new PdfString(title, PdfObject.TEXT_UNICODE));
+            put(PdfName.TITLE, new PdfString(title/*ssteward , PdfObject.TEXT_UNICODE*/));
         }
         
         /**
@@ -148,7 +164,7 @@ class PdfDocument extends Document implements DocListener {
          */
         
         void addSubject(String subject) {
-            put(PdfName.SUBJECT, new PdfString(subject, PdfObject.TEXT_UNICODE));
+            put(PdfName.SUBJECT, new PdfString(subject/*ssteward, PdfObject.TEXT_UNICODE*/));
         }
         
         /**
@@ -158,7 +174,7 @@ class PdfDocument extends Document implements DocListener {
          */
         
         void addKeywords(String keywords) {
-            put(PdfName.KEYWORDS, new PdfString(keywords, PdfObject.TEXT_UNICODE));
+            put(PdfName.KEYWORDS, new PdfString(keywords/*ssteward, PdfObject.TEXT_UNICODE*/));
         }
         
         /**
@@ -168,7 +184,7 @@ class PdfDocument extends Document implements DocListener {
          */
         
         void addAuthor(String author) {
-            put(PdfName.AUTHOR, new PdfString(author, PdfObject.TEXT_UNICODE));
+            put(PdfName.AUTHOR, new PdfString(author/*ssteward, PdfObject.TEXT_UNICODE*/));
         }
         
         /**
@@ -178,7 +194,7 @@ class PdfDocument extends Document implements DocListener {
          */
         
         void addCreator(String creator) {
-            put(PdfName.CREATOR, new PdfString(creator, PdfObject.TEXT_UNICODE));
+            put(PdfName.CREATOR, new PdfString(creator/*, PdfObject.TEXT_UNICODE ssteward*/));
         }
         
         /**
@@ -204,7 +220,7 @@ class PdfDocument extends Document implements DocListener {
         void addkey(String key, String value) {
             if (key.equals("Producer") || key.equals("CreationDate"))
                 return;
-            put(new PdfName(key), new PdfString(value, PdfObject.TEXT_UNICODE));
+            put(new PdfName(key), new PdfString(value/*ssteward, PdfObject.TEXT_UNICODE*/));
         }
     }
     
