@@ -1876,7 +1876,7 @@ TK_Session::TK_Session( int argc,
 
 				string argv_ss;
 				copy_argv_as_utf8( argv_ss, argv, ii );
-				if( argv_ss!= m_output_user_pw ) {
+				if( argv_ss!= m_output_user_pw || argv_ss=="PROMPT" ) {
 					m_output_owner_pw= argv_ss;
 
 				}
@@ -1914,7 +1914,7 @@ TK_Session::TK_Session( int argc,
 				string argv_ss;
 				copy_argv_as_utf8( argv_ss, argv, ii );
 
-				if( m_output_owner_pw!= argv_ss ) {
+				if( m_output_owner_pw!= argv_ss || argv_ss=="PROMPT" ) {
 					m_output_user_pw= argv_ss;
 				}
 				else { // error: identical user and owner password
@@ -2327,11 +2327,16 @@ TK_Session::create_output()
 		java::String* jv_creator_p= 
 			JvNewStringUTF( creator.c_str() );
 
-		if( m_output_owner_pw== "PROMPT" ) {
-			prompt_for_password( "owner", "the output PDF", m_output_owner_pw );
-		}
 		if( m_output_user_pw== "PROMPT" ) {
 			prompt_for_password( "user", "the output PDF", m_output_user_pw );
+		}
+		if( m_output_owner_pw== "PROMPT" ) {
+			prompt_for_password( "owner", "the output PDF", m_output_owner_pw );
+			if( m_output_user_pw == m_output_owner_pw ) {
+				cerr << "Warning: The user and owner passwords are the same." << endl;
+				cerr << "   PDF Viewers interpret this to mean your PDF has" << endl;
+				cerr << "   no owner password." << endl;
+			}
 		}
 
 		jbyteArray output_owner_pw_p= JvNewByteArray( m_output_owner_pw.size() ); {
