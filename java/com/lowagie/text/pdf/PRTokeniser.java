@@ -288,6 +288,12 @@ public class PRTokeniser {
                 }
             }
         }
+        if (level > 0) {
+            type = TK_NUMBER;
+            file.seek(ptr);
+            stringValue = n1;
+            return;
+        }
         throwError("Unexpected end of file");
     }
     
