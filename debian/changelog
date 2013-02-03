@@ -1,3 +1,13 @@
+pdftk (1.45-1) experimental; urgency=low
+
+  * New upstream version. (Closes: #697642)
+  * Adapt patches to new upstream version and drop fix_infinite_loop_on_lf_eol
+    (solved differently by upstream).
+  * Use gcj/g++-4.7 instead of -4.6.
+  * Bump Standards-Version to 3.9.4 and add experimental branch to Vcs-Git.
+
+ -- Johann Felix Soden <johfel@debian.org>  Sun, 03 Feb 2013 19:26:02 +0100
+
 pdftk (1.44-7) unstable; urgency=low
 
   * Add patch to solve failures with particular PDF 1.5 documents generated

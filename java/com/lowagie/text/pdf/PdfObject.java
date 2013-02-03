@@ -33,6 +33,22 @@
  * Boston, MA  02110-1301, USA.
  *
  *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Library General Public
+ * License as published by the Free Software Foundation; either
+ * version 2 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Library General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Library General Public
+ * License along with this library; if not, write to the
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA  02110-1301, USA.
+ *
+ *
  * If you didn't download this code from the following link, you should check if
  * you aren't using an obsolete version:
  * http://www.lowagie.com/iText/
@@ -105,8 +121,9 @@ public abstract class PdfObject {
     public static final String TEXT_PDFDOCENCODING = "PDF";
     
 /** This is the encoding to be used to output text in Unicode. */
-    public static final String TEXT_UNICODE = "UnicodeBig";
-    
+    //public static final String TEXT_UNICODE = "UnicodeBig";
+    public static final String TEXT_UNICODE = "UTF-16"; // ssteward; uses byte order mark
+
     // membervariables
     
 /** the content of this <CODE>PdfObject</CODE> */
@@ -130,6 +147,7 @@ public abstract class PdfObject {
     
     protected PdfObject(int type) {
         this.type = type;
+	this.bytes = null;
     }
     
 /**

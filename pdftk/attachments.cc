@@ -402,6 +402,7 @@ unpack_file( itext::PdfReader* input_reader_p,
 						// patch tweaked by Sid Steward:
 						// toString() doesn't ensure conversion from internal encoding (e.g., Y+diaeresis)
 						jstring fn_str = fn_p->toUnicodeString();
+						//jstring fn_str= JvNewStringUTF( "hello" ); // debug
 						int fn_buff_len = JvGetStringUTFLength( fn_str );
 						char* fn_buff= (char*)malloc( fn_buff_len* sizeof(char) ); // fn_buff not a C string, not NULL terminated
 						JvGetStringUTFRegion( fn_str, 0, fn_str->length(), fn_buff );

@@ -1,5 +1,5 @@
-<!-- Creator     : groff version 1.20.1 -->
-<!-- CreationDate: Thu Oct 28 09:14:36 2010 -->
+<!-- Creator     : groff version 1.21 -->
+<!-- CreationDate: Thu Dec  6 11:36:20 2012 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -98,8 +98,8 @@ Documents or Collate PDF Page Scans <br>
 * Fill PDF Forms with X/FDF Data and/or Flatten Forms <br>
 * Generate FDF Data Stencils from PDF Forms <br>
 * Apply a Background Watermark or a Foreground Stamp <br>
-* Report PDF Metrics such as Metadata and Bookmarks <br>
-* Update PDF Metadata <br>
+* Report PDF Metrics, Bookmarks and Metadata <br>
+* Add/Update PDF Bookmarks or Metadata <br>
 * Attach Files to PDF Pages or the PDF Document <br>
 * Unpack PDF Attachments <br>
 * Burst a PDF Document into Single Pages <br>
@@ -115,7 +115,8 @@ Documents or Collate PDF Page Scans <br>
 options is included below. <b><br>
 &minus;&minus;help</b>, <b>&minus;h</b></p>
 
-<p style="margin-left:22%;">Show summary of options.</p>
+<p style="margin-left:22%;">Show this summary of
+options.</p>
 
 <p style="margin-left:11%;"><b>&lt;input PDF files | - |
 PROMPT&gt;</b></p>
@@ -124,8 +125,8 @@ PROMPT&gt;</b></p>
 If you plan to combine these PDFs (without using handles)
 then list files in the order you want them combined. Use
 <b>-</b> to pass a single PDF into pdftk via stdin. Input
-files can be associated with handles, where a handle is a
-single, upper-case letter:</p>
+files can be associated with handles, where a handle is one
+or more upper-case letters:</p>
 
 <p style="margin-left:22%; margin-top: 1em"><i>&lt;input
 PDF handle&gt;</i><b>=</b><i>&lt;input PDF
@@ -136,7 +137,7 @@ often omitted. They are useful when specifying PDF passwords
 or page ranges, later.</p>
 
 <p style="margin-left:22%; margin-top: 1em">For example:
-A=input1.pdf B=input2.pdf</p>
+A=input1.pdf QT=input2.pdf M=input3.pdf</p>
 
 <p style="margin-left:11%;"><b>[input_pw &lt;input PDF
 owner passwords | PROMPT&gt;]</b></p>
@@ -167,14 +168,8 @@ the supplied password is incorrect or none was given.</p>
 <p style="margin-left:11%;"><b>[&lt;operation&gt;
 &lt;operation arguments&gt;]</b></p>
 
-<p style="margin-left:22%;">If this optional argument is
-omitted, then pdftk runs in &rsquo;filter&rsquo; mode.
-Filter mode takes only one PDF input and creates a new PDF
-after applying all of the output options, like encryption
-and compression.</p>
-
-<p style="margin-left:22%; margin-top: 1em">Available
-operations are: <b>cat</b>, <b>shuffle</b>, <b>burst</b>,
+<p style="margin-left:22%;">Available operations are:
+<b>cat</b>, <b>shuffle</b>, <b>burst</b>,
 <b>generate_fdf</b>, <b>fill_form</b>, <b>background</b>,
 <b>multibackground</b>, <b>stamp</b>, <b>multistamp</b>,
 <b>dump_data</b>, <b>dump_data_utf8</b>,
@@ -183,13 +178,19 @@ operations are: <b>cat</b>, <b>shuffle</b>, <b>burst</b>,
 <b>attach_files</b>, <b>unpack_files</b>. Some operations
 takes additional arguments, described below.</p>
 
+<p style="margin-left:22%; margin-top: 1em">If this
+optional argument is omitted, then pdftk runs in
+&rsquo;filter&rsquo; mode. Filter mode takes only one PDF
+input and creates a new PDF after applying all of the output
+options, like encryption and compression.</p>
+
 <p style="margin-left:15%;"><b>cat [&lt;page
 ranges&gt;]</b></p>
 
-<p style="margin-left:26%;">Catenates pages from input PDFs
-to create a new PDF. Page order in the new PDF is specified
-by the order of the given page ranges. Page ranges are
-described like this:</p>
+<p style="margin-left:26%;">Assembles (catenates) pages
+from input PDFs to create a new PDF. Page order in the new
+PDF is specified by the order of the given page ranges. Page
+ranges are described like this:</p>
 
 <p style="margin-left:26%; margin-top: 1em"><i>&lt;input
 PDF handle&gt;</i>[<i>&lt;begin page
@@ -200,10 +201,10 @@ rotation&gt;</i>]</p>
 <p style="margin-left:26%; margin-top: 1em">Where the
 handle identifies one of the input PDF files, and the
 beginning and ending page numbers are one-based references
-to pages in the PDF file, and the qualifier can be
-<b>even</b> or <b>odd</b>, and the page rotation can be
-<b>N</b>, <b>S</b>, <b>E</b>, <b>W</b>, <b>L</b>, <b>R</b>,
-or <b>D</b>.</p>
+to pages in the PDF file. The qualifier can be <b>even</b>
+or <b>odd</b>, and the page rotation can be <b>north</b>,
+<b>south</b>, <b>east</b>, <b>west</b>, <b>left</b>,
+<b>right</b>, or <b>down</b>.</p>
 
 <p style="margin-left:26%; margin-top: 1em">If the handle
 is omitted from the page range, then the pages are taken
@@ -221,10 +222,11 @@ qualifier works similarly to the <b>even</b>.</p>
 <p style="margin-left:26%; margin-top: 1em">The page
 rotation setting can cause pdftk to rotate pages and
 documents. Each option sets the page rotation as follows (in
-degrees): <b>N</b>: 0, <b>E</b>: 90, <b>S</b>: 180,
-<b>W</b>: 270, <b>L</b>: -90, <b>R</b>: +90, <b>D</b>: +180.
-<b>L</b>, <b>R</b>, and <b>D</b> make relative adjustments
-to a page&rsquo;s rotation.</p>
+degrees): <b>north</b>: 0, <b>east</b>: 90, <b>south</b>:
+180, <b>west</b>: 270, <b>left</b>: -90, <b>right</b>: +90,
+<b>down</b>: +180. <b>left</b>, <b>right</b>, and
+<b>down</b> make relative adjustments to a page&rsquo;s
+rotation.</p>
 
 <p style="margin-left:26%; margin-top: 1em">If no arguments
 are passed to cat, then pdftk combines all input PDFs in the
@@ -239,13 +241,19 @@ page of a document instead of a page number. <br>
 * Reference a single page by omitting the ending page
 number. <br>
 * The handle may be used alone to represent the entire PDF
-document, e.g., B1-end is the same as B.</p>
+document, e.g., B1-end is the same as B. <br>
+* You can reference page numbers in reverse order by
+prefixing them with the letter <b>r</b>. For example, page
+r1 is the last page of the document, r2 is the next-to-last
+page of the document, and rend is the first page of the
+document. You can use this prefix in ranges, too, for
+example r3-r1 is the last three pages of a PDF.</p>
 
 <p style="margin-left:26%; margin-top: 1em"><b>Page Range
-Examples w/o Handles: <br>
-1-endE</b> - rotate entire document 90 degrees <b><br>
+Examples without Handles: <br>
+1-endeast</b> - rotate entire document 90 degrees <b><br>
 5 11 20</b> - take single pages from input PDF <b><br>
-5-25oddW</b> - take odd pages in range, rotate 90 degrees
+5-25oddwest</b> - take odd pages in range, rotate 90 degrees
 <b><br>
 6-1</b> - reverse pages in range from input PDF</p>
 
@@ -258,14 +266,15 @@ order <b><br>
 A72</b> - take a single page from in1.pdf <b><br>
 A1-21 Beven A72</b> - assemble pages from both in1.pdf and
 in2.pdf <b><br>
-AW</b> - rotate entire in1.pdf document 90 degrees <b><br>
+Awest</b> - rotate entire in1.pdf document 90 degrees
+<b><br>
 B</b> - use all of in2.pdf <b><br>
-A2-30evenL</b> - take the even pages from the range, remove
-90 degrees from each page&rsquo;s rotation <b><br>
+A2-30evenleft</b> - take the even pages from the range,
+remove 90 degrees from each page&rsquo;s rotation <b><br>
 A A</b> - catenate in1.pdf with in1.pdf <b><br>
-AevenW AoddE</b> - apply rotations to even pages, odd pages
-from in1.pdf <b><br>
-AW BW BD</b> - catenate rotated documents</p>
+Aevenwest Aoddeast</b> - apply rotations to even pages, odd
+pages from in1.pdf <b><br>
+Awest Bwest Bdown</b> - catenate rotated documents</p>
 
 <p style="margin-left:15%;"><b>shuffle [&lt;page
 ranges&gt;]</b></p>
@@ -436,13 +445,13 @@ excepct that the output is encoded as UTF-8.</p>
 <p style="margin-left:15%;"><b>update_info &lt;info data
 filename | - | PROMPT&gt;</b></p>
 
-<p style="margin-left:26%;">Changes the metadata stored in
-a single PDF&rsquo;s Info dictionary to match the input data
-file. The input data file uses the same syntax as the output
-from <b>dump_data</b>. Non-ASCII characters should be
-encoded as XML numerical entities. This does not change the
-metadata stored in the PDF&rsquo;s XMP stream, if it has
-one. For example:</p>
+<p style="margin-left:26%;">Changes the bookmarks and
+metadata in a single PDF&rsquo;s Info dictionary to match
+the input data file. The input data file uses the same
+syntax as the output from <b>dump_data</b>. Non-ASCII
+characters should be encoded as XML numerical entities. This
+does not change the metadata stored in the PDF&rsquo;s XMP
+stream, if it has one. For example:</p>
 
 <p style="margin-left:26%; margin-top: 1em">pdftk in.pdf
 update_info in.info output out.pdf</p>
@@ -676,8 +685,8 @@ pdftk A=in1.pdf B=in2.pdf cat A B output out1.pdf <br>
 or (using wildcards): <br>
 pdftk *.pdf cat output combined.pdf</p>
 
-<p style="margin-left:11%;"><b>Remove &rsquo;page 13&rsquo;
-from in1.pdf to create out1.pdf</b></p>
+<p style="margin-left:11%;"><b>Remove page 13 from in1.pdf
+to create out1.pdf</b></p>
 
 <p style="margin-left:14%;">pdftk in.pdf cat 1-12 14-end
 output out1.pdf <br>
@@ -733,14 +742,14 @@ report.txt</p>
 <p style="margin-left:11%;"><b>Rotate the first PDF page to
 90 degrees clockwise</b></p>
 
-<p style="margin-left:14%;">pdftk in.pdf cat 1E 2-end
+<p style="margin-left:14%;">pdftk in.pdf cat 1east 2-end
 output out.pdf</p>
 
 <p style="margin-left:11%;"><b>Rotate an entire PDF
 document to 180 degrees</b></p>
 
-<p style="margin-left:14%;">pdftk in.pdf cat 1-endS output
-out.pdf</p>
+<p style="margin-left:14%;">pdftk in.pdf cat 1-endsouth
+output out.pdf</p>
 
 <h2>NOTES
 <a name="NOTES"></a>

@@ -30,6 +30,22 @@
  * Boston, MA  02110-1301, USA.
  *
  *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Library General Public
+ * License as published by the Free Software Foundation; either
+ * version 2 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Library General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Library General Public
+ * License along with this library; if not, write to the
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA  02110-1301, USA.
+ *
+ *
  * If you didn't download this code from the following link, you should check if
  * you aren't using an obsolete version:
  * http://www.lowagie.com/iText/
@@ -216,7 +232,7 @@ public class FdfWriter {
      * an existing field
      */    
     public boolean setFieldAsString(String field, String value) {
-        return setField(field, new PdfString(value, PdfObject.TEXT_UNICODE));
+        return setField(field, new PdfString(value /* ssteward , PdfObject.TEXT_UNICODE */ ));
     }
     
     /** Sets all the fields from this <CODE>FdfReader</CODE>
@@ -289,7 +305,7 @@ public class FdfWriter {
             PdfDictionary dic = new PdfDictionary();
             dic.put(PdfName.FIELDS, calculate(fdf.fields));
             if (fdf.file != null)
-                dic.put(PdfName.F, new PdfString(fdf.file, PdfObject.TEXT_UNICODE));
+                dic.put(PdfName.F, new PdfString(fdf.file /* ssteward, PdfObject.TEXT_UNICODE */ ));
             PdfDictionary fd = new PdfDictionary();
             fd.put(PdfName.FDF, dic);
             PdfIndirectReference ref = addToBody(fd).getIndirectReference();
@@ -308,7 +324,7 @@ public class FdfWriter {
                 String key = (String)it.next();
                 Object v = map.get(key);
                 PdfDictionary dic = new PdfDictionary();
-                dic.put(PdfName.T, new PdfString(key, PdfObject.TEXT_UNICODE));
+                dic.put(PdfName.T, new PdfString(key /* ssteward , PdfObject.TEXT_UNICODE */));
                 if (v instanceof HashMap) {
                     dic.put(PdfName.KIDS, calculate((HashMap)v));
                 }
