@@ -4,25 +4,24 @@ Bug-Debian: http://bugs.debian.org/531529
 
 --- a/pdftk/pdftk.cc
 +++ b/pdftk/pdftk.cc
-@@ -235,9 +235,14 @@
+@@ -242,7 +242,15 @@
  		// store in this java object so the gc can trace it
  		g_dont_collect_p->addElement( reader );
  
--		input_pdf_p->m_authorized_b= ( !reader->encrypted || reader->passwordIsOwner );
--		if( !input_pdf_p->m_authorized_b ) {
--			open_success_b= false;
-+		input_pdf_p->m_authorized_b= true; // instead of:  ( !reader->encrypted || reader->passwordIsOwner );
-+
-+		if ( open_success_b && reader->encrypted && !reader->passwordIsOwner )
+-		input_pdf_p->m_authorized_b= ( !reader->encrypted || reader->ownerPasswordUsed );
++		input_pdf_p->m_authorized_b= true; // instead of:  ( !reader->encrypted || reader->ownerPasswordUsed );
++		if ( open_success_b && reader->encrypted && !reader->ownerPasswordUsed )
 +		{
 +			cerr << "WARNING: The creator of the input PDF:" << endl;
 +			cerr << "   " << input_pdf_p->m_filename << endl;
 +			cerr << "   has set an owner password (which is not required to handle this PDF)." << endl;
 +			cerr << "   You did not supply this password. Please respect any copyright." << endl;
++ 		}
++
+ 		if( !input_pdf_p->m_authorized_b ) {
+ 			open_success_b= false;
  		}
- 	}
- 	catch( java::io::IOException* ioe_p ) { // file open error
-@@ -258,9 +263,8 @@
+@@ -272,9 +280,8 @@
  		cerr << "The password you supplied for the input PDF:" << endl;
  		cerr << "   " << input_pdf_p->m_filename << endl;
  		cerr << "   did not work.  This PDF is encrypted, and you must supply the" << endl;
@@ -34,7 +33,7 @@ Bug-Debian: http://bugs.debian.org/531529
  
  		prompt_for_password( "open", "the input PDF:\n   "+ input_pdf_p->m_filename, input_pdf_p->m_password );
  		if( !input_pdf_p->m_password.empty() ) { // reset flags try again
-@@ -274,7 +278,7 @@
+@@ -288,7 +295,7 @@
  		cerr << "Error: Failed to open PDF file: " << endl;
  		cerr << "   " << input_pdf_p->m_filename << endl;
  		if( !input_pdf_p->m_authorized_b ) {
@@ -43,7 +42,7 @@ Bug-Debian: http://bugs.debian.org/531529
  		}
  	}
  
-@@ -697,7 +701,7 @@
+@@ -665,7 +672,7 @@
  				}
  
  				if( !it->m_authorized_b ) {

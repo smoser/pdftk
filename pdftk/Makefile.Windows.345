@@ -1,6 +1,6 @@
 # -*- Mode: Makefile -*-
 # Makefile.Debian
-# Copyright (c) 2004-2012 Sid Steward
+# Copyright (c) 2004-2013 Sid Steward
 # This is part of pdftk.
 #
 # Visit: www.pdftk.com for pdftk information and articles
@@ -18,24 +18,25 @@
 #   Clean:               make -f Makefile.Windows clean
 # 	 								
 
-# this tries to compensate for objects missing from older versions of libgcj
-# it replaces them with local implementations
-#
-# set to 1 for gcc 3.4 and other, older versions of gcc (e.g., mingw 3.4.5)
-# comment out for gcc 4.4 and other, newer versions of gcc
-
-export USE_LOCAL_LIBGCJ= 1
+export USE_LIBGCJ_SUPPLEMENT= 1
 
 # tools
 # need direct path to libgcj for gcjh (starting in gcj 4.1.2 per Aurélien GÉRÔME)
 TOOLPATH= /c/mingw-3.4.5/bin/
 export VERSUFF=
+export CPP= $(TOOLPATH)cpp$(VERSUFF)
 export CXX= $(TOOLPATH)g++$(VERSUFF)
 export GCJ= $(TOOLPATH)gcj$(VERSUFF)
 export GCJH= $(TOOLPATH)gcjh$(VERSUFF)
 export GJAR= $(TOOLPATH)jar$(VERSUFF)
-#export LIBGCJ= /usr/share/java/libgcj$(VERSUFF).jar
+
+ifdef USE_LIBGCJ_SUPPLEMENT
+# using supplemented libgcj-3.4.5.jar; see ../java/ for supplement source
+export LIBGCJ= /c/mingw-3.4.5/share/java/libgcj-3.4.5-supp-1.jar
+else
 export LIBGCJ= /c/mingw-3.4.5/share/java/libgcj-3.4.5.jar
+endif
+
 export AR= ar
 export RM= rm
 export ARFLAGS= rs
@@ -71,15 +72,17 @@ export RMFLAGS= -vf
 # see: http://www.gentoo.org/proj/en/qa/asneeded.xml
 # only effects libraries following option on the command line
 #
-export CPPFLAGS= -DPATH_DELIM=0x5c -DASK_ABOUT_WARNINGS=false -fdollars-in-identifiers
-# removed -Weffc++ from CXXFLAGS because it was cluttering output with warnings re generated code and STL
-export CXXFLAGS= -Wall -Wextra -O2
+
+export CPPFLAGS= -DPATH_DELIM=0x5c -DASK_ABOUT_WARNINGS=false \
+	-D_UNICODE -DUNICODE -D__USE_MINGW_ACCESS
+
+export CXXFLAGS= -Wall -Wextra -O2 -fdollars-in-identifiers -mthreads
+
 export GCJFLAGS= -O2
+
 # added -nostdlib to track dependencies
 # added -lshell32 for wide-char handling in pdftk.cc
 #export LDLIBS= -lgcj -lws2_32 -liconv
 export LDLIBS= c:/mingw-3.4.5/lib/crt2.o -nostdlib -lgcj -lws2_32 -liconv -luser32 -ladvapi32 -lmingw32 -lstdc++ -lgcc -lmoldname -lmingwex -lkernel32 -lmsvcrt -lshell32
-
-
 
 include Makefile.Base

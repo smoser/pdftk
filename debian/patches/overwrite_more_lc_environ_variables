@@ -9,7 +9,7 @@ Bug-Debian: http://bugs.debian.org/560594
 
 --- a/pdftk/pdftk.cc
 +++ b/pdftk/pdftk.cc
-@@ -3308,6 +3308,11 @@
+@@ -3650,6 +3650,11 @@
  	*/
  	static char my_lang[]="LANG=C";
  	putenv(my_lang);

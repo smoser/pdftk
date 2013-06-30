@@ -18,12 +18,12 @@
 +report.o : javalib report.cc report.h pdftk.h
  	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -I$(JAVALIBPATH) report.cc -c
  
--pdftk.o : pdftk.cc pdftk.h attachments.h report.h $(JAVALIB) $(GCJ_LOCAL_LIB_FULL)
-+pdftk.o : javalib pdftk.cc pdftk.h attachments.h report.h $(GCJ_LOCAL_LIB_FULL)
+-pdftk.o : pdftk.cc pdftk.h attachments.h report.h $(JAVALIB)
++pdftk.o : javalib pdftk.cc pdftk.h attachments.h report.h
  	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -I$(JAVALIBPATH) pdftk.cc -c
  
--pdftk : pdftk.o attachments.o report.o $(JAVALIB) $(GCJ_LOCAL_LIB_FULL)
-+pdftk : javalib pdftk.o attachments.o report.o $(GCJ_LOCAL_LIB_FULL)
- 	$(CXX) $(CXXFLAGS) attachments.o report.o pdftk.o $(JAVALIB) $(GCJ_LOCAL_LIB_FULL) $(LDLIBS) -o pdftk
+-pdftk : pdftk.o attachments.o report.o $(JAVALIB)
++pdftk : javalib pdftk.o attachments.o report.o
+ 	$(CXX) $(CXXFLAGS) attachments.o report.o pdftk.o $(JAVALIB) $(LDLIBS) -o pdftk
  
  install:

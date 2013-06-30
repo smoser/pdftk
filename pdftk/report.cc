@@ -1,7 +1,7 @@
 /* -*- Mode: C++; tab-width: 2; c-basic-offset: 2 -*- */
 /*
 	pdftk, the PDF Toolkit
-	Copyright (c) 2003-2012 Sid Steward
+	Copyright (c) 2003-2013 Sid Steward
 
 
 	This program is free software; you can redistribute it and/or modify
@@ -53,30 +53,30 @@
 #include <java/util/Iterator.h>
 #include <java/util/HashMap.h>
 
-#include "com/lowagie/text/Document.h"
-#include "com/lowagie/text/Rectangle.h"
-#include "com/lowagie/text/pdf/PdfObject.h"
-#include "com/lowagie/text/pdf/PdfName.h"
-#include "com/lowagie/text/pdf/PdfString.h"
-#include "com/lowagie/text/pdf/PdfNumber.h"
-#include "com/lowagie/text/pdf/PdfArray.h"
-#include "com/lowagie/text/pdf/PdfDictionary.h"
-#include "com/lowagie/text/pdf/PdfDestination.h"
-#include "com/lowagie/text/pdf/PdfOutline.h"
-#include "com/lowagie/text/pdf/PdfCopy.h"
-#include "com/lowagie/text/pdf/PdfReader.h"
-#include "com/lowagie/text/pdf/PdfImportedPage.h"
-#include "com/lowagie/text/pdf/PdfWriter.h"
-#include "com/lowagie/text/pdf/PdfStamperImp.h"
-#include "com/lowagie/text/pdf/PdfEncryptor.h"
-#include "com/lowagie/text/pdf/PdfNameTree.h"
-#include "com/lowagie/text/pdf/FdfReader.h"
-#include "com/lowagie/text/pdf/AcroFields.h"
-#include "com/lowagie/text/pdf/PdfIndirectReference.h"
-#include "com/lowagie/text/pdf/PdfIndirectObject.h"
-#include "com/lowagie/text/pdf/PdfFileSpecification.h"
+#include "pdftk/com/lowagie/text/Document.h"
+#include "pdftk/com/lowagie/text/Rectangle.h"
+#include "pdftk/com/lowagie/text/pdf/PdfObject.h"
+#include "pdftk/com/lowagie/text/pdf/PdfName.h"
+#include "pdftk/com/lowagie/text/pdf/PdfString.h"
+#include "pdftk/com/lowagie/text/pdf/PdfNumber.h"
+#include "pdftk/com/lowagie/text/pdf/PdfBoolean.h"
+#include "pdftk/com/lowagie/text/pdf/PdfArray.h"
+#include "pdftk/com/lowagie/text/pdf/PdfDictionary.h"
+#include "pdftk/com/lowagie/text/pdf/PdfDestination.h"
+#include "pdftk/com/lowagie/text/pdf/PdfOutline.h"
+#include "pdftk/com/lowagie/text/pdf/PdfCopy.h"
+#include "pdftk/com/lowagie/text/pdf/PdfReader.h"
+#include "pdftk/com/lowagie/text/pdf/PdfImportedPage.h"
+#include "pdftk/com/lowagie/text/pdf/PdfWriter.h"
+#include "pdftk/com/lowagie/text/pdf/PdfStamperImp.h"
+#include "pdftk/com/lowagie/text/pdf/PdfNameTree.h"
+#include "pdftk/com/lowagie/text/pdf/FdfReader.h"
+#include "pdftk/com/lowagie/text/pdf/AcroFields.h"
+#include "pdftk/com/lowagie/text/pdf/PdfIndirectReference.h"
+#include "pdftk/com/lowagie/text/pdf/PdfIndirectObject.h"
+#include "pdftk/com/lowagie/text/pdf/PdfFileSpecification.h"
 
-#include "com/lowagie/text/pdf/PRStream.h"
+#include "pdftk/com/lowagie/text/pdf/PRStream.h"
 
 using namespace std;
 
@@ -87,8 +87,8 @@ namespace java {
 }
 
 namespace itext {
-	using namespace com::lowagie::text;
-	using namespace com::lowagie::text::pdf;
+	using namespace pdftk::com::lowagie::text;
+	using namespace pdftk::com::lowagie::text::pdf;
 }
 
 #include "pdftk.h"
@@ -98,7 +98,7 @@ namespace itext {
 ////
 // created for data import, maybe useful for export, too
 
-static const string pdftkEmptyString= "PdftkEmptyString";
+static const string g_uninitString= "PdftkEmptyString";
 
 //
 class PdfInfo {
@@ -111,8 +111,8 @@ public:
 	string m_key;
 	string m_value;
 
-	PdfInfo() : m_key(pdftkEmptyString), m_value(pdftkEmptyString) {}
-	bool valid() { return( m_key!= pdftkEmptyString && m_value!= pdftkEmptyString ); }
+	PdfInfo() : m_key( g_uninitString ), m_value( g_uninitString ) {}
+	bool valid() { return( m_key!= g_uninitString && m_value!= g_uninitString ); }
 };
 const string PdfInfo::m_prefix= "Info";
 const string PdfInfo::m_begin_mark= "InfoBegin";
@@ -126,28 +126,16 @@ ostream& operator<<( ostream& ss, const PdfInfo& ii ) {
 	return ss;
 }
 
-//
-class PdfBookmark {
-public:
-	static const string m_prefix;
-	static const string m_begin_mark;
-	static const string m_title_label;
-	static const string m_level_label;
-	static const string m_page_number_label;
-
-	string m_title;
-	int m_level;
-	int m_page_num; // zero means no destination
-	
-	PdfBookmark() : m_title(pdftkEmptyString), m_level(-1), m_page_num(-1) {}
-
-	bool valid() { return( 0< m_level && 0<= m_page_num && m_title!= pdftkEmptyString ); }
-};
 const string PdfBookmark::m_prefix= "Bookmark";
 const string PdfBookmark::m_begin_mark= "BookmarkBegin";
 const string PdfBookmark::m_title_label= "BookmarkTitle:";
 const string PdfBookmark::m_level_label= "BookmarkLevel:";
 const string PdfBookmark::m_page_number_label= "BookmarkPageNumber:";
+PdfBookmark::PdfBookmark() : m_title( g_uninitString ), 
+														 m_level(-1), m_page_num(-1) {}
+bool PdfBookmark::valid() { 
+	return( 0< m_level && 0<= m_page_num && m_title!= g_uninitString );
+}
 
 ostream& operator<<( ostream& ss, const PdfBookmark& bb ) {
 	ss << PdfBookmark::m_begin_mark << endl;
@@ -167,6 +155,16 @@ public:
 const string PdfPageLabel::m_prefix= "PageLabel";
 const string PdfPageLabel::m_begin_mark= "PageLabelBegin";
 
+//
+class PdfPageMedia {
+public:
+	static const string m_prefix;
+	static const string m_begin_mark;
+	// TODO
+};
+const string PdfPageMedia::m_prefix= "PageMedia";
+const string PdfPageMedia::m_begin_mark= "PageMediaBegin";
+
 ////
 //
 class PdfData {
@@ -180,7 +178,7 @@ public:
 	string m_id_1;
 
 	PdfData() : m_info(), m_bookmarks(), m_num_pages(-1), 
-							m_id_0( pdftkEmptyString ), m_id_1( pdftkEmptyString ) {}
+							m_id_0( g_uninitString ), m_id_1( g_uninitString ) {}
 };
 
 ostream& operator<<( ostream& ss, const PdfData& dd ) {
@@ -281,19 +279,30 @@ OutputPdfName( ostream& ofs,
 
 static int
 GetPageNumber( itext::PdfDictionary* dict_p,
-							 itext::PdfReader* reader_p )
+							 itext::PdfReader* reader_p,
+							 map< itext::PdfDictionary*, int >& cache )
 // take a PdfPage dictionary and return its page location in the document;
 // recurse our way up the pages tree, counting pages as we go;
 // dict_p may be a page or a page tree object;
 // return value is zero-based;
 {
-	if( dict_p && dict_p->contains( itext::PdfName::PARENT ) ) {
-		jint sum_pages= 0;
+	{ // consult the cache
+		map< itext::PdfDictionary*, int >::const_iterator it=
+			cache.find( dict_p );
+		if( it!= cache.end() )
+			return it->second;
+	}
 
+	int ret_val= 0;
+
+	if( dict_p && dict_p->contains( itext::PdfName::PARENT ) ) {
 		itext::PdfDictionary* parent_p= (itext::PdfDictionary*)
 			reader_p->getPdfObject( dict_p->get( itext::PdfName::PARENT ) );
 		if( parent_p && parent_p->isDictionary() ) {
 			// a parent is a page tree object and will have Kids
+
+			// recurse up the page tree
+			jint sum_pages= GetPageNumber( parent_p, reader_p, cache );
 
 			itext::PdfArray* parent_kids_p= (itext::PdfArray*)
 				reader_p->getPdfObject( parent_p->get( itext::PdfName::KIDS ) );
@@ -309,46 +318,46 @@ GetPageNumber( itext::PdfDictionary* dict_p,
 							reader_p->getPdfObject( (itext::PdfDictionary*)(kids_p->get(kids_ii)) );
 						if( kid_p && kid_p->isDictionary() ) {
 
-							if( kid_p== dict_p ) {
-								// counting kids is complete; recurse
+							if( kid_p== dict_p ) // we have what we were looking for
+								ret_val= sum_pages;
 
-								return sum_pages+ GetPageNumber( parent_p, reader_p ); // <--- return
-							}
-							else {
-								// is kid a page, or is kid a page tree object? add count to sum;
-								// PdfDictionary::isPage() and PdfDictionary::isPages()
-								// are not reliable, here
+							// is kid a page, or is kid a page tree object? add count to sum;
+							// PdfDictionary::isPage() and PdfDictionary::isPages()
+							// are not reliable, here
 
-								itext::PdfName* kid_type_p= (itext::PdfName*)
-									reader_p->getPdfObject( kid_p->get( itext::PdfName::TYPE ) );
-								if( kid_type_p && kid_type_p->isName() ) {
+							itext::PdfName* kid_type_p= (itext::PdfName*)
+								reader_p->getPdfObject( kid_p->get( itext::PdfName::TYPE ) );
+							if( kid_type_p && kid_type_p->isName() ) {
 
-									if( kid_type_p->equals( itext::PdfName::PAGE ) ) {
-										// *kid_p is a Page
+								if( kid_type_p->equals( itext::PdfName::PAGE ) ) {
+									// *kid_p is a Page
 
-										sum_pages+= 1;
-									}
-									else if( kid_type_p->equals( itext::PdfName::PAGES ) ) {
-										// *kid_p is a Page Tree Node
+									// store page number in our cache
+									cache[ kid_p ]= sum_pages;
 
-										itext::PdfNumber* count_p= (itext::PdfNumber*)
-											reader_p->getPdfObject( kid_p->get( itext::PdfName::COUNT ) );
-										if( count_p && count_p->isNumber() ) {
+									//
+									sum_pages+= 1;
+								}
+								else if( kid_type_p->equals( itext::PdfName::PAGES ) ) {
+									// *kid_p is a Page Tree Node
 
-											sum_pages+= count_p->intValue();
+									itext::PdfNumber* count_p= (itext::PdfNumber*)
+										reader_p->getPdfObject( kid_p->get( itext::PdfName::COUNT ) );
+									if( count_p && count_p->isNumber() ) {
 
-										}
-										else { // error
-											cerr << "pdftk Error in GetPageNumber(): invalid count;" << endl;
-										}
+										//
+										sum_pages+= count_p->intValue();
 									}
 									else { // error
-										cerr << "pdftk Error in GetPageNumber(): unexpected kid type;" << endl;
+										cerr << "pdftk Error in GetPageNumber(): invalid count;" << endl;
 									}
 								}
 								else { // error
-									cerr << "pdftk Error in GetPageNumber(): invalid kid_type_p;" << endl;
+									cerr << "pdftk Error in GetPageNumber(): unexpected kid type;" << endl;
 								}
+							}
+							else { // error
+								cerr << "pdftk Error in GetPageNumber(): invalid kid_type_p;" << endl;
 							}
 						}
 						else { // error
@@ -371,74 +380,100 @@ GetPageNumber( itext::PdfDictionary* dict_p,
 	}
 	else {
 		// *dict_p has no parent; end recursion
-		return 0;
+		ret_val= 0;
+		cache[ dict_p ]= ret_val;
 	}
 
-	// error: should have recursed
-	cerr << "pdftk Error in GetPageNumber(): recursion case skipped;" << endl;
-
-	return 0;
+	return ret_val;
 }
 
-static void
-ReportOutlines( ostream& ofs, 
-								itext::PdfDictionary* outline_p,
-								int level,
-								itext::PdfReader* reader_p,
-								bool utf8_b )
+int
+ReadOutlines( vector<PdfBookmark>& bookmark_data,
+							itext::PdfDictionary* outline_p,
+							int level, // pass in -1 to trim off Outlines dict
+							itext::PdfReader* reader_p,							
+							bool utf8_b )
 {
-	// mark beginning of record
-	ofs << "BookmarkBegin" << endl;
+	int ret_val= 0;
+	map< itext::PdfDictionary*, int > cache;
 
-	// the title; HTML-compatible
-	ofs << "BookmarkTitle: ";
-	itext::PdfString* title_p= (itext::PdfString*)
-		reader_p->getPdfObject( outline_p->get( itext::PdfName::TITLE ) );
-	if( title_p && title_p->isString() ) {
+	while( outline_p ) {
 
-		OutputPdfString( ofs, title_p, utf8_b );
-		
-		ofs << endl;
-	}
-	else { // error
-		ofs << "[PDFTK ERROR: TITLE NOT FOUND]" << endl;
-	}
+		// load this with collected data, then add to vector
+		PdfBookmark bookmark;
 
-	// the level; 1-based to jive with HTML heading level concept
-	ofs << "BookmarkLevel: " << level+ 1 << endl;
+		// the title
+		itext::PdfString* title_p= (itext::PdfString*)
+			reader_p->getPdfObject( outline_p->get( itext::PdfName::TITLE ) );
+		if( title_p && title_p->isString() ) {
 
-	// page number, 1-based; 
-	// a zero value indicates no page destination or an error
-	ofs << "BookmarkPageNumber: ";
-	{
-		bool fail_b= false;
+			ostringstream oss;
+			OutputPdfString( oss, title_p, utf8_b );
+			bookmark.m_title= oss.str();
+		}
+		else { // error
+			ret_val= 1;
+		}
 
-		// the destination object may take be in a couple different places
-		// and may take a couple, different forms
+		// the level; 1-based to jive with HTML heading level concept
+		bookmark.m_level= level+ 1;
 
-		itext::PdfObject* destination_p= 0; {
-			if( outline_p->contains( itext::PdfName::DEST ) ) {
-				destination_p=
-					reader_p->getPdfObject( outline_p->get( itext::PdfName::DEST ) );
+		// page number, 1-based; 
+		// a zero value indicates no page destination or an error
+		{
+			bool fail_b= false;
+
+			// the destination object may take be in a couple different places
+			// and may take a couple, different forms
+
+			itext::PdfObject* destination_p= 0; {
+				if( outline_p->contains( itext::PdfName::DEST ) ) {
+					destination_p=
+						reader_p->getPdfObject( outline_p->get( itext::PdfName::DEST ) );
+				}
+				else if( outline_p->contains( itext::PdfName::A ) ) {
+
+					itext::PdfDictionary* action_p= (itext::PdfDictionary*)
+						reader_p->getPdfObject( outline_p->get( itext::PdfName::A ) );
+					if( action_p && action_p->isDictionary() ) {
+
+						itext::PdfName* s_p= (itext::PdfName*)
+							reader_p->getPdfObject( action_p->get( itext::PdfName::S ) );
+						if( s_p && s_p->isName() ) {
+
+							if( s_p->equals( itext::PdfName::GOTO ) ) {
+								destination_p=
+									reader_p->getPdfObject( action_p->get( itext::PdfName::D ) );
+							}
+							else { // immediate action is not a link in this document;
+								// not an error
+								// fail_b= true;
+							}
+						}
+						else { // error
+							fail_b= true;
+						}
+					}
+					else { // error
+						fail_b= true;
+					}
+				}
+				else { // unexpected
+					fail_b= true;
+				}
 			}
-			else if( outline_p->contains( itext::PdfName::A ) ) {
 
-				itext::PdfDictionary* action_p= (itext::PdfDictionary*)
-					reader_p->getPdfObject( outline_p->get( itext::PdfName::A ) );
-				if( action_p && action_p->isDictionary() ) {
+			// destination is an array
+			if( destination_p && destination_p->isArray() ) {
 
-					itext::PdfName* s_p= (itext::PdfName*)
-						reader_p->getPdfObject( action_p->get( itext::PdfName::S ) );
-					if( s_p && s_p->isName() ) {
+				java::ArrayList* array_list_p= ((itext::PdfArray*)destination_p)->getArrayList();
+				if( array_list_p && !array_list_p->isEmpty() ) {
 
-						if( s_p->equals( itext::PdfName::GOTO ) ) {
-							destination_p=
-								reader_p->getPdfObject( action_p->get( itext::PdfName::D ) );
-						}
-						else { // immediate action is not a link in this document;
-							// not an error
-							// fail_b= true;
-						}
+					itext::PdfDictionary* page_p= (itext::PdfDictionary*)
+						reader_p->getPdfObject( (itext::PdfObject*)(array_list_p->get(0)) );
+
+					if( page_p && page_p->isDictionary() ) {
+						bookmark.m_page_num= GetPageNumber(page_p, reader_p, cache)+ 1;
 					}
 					else { // error
 						fail_b= true;
@@ -447,62 +482,67 @@ ReportOutlines( ostream& ofs,
 				else { // error
 					fail_b= true;
 				}
-			}
-			else { // unexpected
-				fail_b= true;
-			}
-		}
-
-		// destination is an array
-		if( destination_p && destination_p->isArray() ) {
-
-			java::ArrayList* array_list_p= ((itext::PdfArray*)destination_p)->getArrayList();
-			if( array_list_p && !array_list_p->isEmpty() ) {
-
-				itext::PdfDictionary* page_p= (itext::PdfDictionary*)
-					reader_p->getPdfObject( (itext::PdfObject*)(array_list_p->get(0)) );
-
-				if( page_p && page_p->isDictionary() ) {
-					ofs << GetPageNumber(page_p, reader_p)+ 1 << endl;
-				}
-				else { // error
-					fail_b= true;
-				}
-			}
+			} // TODO: named destinations handling
 			else { // error
 				fail_b= true;
 			}
-		} // TODO: named destinations handling
-		else { // error
-			fail_b= true;
+
+			if( fail_b ) { // output our 'null page reference' code
+				bookmark.m_page_num= 0;
+			}
 		}
 
-		if( fail_b ) { // output our 'null page reference' code
-			ofs << 0 << endl;
+		// add bookmark to collected data
+		if( 0< bookmark.m_level )
+			bookmark_data.push_back( bookmark );
+
+		// recurse into any children
+		if( outline_p->contains( itext::PdfName::FIRST ) ) {
+
+			itext::PdfDictionary* child_p= (itext::PdfDictionary*)
+				reader_p->getPdfObject( outline_p->get( itext::PdfName::FIRST ) );
+			if( child_p && child_p->isDictionary() ) {
+
+				ret_val+= ReadOutlines( bookmark_data, child_p, level+ 1, reader_p, utf8_b );
+			}
 		}
+
+		// iterate over siblings
+		if( outline_p->contains( itext::PdfName::NEXT ) ) {
+
+			itext::PdfDictionary* sibling_p= (itext::PdfDictionary*)
+				reader_p->getPdfObject( outline_p->get( itext::PdfName::NEXT ) );
+			if( sibling_p && sibling_p->isDictionary() ) {
+				outline_p= sibling_p;
+			}
+			else // break out of loop
+				outline_p= 0;
+		}
+		else // break out of loop
+			outline_p= 0;
 	}
 
-	// recurse into any children
-	if( outline_p->contains( itext::PdfName::FIRST ) ) {
+	return ret_val;
+}
 
-		itext::PdfDictionary* child_p= (itext::PdfDictionary*)
-			reader_p->getPdfObject( outline_p->get( itext::PdfName::FIRST ) );
-		if( child_p && child_p->isDictionary() ) {
+static void
+ReportOutlines( ostream& ofs, 
+								itext::PdfDictionary* outline_p,
+								itext::PdfReader* reader_p,
+								bool utf8_b )
+{
+	vector<PdfBookmark> bookmark_data;
+	ReadOutlines( bookmark_data,
+								outline_p,
+								0,
+								reader_p,
+								utf8_b );
 
-			ReportOutlines( ofs, child_p, level+ 1, reader_p, utf8_b );
+	for( vector<PdfBookmark>::iterator it= bookmark_data.begin();
+			 it!= bookmark_data.end(); ++it )
+		{
+			ofs << *it;
 		}
-	}
-
-	// recurse into next sibling
-	if( outline_p->contains( itext::PdfName::NEXT ) ) {
-
-		itext::PdfDictionary* sibling_p= (itext::PdfDictionary*)
-			reader_p->getPdfObject( outline_p->get( itext::PdfName::NEXT ) );
-		if( sibling_p && sibling_p->isDictionary() ) {
-
-			ReportOutlines( ofs, sibling_p, level, reader_p, utf8_b );
-		}
-	}
 }
 
 static void
@@ -679,7 +719,7 @@ class FormField {
 	string m_tt; // name
 	string m_tu; // alt. name
 	int m_ff; // flags
-	string m_vv; // value
+	set< string > m_vv; // value -- may be an array
 	string m_dv; // default value
 
 	// variable-text features
@@ -709,8 +749,10 @@ static void
 	if( !ff.m_tu.empty() )
 		ofs << "FieldNameAlt: " << ff.m_tu << endl;
 	ofs << "FieldFlags: " << ff.m_ff << endl;
-	if( !ff.m_vv.empty() )
-		ofs << "FieldValue: " << ff.m_vv << endl;
+	if( !ff.m_vv.empty() ) {
+		for( set< string >::const_iterator it= ff.m_vv.begin(); it!= ff.m_vv.end(); ++it )
+			ofs << "FieldValue: " << (*it) << endl;
+	}
 	if( !ff.m_dv.empty() )
 		ofs << "FieldValueDefault: " << ff.m_dv << endl;
 
@@ -832,15 +874,36 @@ ReportAcroFormFields( ostream& ofs,
 				if( kid_p->contains( itext::PdfName::V ) ) {
 					itext::PdfObject* pdfs_p= 
 						reader_p->getPdfObject( kid_p->get( itext::PdfName::V ) );
+
 					if( pdfs_p && pdfs_p->isString() ) {
 						ostringstream name_oss;
 						OutputPdfString( name_oss, (itext::PdfString*)pdfs_p, utf8_b );
-						acc_state.m_vv= name_oss.str();
+						acc_state.m_vv.insert( name_oss.str() );
 					}
-					if( pdfs_p && pdfs_p->isName() ) {
+					else if( pdfs_p && pdfs_p->isName() ) {
 						ostringstream name_oss;
 						OutputPdfName( name_oss, (itext::PdfName*)pdfs_p );
-						acc_state.m_vv= name_oss.str();
+						acc_state.m_vv.insert( name_oss.str() );
+					}
+					else if( pdfs_p && pdfs_p->isArray() ) {
+						// multiple selections
+						java::ArrayList* vv_p= ((itext::PdfArray*)pdfs_p)->getArrayList();
+						for( jint vv_ii= 0; vv_ii< vv_p->size(); ++vv_ii ) {
+							itext::PdfObject* pdfs_p= (itext::PdfObject*)
+								reader_p->getPdfObject( (itext::PdfObject*)(vv_p->get(vv_ii)) );
+							
+							// copy/paste from above
+							if( pdfs_p && pdfs_p->isString() ) {
+								ostringstream name_oss;
+								OutputPdfString( name_oss, (itext::PdfString*)pdfs_p, utf8_b );
+								acc_state.m_vv.insert( name_oss.str() );
+							}
+							else if( pdfs_p && pdfs_p->isName() ) {
+								ostringstream name_oss;
+								OutputPdfName( name_oss, (itext::PdfName*)pdfs_p );
+								acc_state.m_vv.insert( name_oss.str() );
+							}
+						}
 					}
 				}
 
@@ -1125,11 +1188,14 @@ ReportOnPdf( ostream& ofs,
 		}
 	}
 
+	jint numPages= reader_p->getNumberOfPages();
+
 	{ // number of pages and outlines
 		itext::PdfDictionary* catalog_p= reader_p->catalog;
 		if( catalog_p && catalog_p->isDictionary() ) {
 
 			// number of pages
+			/*
 			itext::PdfDictionary* pages_p= (itext::PdfDictionary*)
 				reader_p->getPdfObject( catalog_p->get( itext::PdfName::PAGES ) );
 			if( pages_p && pages_p->isDictionary() ) {
@@ -1147,6 +1213,8 @@ ReportOnPdf( ostream& ofs,
 			else { // error
 				cerr << "pdftk Error in ReportOnPdf(): invalid pages_p;" << endl;
 			}
+			*/
+			ofs << "NumberOfPages: " << (unsigned int)numPages << endl;
 
 			// outlines; optional
 			itext::PdfDictionary* outlines_p= (itext::PdfDictionary*)
@@ -1157,7 +1225,7 @@ ReportOnPdf( ostream& ofs,
 					reader_p->getPdfObject( outlines_p->get( itext::PdfName::FIRST ) );
 				if( top_outline_p && top_outline_p->isDictionary() ) {
 
-					ReportOutlines( ofs, top_outline_p, 0, reader_p, utf8_b );
+					ReportOutlines( ofs, top_outline_p, reader_p, utf8_b );
 				}
 				else { // error
 					// okay, not a big deal
@@ -1168,6 +1236,45 @@ ReportOnPdf( ostream& ofs,
 		}
 		else { // error
 			cerr << "pdftk Error in ReportOnPdf(): couldn't find catalog;" << endl;
+		}
+	}
+
+	{ // page metrics, rotation
+		for( jint ii= 1; ii<= numPages; ++ii ) {
+			itext::PdfDictionary* page_p= reader_p->getPageN( ii );
+
+			ofs << PdfPageMedia::m_begin_mark << endl;
+			ofs << "PageMediaNumber: " << (unsigned int)ii << endl;
+
+			ofs << "PageMediaRotation: " << (unsigned int)(reader_p->getPageRotation( page_p )) << endl;
+
+			itext::Rectangle* page_rect_p= reader_p->getPageSize( page_p );
+			if( page_rect_p ) {
+				ofs << "PageMediaRect: " 
+						<< (float)(page_rect_p->left()) << " "
+						<< (float)(page_rect_p->bottom()) << " "
+						<< (float)(page_rect_p->right()) << " "
+						<< (float)(page_rect_p->top()) << endl;
+				ofs << "PageMediaDimensions: " 
+						<< (float)(page_rect_p->right()- page_rect_p->left()) << " "
+						<< (float)(page_rect_p->top()- page_rect_p->bottom()) << endl;
+			}
+			
+			itext::Rectangle* page_crop_p= reader_p->getBoxSize( page_p, itext::PdfName::CROPBOX );
+			if( page_crop_p && 
+					!( page_crop_p->left()== page_rect_p->left() &&
+						 page_crop_p->bottom()== page_rect_p->bottom() &&
+						 page_crop_p->right()== page_rect_p->right() &&
+						 page_crop_p->top()== page_rect_p->top() ) )
+				{
+					ofs << "PageMediaCropRect: " 
+							<< (float)(page_crop_p->left()) << " "
+							<< (float)(page_crop_p->bottom()) << " "
+							<< (float)(page_crop_p->right()) << " "
+							<< (float)(page_crop_p->top()) << endl;
+				} 
+
+			reader_p->releasePage( ii );
 		}
 	}
 
@@ -1193,7 +1300,7 @@ ReportOnPdf( ostream& ofs,
 ////  import data to PDF
 // 
 
-static const char empty_string[]= ""; // TODO: maybe this should be pdftkEmptyString?
+static const char empty_string[]= "";
 static const char*
 BufferString( const char* buff, int buff_ii= 0 ) 
 {
@@ -1209,9 +1316,10 @@ BufferInt( const char* buff, int buff_ii= 0 )
 	//while( buff[buff_ii] && isspace(buff[buff_ii]) ) { ++buff_ii; }
 	if( isspace( buff[buff_ii] ) ) // one or no spaces before data
 		++buff_ii;
-	while( buff[buff_ii] ) {
+	while( buff[buff_ii] && '0'<= buff[buff_ii] && buff[buff_ii]<= '9' ) {
 		ret_val*= 10;
-		ret_val+= (buff[buff_ii++]- '0');
+		ret_val+= (buff[buff_ii]- '0');
+		++buff_ii;
 	}
 	return ret_val;
 }
@@ -1220,11 +1328,11 @@ static bool
 LoadString( string& ss, const char* buff, const char* label ) {
 	int label_len= strlen( label );
 	if( strncmp( buff, label, label_len )== 0 ) {
-		if( ss== pdftkEmptyString ) {
+		if( ss== g_uninitString ) {
 			ss= BufferString( buff, label_len );
 		}
 		else { // warning
-			cerr << "pdftk Warning: " << label << " (" << ss << ") not empty when reading new " << label << " (" << BufferString( buff, label_len ) << ") -- skipping newer item" << endl;
+			cerr << "pdftk Warning: " << label << " (" << ss << ") already loaded when reading new " << label << " (" << BufferString( buff, label_len ) << ") -- skipping newer item" << endl;
 		}
 		return true;
 	}
@@ -1343,6 +1451,12 @@ LoadDataFile( istream& ifs,
 
 			// page label record
 			else if( strncmp( buff, PdfPageLabel::m_prefix.c_str(), PdfPageLabel::m_prefix.length() )== 0 ) {
+				buff_prev_len= 0;
+				// TODO
+			}
+
+			// page media record
+			else if( strncmp( buff, PdfPageMedia::m_prefix.c_str(), PdfPageMedia::m_prefix.length() )== 0 ) {
 				buff_prev_len= 0;
 				// TODO
 			}
@@ -1620,6 +1734,150 @@ BuildBookmarks( itext::PdfReader* reader_p,
 	return ret_val;
 }
 
+// for use with writers, e.g. PdfCopy (esp. PdfCopy.setOutlines())
+int
+BuildBookmarks( itext::PdfWriter* writer_p,
+								vector<PdfBookmark>::const_iterator& it,
+								vector<PdfBookmark>::const_iterator it_end,
+								itext::PdfDictionary* parent_p,
+								itext::PdfIndirectReference* parent_ref_p,
+								itext::PdfDictionary* after_child_p,
+								itext::PdfIndirectReference* after_child_ref_p,
+								itext::PdfDictionary*& final_child_p,
+								itext::PdfIndirectReference*& final_child_ref_p,
+								int parent_level,
+								int& num_bookmarks_total,
+								int page_num_offset,
+								int level_offset,
+								bool utf8_b )
+{
+	int ret_val= 0;
+
+	// when using after_child, caller must
+	// call writer_p->addToBody( after_child_p, after_child_ref_p ) upon return
+	itext::PdfDictionary* bookmark_prev_p= after_child_p;
+	itext::PdfIndirectReference* bookmark_prev_ref_p= after_child_ref_p;
+
+	itext::PdfIndirectReference* bookmark_first_ref_p= 0;
+	int num_bookmarks= 0;
+
+	if( parent_level+ 1< it->m_level ) { // first child jumping levels
+
+		////
+		// add missing level
+
+		++num_bookmarks; ++num_bookmarks_total;
+		itext::PdfDictionary* bookmark_p= new itext::PdfDictionary();
+		itext::PdfIndirectReference* bookmark_ref_p= writer_p->getPdfIndirectReference();
+		bookmark_first_ref_p= bookmark_ref_p;
+
+		bookmark_p->put( itext::PdfName::PARENT, (itext::PdfObject*)parent_ref_p );
+
+		itext::PdfString* title_p= new itext::PdfString( JvNewStringUTF("") );
+		bookmark_p->put( itext::PdfName::TITLE, title_p );
+
+		bookmark_prev_p= bookmark_p;
+		bookmark_prev_ref_p= bookmark_ref_p;
+
+		// recurse in loop
+	}
+
+	for( ;it!= it_end; ++it ) {
+	
+		if( parent_level+ 1< it->m_level ) { // encountered child; recurse
+			ret_val= BuildBookmarks( writer_p,
+															 it,
+															 it_end,
+															 bookmark_prev_p, // parent
+															 bookmark_prev_ref_p,
+															 0, 0,
+															 final_child_p, final_child_ref_p,
+															 parent_level+ 1,
+															 num_bookmarks_total,
+															 page_num_offset,
+															 level_offset,
+															 utf8_b );
+			--it;
+			continue;
+		}
+		else if( it->m_level< parent_level+ 1 ) {
+			break; // no more children; add children to parent and return
+		}
+
+		////
+		// create child
+
+		++num_bookmarks; ++num_bookmarks_total;
+		itext::PdfDictionary* bookmark_p= new itext::PdfDictionary();
+		itext::PdfIndirectReference* bookmark_ref_p= writer_p->getPdfIndirectReference();
+		if( !bookmark_first_ref_p )
+			bookmark_first_ref_p= bookmark_ref_p;
+
+		bookmark_p->put( itext::PdfName::PARENT, (itext::PdfObject*)parent_ref_p );
+
+		if( bookmark_prev_ref_p ) {
+			bookmark_p->put( itext::PdfName::PREV, (itext::PdfObject*)bookmark_prev_ref_p );
+			bookmark_prev_p->put( itext::PdfName::NEXT, (itext::PdfObject*)bookmark_ref_p );
+		}
+
+		if( utf8_b ) { // UTF-8 encoded input
+			bookmark_p->put( itext::PdfName::TITLE,
+											 new itext::PdfString( JvNewStringUTF(it->m_title.c_str()) /*,
+											 itext::PdfObject::TEXT_UNICODE*/ ) );
+		}
+		else { // XML entities input
+			const jsize jvs_size= 4096;
+			jchar jvs[jvs_size];
+			jsize jvs_len= 0;
+			XmlStringToJcharArray( jvs, jvs_size, &jvs_len, it->m_title );
+
+			bookmark_p->put( itext::PdfName::TITLE,
+											 new itext::PdfString( JvNewString(jvs, jvs_len) /*,
+											 itext::PdfObject::TEXT_UNICODE*/ ) );
+		}
+
+		if( 0< it->m_page_num ) { // destination
+			itext::PdfDestination* dest_p= new itext::PdfDestination(itext::PdfDestination::FIT);
+			itext::PdfIndirectReference* page_ref_p= 
+				writer_p->getPageReference( it->m_page_num+ page_num_offset );
+			if( page_ref_p ) {
+				dest_p->addPage( (itext::PdfIndirectReference*)page_ref_p );
+			}
+			bookmark_p->put( itext::PdfName::DEST, dest_p );
+		}
+
+		// finished with prev; add to body
+		if( bookmark_prev_p )
+			writer_p->addToBody( bookmark_prev_p, bookmark_prev_ref_p );
+
+		bookmark_prev_p= bookmark_p;
+		bookmark_prev_ref_p= bookmark_ref_p;
+	}
+
+	// finished with prev; add to body (unless we're appending)
+	if( bookmark_prev_p && !after_child_p )
+		writer_p->addToBody( bookmark_prev_p, bookmark_prev_ref_p );
+
+	if( bookmark_first_ref_p && bookmark_prev_ref_p ) {
+		// pack these children into parent before returning
+		if( !parent_p->contains( itext::PdfName::FIRST ) ) // in case we're appending
+			parent_p->put( itext::PdfName::FIRST, (itext::PdfObject*)bookmark_first_ref_p );
+		parent_p->put( itext::PdfName::LAST, (itext::PdfObject*)bookmark_prev_ref_p );
+		if( parent_level== 0 ) { // only for top-level "outlines" dict
+			parent_p->put( itext::PdfName::COUNT, new itext::PdfNumber( (jint)num_bookmarks_total ) );
+		}
+		else {
+			parent_p->put( itext::PdfName::COUNT, new itext::PdfNumber( (jint)num_bookmarks ) );
+		}
+	}
+
+	// pass back to calling function so it can call BuildBookmarks serially
+	final_child_p= bookmark_prev_p;
+	final_child_ref_p= bookmark_prev_ref_p;
+
+	return ret_val;
+}
+
 bool
 UpdateInfo( itext::PdfReader* reader_p,
 						istream& ifs,
@@ -1639,13 +1897,14 @@ UpdateInfo( itext::PdfReader* reader_p,
 					
 					// build bookmarks
 					itext::PdfDictionary* outlines_p= new itext::PdfDictionary( itext::PdfName::OUTLINES );
-					itext::PRIndirectReference* outlines_ref_p= reader_p->getPRIndirectReference( outlines_p );
 					if( outlines_p ) {
+						itext::PRIndirectReference* outlines_ref_p= reader_p->getPRIndirectReference( outlines_p );
 
-						vector<PdfBookmark>::const_iterator bit= pdf_data.m_bookmarks.begin();
 						int num_bookmarks_total= 0;
+						// passed in by reference, so must use variable:
+						vector<PdfBookmark>::const_iterator vit= pdf_data.m_bookmarks.begin();
 						BuildBookmarks( reader_p,
-														bit,
+														vit,
 														pdf_data.m_bookmarks.end(),
 														outlines_p,
 														outlines_ref_p,
@@ -1715,6 +1974,248 @@ UpdateInfo( itext::PdfReader* reader_p,
 
 	return ret_val_b;
 }
+
+void
+ReportAction( ostream& ofs, 
+							itext::PdfReader* reader_p,
+							itext::PdfDictionary* action_p,
+							bool utf8_b, string prefix )
+{
+	if( action_p->contains( itext::PdfName::S ) ) {
+		itext::PdfName* s_p= (itext::PdfName*)
+			reader_p->getPdfObject( action_p->get( itext::PdfName::S ) );
+
+		// URI action
+		if( s_p->equals( itext::PdfName::URI ) ) {
+			ofs << prefix << "ActionSubtype: URI" << endl;
+
+			// report URI
+			if( action_p->contains( itext::PdfName::URI ) ) {
+				itext::PdfString* uri_p= (itext::PdfString*)
+					reader_p->getPdfObject( action_p->get( itext::PdfName::URI ) );
+				if( uri_p && uri_p->isString() ) {
+					
+					ofs << prefix << "ActionURI: ";
+					OutputPdfString( ofs, uri_p, utf8_b );
+					ofs << endl;
+				}
+			}
+
+			// report IsMap
+			if( action_p->contains( itext::PdfName::ISMAP ) ) {
+				itext::PdfBoolean* ismap_p= (itext::PdfBoolean*)
+					reader_p->getPdfObject( action_p->get( itext::PdfName::ISMAP ) );
+				if( ismap_p && ismap_p->isBoolean() )
+					if( ismap_p->booleanValue() )
+						ofs << prefix << "ActionIsMap: true" << endl;
+					else
+						ofs << prefix << "ActionIsMap: false" << endl;
+			}
+			else
+				ofs << prefix << "ActionIsMap: false" << endl;
+		}
+	}
+
+	// subsequent actions? can be a single action or an array
+	if( action_p->contains( itext::PdfName::NEXT ) ) {
+		itext::PdfObject* next_p= reader_p->getPdfObject( action_p->get( itext::PdfName::NEXT ) );
+		if( next_p->isDictionary() ) {
+			ReportAction( ofs, reader_p, (itext::PdfDictionary*)next_p, utf8_b, prefix );
+		}
+		else if( next_p->isArray() ) {
+			java::ArrayList* actions_p= ((itext::PdfArray*)next_p)->getArrayList();
+			for( jint ii= 0; ii< actions_p->size(); ++ii ) {
+				itext::PdfDictionary* action_p= (itext::PdfDictionary*)
+					reader_p->getPdfObject( (itext::PdfObject*)actions_p->get(ii) );
+				if( action_p && action_p->isDictionary() )
+					ReportAction( ofs, reader_p, action_p, utf8_b, prefix ); // recurse
+			}
+		}
+	}
+}
+
+static const int LLx= 0;
+static const int LLy= 1;
+static const int URx= 2;
+static const int URy= 3;
+
+void
+ReportAnnot( ostream& ofs,
+						 itext::PdfReader* reader_p,
+						 int page_num,
+						 itext::PdfDictionary* page_p,
+						 itext::PdfDictionary* annot_p,
+						 bool utf8_b )
+{
+	// report things common to all annots
+
+	// subtype
+	itext::PdfName* subtype_p= (itext::PdfName*)
+		reader_p->getPdfObject( annot_p->get( itext::PdfName::SUBTYPE ) );
+	if( subtype_p && subtype_p->isName() ) {
+		ofs << "AnnotSubtype: ";
+		OutputPdfName( ofs, subtype_p );
+		ofs << endl;
+	}
+
+	////
+	// rect
+
+	// get raw rect from annot
+	float rect[4]= { 0.0, 0.0, 0.0, 0.0 };
+	itext::PdfArray* rect_p= (itext::PdfArray*)
+		reader_p->getPdfObject( annot_p->get( itext::PdfName::RECT ) );
+	if( rect_p && rect_p->isArray() ) {
+		java::ArrayList* rect_al_p= rect_p->getArrayList();
+		if( rect_al_p && rect_al_p->size()== 4 ) {
+
+			for( jint ii= 0; ii< 4; ++ii ) {
+				itext::PdfNumber* coord_p= (itext::PdfNumber*)
+					reader_p->getPdfObject( (itext::PdfObject*)(rect_al_p->get( ii ) ) );
+				if( coord_p && coord_p->isNumber() )
+					rect[ ii ]= (float)coord_p->floatValue();
+				else
+					rect[ ii ]= -1; // error value
+			}
+		}
+	}
+	
+	// transform rect according to page crop box
+	// grab width and height for later xform
+	float page_crop_width= 0;
+	float page_crop_height= 0;
+	{
+		itext::Rectangle* page_crop_p= reader_p->getCropBox( page_num );
+		rect[0]= rect[0]- page_crop_p->left();
+		rect[1]= rect[1]- page_crop_p->bottom();
+		rect[2]= rect[2]- page_crop_p->left();
+		rect[3]= rect[3]- page_crop_p->bottom();
+
+		page_crop_width= (float)(page_crop_p->right()- page_crop_p->left());
+		page_crop_height= (float)(page_crop_p->top()- page_crop_p->bottom());
+	}
+
+	// create new rect based on page rotation
+	int page_rot= (int)(reader_p->getPageRotation( page_num )) % 360;
+	float rot_rect[4]= { 0.0, 0.0, 0.0, 0.0 };
+	switch( page_rot ) {
+
+	case 90:
+		rot_rect[0]= rect[LLy];
+		rot_rect[1]= page_crop_width- rect[URx];
+		rot_rect[2]= rect[URy];
+		rot_rect[3]= page_crop_width- rect[LLx];
+		break;
+
+	case 180:
+		rot_rect[0]= page_crop_width- rect[URx];
+		rot_rect[1]= page_crop_height- rect[URy];
+		rot_rect[2]= page_crop_width- rect[LLx];
+		rot_rect[3]= page_crop_height- rect[LLy];
+		break;
+
+	case 270:
+		rot_rect[0]= page_crop_height- rect[URy];
+		rot_rect[1]= rect[LLx];
+		rot_rect[2]= page_crop_height- rect[LLy];
+		rot_rect[3]= rect[URx];
+		break;
+
+	default: // 0 deg
+		rot_rect[0]= rect[0];
+		rot_rect[1]= rect[1];
+		rot_rect[2]= rect[2];
+		rot_rect[3]= rect[3];
+		break;
+	}
+
+	// output rotated rect
+	ofs << "AnnotRect: " << rot_rect[0] << " " << rot_rect[1];
+	ofs << " " << rot_rect[2] << " " << rot_rect[3] << endl;
+
+}
+
+void
+ReportAnnots( ostream& ofs,
+							itext::PdfReader* reader_p,
+							bool utf8_b )
+{
+	reader_p->resetReleasePage();
+
+	////
+	// document information
+
+	// document page count
+	ofs << "NumberOfPages: " << (int)reader_p->getNumberOfPages() << endl;
+
+	// document base url
+	itext::PdfDictionary* uri_p= (itext::PdfDictionary*)
+		reader_p->getPdfObject( reader_p->catalog->get( itext::PdfName::URI ) );
+	if( uri_p && uri_p->isDictionary() ) {
+		
+		itext::PdfString* base_p= (itext::PdfString*)
+			reader_p->getPdfObject( uri_p->get( itext::PdfName::BASE ) );
+		if( base_p && base_p->isString() ) {
+			ofs << "PdfUriBase: ";
+			OutputPdfString( ofs, base_p, utf8_b );
+			ofs << endl;
+		}
+	}
+
+	////
+	// iterate over pages
+
+	for( jint ii= 1; ii<= reader_p->getNumberOfPages(); ++ii ) {
+		itext::PdfDictionary* page_p= reader_p->getPageN( ii );
+
+		itext::PdfArray* annots_p= (itext::PdfArray*)
+			reader_p->getPdfObject( page_p->get( itext::PdfName::ANNOTS ) );
+		if( annots_p && annots_p->isArray() ) {
+
+			java::ArrayList* annots_al_p= annots_p->getArrayList();
+			if( annots_al_p ) {
+
+				// iterate over annotations
+				for( jint jj= 0; jj< annots_al_p->size(); ++jj ) {
+
+					itext::PdfDictionary* annot_p= (itext::PdfDictionary*)
+						reader_p->getPdfObject( (itext::PdfObject*)annots_al_p->get( jj ) );
+					if( annot_p && annot_p->isDictionary() ) {
+
+						itext::PdfName* type_p= (itext::PdfName*)
+							reader_p->getPdfObject( annot_p->get( itext::PdfName::TYPE ) );
+						if( type_p->equals( itext::PdfName::ANNOT ) ) {
+
+							itext::PdfName* subtype_p= (itext::PdfName*)
+								reader_p->getPdfObject( annot_p->get( itext::PdfName::SUBTYPE ) );
+						
+							// link annotation
+							if( subtype_p->equals( itext::PdfName::LINK ) ) {
+
+								ofs << "---" << endl; // delim
+								ReportAnnot( ofs, reader_p, (int)ii, page_p, annot_p, utf8_b ); // base annot items
+								ofs << "AnnotPageNumber: " << (int)ii << endl;
+
+								// link-specific items
+								if( annot_p->contains( itext::PdfName::A ) ) { // action
+									itext::PdfDictionary* action_p= (itext::PdfDictionary*)
+										reader_p->getPdfObject( annot_p->get( itext::PdfName::A ) );
+									if( action_p && action_p->isDictionary() ) {
+
+										ReportAction( ofs, reader_p, action_p, utf8_b, "Annot" );
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		reader_p->releasePage( ii );
+	}
+	reader_p->resetReleasePage();
+}
+
 
 /*
 

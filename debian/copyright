@@ -5,7 +5,7 @@ Upstream-Contact:
 Source: http://www.pdflabs.com/tools/pdftk-the-pdf-toolkit/
 
 Files: *
-Copyright: 2003-2010, Sid Steward <sid.steward at pdflabs dot com>
+Copyright: 2003-2013, Sid Steward <sid.steward at pdflabs dot com>
 License: GPL-2+
  This program is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@ License: GPL-2+
  version 2 can be found in /usr/share/common-licenses/GPL-2 file.
 
 Files: java/com/*
-Copyright: 1999-2002, Bruno Lowagie
+Copyright: 1999-2005, Bruno Lowagie
            2002, Jeremy Bowman <bowmanjm@attbi.com>.
            2002, Josselin PUJO
 	   2002, Mark Thompson
@@ -68,8 +68,7 @@ License: Apache-2.0
  On Debian systems, the complete text of the GNU General Public License
  version 2 can be found in /usr/share/common-licenses/Apache-2.0 file.
 
-Files: java/gnu_local/*
-       java/java_local/*
+Files: java/java/*
 Copyright: 1999-2003, Free Software Foundation, Inc.
 License: GPL-2+ with link exception
  GNU Classpath is free software; you can redistribute it and/or modify
@@ -116,7 +115,7 @@ License: other
  not modified. Adobe Systems has no responsibility or obligation to
  support the use of the AFM files.
 
-Files: java/org/bouncycastle/*
+Files: java/pdftk/org/bouncycastle/*
 Copyright: 2000-2008, The Legion Of The Bouncy Castle (http://www.bouncycastle.org)
 License: other
  The Bouncy Castle License
@@ -137,10 +136,11 @@ License: other
  DEALINGS IN THE SOFTWARE.
 
 
+
 Files: debian/*
 Copyright: 2004-2006 Aurelien Jarno <aurel32@debian.org>
            2006-2008 Aurélien GÉRÔME <ag@roxor.cx>
-           2009-2012 Johann Felix Soden <johfel@debian.org>
+           2009-2013 Johann Felix Soden <johfel@debian.org>
 License: GPL
  The Debian packaging information is under the GPL.
  On Debian systems, the complete text of the GNU General Public

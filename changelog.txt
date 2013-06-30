@@ -1,3 +1,51 @@
+    * 2.01 - June 5, 2013
+          o Fixed an uncompress bug introduced in 2.00 that corrupted some
+            image streams.
+          o Updated the Windows pdftk.exe compiler settings to remedy an
+            elusive NullPointerException reported in the field. This problem
+            first appeared in version 2.00.
+    * 2.00 - May 22, 2013
+          o Added AES decryption of input PDFs. The 'owner' password is still
+            required when decrypting any PDF.
+          o Added merging of bookmarks/outlines when merging full PDFs.
+          o Added new rotate operation, which is a convenient way of rotating
+            select pages of a single PDF.
+          o Added new dump_data_annots operation. Currently it reports only
+            link annotation information.
+          o Added new need_appearances output option. Use this when filling a
+            form with non-ASCII text to ensure the best presentation in Adobe
+            Reader/Acrobat. It won't work when combined with the flatten
+            option.
+          o Improved the compress option so that output PDFs are more compact
+            and efficient.
+          o Added page media information to dump_data output: page rotation,
+            page media bounds and page crop bounds.
+          o Improved the performance of dump_data so it works better with very
+            large PDFs.
+          o Improved the memory management in the Windows binary. This fixes
+            the rare "Too many heap sections" error.
+          o Fixed a bug where form fields with multiple values were not being
+            properly reported by dump_data_fields.
+          o Fixed a_burst_bug that was corrupting the output PDF pages.
+          o Fixed an_input_bug to allow interactive prompting of both the user
+            and owner passwords.
+          o Fixed a burst bug so that doc_data.txt is now output to the same
+            directory as the PDF's pages when an output directory is given.
+          o Fixed a bug where indirect references to the PDF ID in the trailer
+            would cause a crash.
+          o Added a test to fill_form so it checks that an input PDF is a form
+            before trying to fill it with data.
+          o Added a return value of 3 for warnings 'PDF information not added'
+            or 'PDF form not filled.'
+          o Improved the error message for cat page range errors.
+          o Fixed the error report when an input page number is out of range.
+          o Fixed a burst bug where document metadata wasn't being copied
+            properly to the output PDFs.
+          o Updated the Bouncy Castle library to 1.48.
+          o When using the cat operation, the output PDF version number is now
+            set to the maximum PDF version of all of the input PDFs. If any of
+            the input PDFs have PDF extension levels, then the greatest
+            extension level is also copied to the output PDF.
     * 1.45 - December 6, 2012
           o You can now add or change a PDF's bookmarks using update_info.
           o Added record delimiters to dump_data output to help make parsing

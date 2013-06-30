@@ -1,7 +1,7 @@
 /* -*- Mode: C++; tab-width: 2; c-basic-offset: 2 -*- */
 /*
 	pdftk, the PDF Toolkit
-	Copyright (c) 2003-2012 Sid Steward
+	Copyright (c) 2003-2013 Sid Steward
 
 
 	This program is free software; you can redistribute it and/or modify
@@ -85,6 +85,7 @@ public:
 		dump_data_utf8_k,
 		dump_data_fields_k,
 		dump_data_fields_utf8_k,
+		dump_data_annots_k,
 		generate_fdf_k,
 		unpack_files_k, // unpack files from input; no PDF output
 		//
@@ -102,6 +103,7 @@ public:
 		multibackground_k, // feature added by Bernhard R. Link <brlink@debian.org>, Johann Felix Soden <johfel@gmx.de>
 		stamp_k,
 		multistamp_k, // feature added by Bernhard R. Link <brlink@debian.org>, Johann Felix Soden <johfel@gmx.de>
+		rotate_k, // rotate given pages as directed
 
 		// optional attach_file argument
 		attach_file_to_page_k,
@@ -140,6 +142,7 @@ public:
 
 		// forms
 		flatten_k,
+		need_appearances_k,
 		drop_xfa_k,
 		keep_first_id_k,
 		keep_final_id_k,
@@ -189,9 +192,11 @@ public:
 	bool m_output_uncompress_b;
 	bool m_output_compress_b;
 	bool m_output_flatten_b;
+	bool m_output_need_appearances_b;
 	bool m_output_drop_xfa_b;
 	bool m_output_keep_first_id_b;
 	bool m_output_keep_final_id_b;
+	bool m_cat_full_pdfs_b; // we are merging entire docs, not select pages
 
 	enum encryption_strength {
 		none_enc= 0,
