@@ -1,3 +1,10 @@
+pdftk (1.45-1) experimental; urgency=low
+
+  The syntax for page rotation has changed: Instead of N, S, E, W, L, R and D,
+  you need to use: north, south, east, west, left, right and down.
+
+ -- Johann Felix Soden <johfel@debian.org>  Tue, 18 Jun 2013 00:50:38 +0200
+
 pdftk (1.44-1) experimental; urgency=low
 
   Since the 1.43+dfsg-1 release, the dump_data, dump_data_fields and

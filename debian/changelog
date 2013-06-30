@@ -1,3 +1,19 @@
+pdftk (2.01-1) unstable; urgency=low
+
+  * New upstream version
+    - supports AES encryption. (Closes: #703591)
+    - crashes with some pdf 1.6 and 1.7 documents solved.
+      (Closes: #706075,  #714518)
+  * debian/patches/*: Drop upstream applied patches and rework the rest.
+  * Build with gcj/g++-4.8 instead of -4.7.
+  * Switch to debhelper compat v9.
+  * debian/copyright: Update years and paths.
+  * debian/control: Use anonscm.debian.org in VCS-* fields; Vcs-Git without
+    experimental branch.
+  * Fix hyphens in man page.
+
+ -- Johann Felix Soden <johfel@debian.org>  Mon, 01 Jul 2013 00:19:19 +0200
+
 pdftk (1.45-1) experimental; urgency=low
 
   * New upstream version. (Closes: #697642)
