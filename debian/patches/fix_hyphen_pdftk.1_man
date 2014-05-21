@@ -190,7 +190,7 @@ Author: Johann Felix Soden <johfel@debian.org>
  Changes the bookmarks and metadata in a single PDF's Info dictionary to match
  the input data file. The input data file uses the same syntax as the
  output from \fBdump_data\fR. Non-ASCII characters should be encoded as XML
-@@ -315,7 +315,7 @@
+@@ -322,7 +322,7 @@
  
  pdftk in.pdf update_info in.info output out.pdf
  .TP
@@ -199,7 +199,7 @@ Author: Johann Felix Soden <johfel@debian.org>
  Same as \fBupdate_info\fR except that the input is encoded as UTF-8.
  .TP
  .B attach_files <attachment filenames | PROMPT> [to_page <page number | PROMPT>]
-@@ -338,9 +338,9 @@
+@@ -345,9 +345,9 @@
  pdftk report.pdf unpack_files output PROMPT
  .RE
  .TP
@@ -211,7 +211,7 @@ Author: Johann Felix Soden <johfel@debian.org>
  When using the \fBdump_data\fR operation, use \fBoutput\fR to set the name of the
  output data file. When using the \fBunpack_files\fR operation, use \fBoutput\fR to set
  the name of an output directory.  When using the \fBburst\fR operation, you can use \fBoutput\fR
-@@ -430,7 +430,7 @@
+@@ -442,7 +442,7 @@
  .br
  or if odd.pdf is in reverse order:
  .br
@@ -220,7 +220,7 @@ Author: Johann Felix Soden <johfel@debian.org>
  .TP
  .B Decrypt a PDF
  pdftk secured.pdf input_pw foopass output unsecured.pdf
-@@ -456,11 +456,11 @@
+@@ -468,11 +468,11 @@
  pdftk *.pdf cat output combined.pdf
  .TP
  .B Remove page 13 from in1.pdf to create out1.pdf
@@ -234,7 +234,7 @@ Author: Johann Felix Soden <johfel@debian.org>
  .TP
  .B Apply 40-bit encryption to output, revoking all permissions (the default).  Set the owner PW to 'foopass'.
  pdftk 1.pdf 2.pdf cat output 3.pdf encrypt_40bit owner_pw foopass
-@@ -484,14 +484,14 @@
+@@ -496,14 +496,14 @@
  pdftk in.pdf dump_data output report.txt
  .TP
  .B Rotate the first PDF page to 90 degrees clockwise

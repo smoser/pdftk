@@ -34,12 +34,12 @@ Author: Johann Felix Soden <johfel@gmx.de>
 +# gcj-jdk, g++
 --- a/pdftk/Makefile.Base
 +++ b/pdftk/Makefile.Base
-@@ -43,7 +43,7 @@
+@@ -46,7 +46,7 @@
  	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -I$(JAVALIBPATH) pdftk.cc -c
  
- pdftk : pdftk.o attachments.o report.o $(JAVALIB) $(LIBGCJ_SUPPLEMENT_FULL_O)
--	$(CXX) $(CXXFLAGS) attachments.o report.o pdftk.o $(JAVALIB) $(LIBGCJ_SUPPLEMENT_FULL_O) $(LDLIBS) -o pdftk
-+	$(CXX) $(LDFLAGS) $(CXXFLAGS) attachments.o report.o pdftk.o $(JAVALIB) $(LIBGCJ_SUPPLEMENT_FULL_O) $(LDLIBS) -o pdftk
+ pdftk : pdftk.o attachments.o report.o passwords.o $(JAVALIB) $(LIBGCJ_SUPPLEMENT_FULL_O)
+-	$(CXX) $(CXXFLAGS) attachments.o report.o passwords.o pdftk.o $(JAVALIB) $(LIBGCJ_SUPPLEMENT_FULL_O) $(LDLIBS) -o pdftk
++	$(CXX) $(LDFLAGS) $(CXXFLAGS) attachments.o report.o passwords.o pdftk.o $(JAVALIB) $(LIBGCJ_SUPPLEMENT_FULL_O) $(LDLIBS) -o pdftk
  
  install:
  	/usr/bin/install pdftk /usr/local/bin 

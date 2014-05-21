@@ -23,6 +23,22 @@
  * Boston, MA  02110-1301, USA.
  *
  *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Library General Public
+ * License as published by the Free Software Foundation; either
+ * version 2 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Library General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Library General Public
+ * License along with this library; if not, write to the
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA  02110-1301, USA.
+ *
+ *
  */
 
 /*
@@ -695,10 +711,10 @@ public class CFFFont {
         
         seek(0);
         
-        int major = getCard8();
-        int minor = getCard8();
+        // ssteward omit: int major = getCard8();
+        // ssteward omit: int minor = getCard8();
         int hdrSize = getCard8();
-        int offSize = getCard8();
+        // ssteward omit: int offSize = getCard8();
         nextIndexOffset = hdrSize;
         
         l.addLast(new RangeItem(buf,0,hdrSize));
@@ -1023,14 +1039,13 @@ public class CFFFont {
         buf = inputbuffer;
         seek(0);
         
-        int major, minor;
-        major = getCard8();
-        minor = getCard8();
+        // ssteward omit: int major = getCard8();
+        // ssteward omit: int minor = getCard8();
         
         //System.err.println("CFF Major-Minor = "+major+"-"+minor);
         
         int hdrSize = getCard8();
-	int offSize = getCard8();
+	// ssteward omit: int offSize = getCard8();
         
         //System.err.println("offSize = "+offSize);
         
@@ -1166,6 +1181,6 @@ public class CFFFont {
     
     void ReadEncoding(int nextIndexOffset){
     	seek(nextIndexOffset);
-    	int format = getCard8();
+    	// ssteward omit: int format = getCard8();
     }    
 }

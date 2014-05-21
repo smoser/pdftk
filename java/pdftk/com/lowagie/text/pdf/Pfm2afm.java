@@ -30,6 +30,22 @@
  * Boston, MA  02110-1301, USA.
  *
  *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Library General Public
+ * License as published by the Free Software Foundation; either
+ * version 2 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Library General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Library General Public
+ * License along with this library; if not, write to the
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA  02110-1301, USA.
+ *
+ *
  * If you didn't download this code from the following link, you should check if
  * you aren't using an obsolete version:
  * http://www.lowagie.com/iText/
@@ -405,53 +421,53 @@ public class Pfm2afm {
         out.print("EndFontMetrics\n");
     }
 
-    private short  vers;
-    private int   h_len;             /* Total length of .pfm file */
-    private String   copyright;   /* Copyright string [60]*/
-    private short  type;
-    private short  points;
-    private short  verres;
-    private short  horres;
-    private short  ascent;
-    private short  intleading;
-    private short  extleading;
-    private byte   italic;
-    private byte   uline;
-    private byte   overs;
-    private short  weight;
-    private byte   charset;         /* 0=windows, otherwise nomap */
-    private short  pixwidth;        /* Width for mono fonts */
-    private short  pixheight;
-    private byte   kind;            /* Lower bit off in mono */
-    private short  avgwidth;        /* Mono if avg=max width */
-    private short  maxwidth;        /* Use to compute bounding box */
-    private int   firstchar;       /* First char in table */
-    private int   lastchar;        /* Last char in table */
-    private byte   defchar;
-    private byte   brkchar;
-    private short  widthby;
-    private int   device;
-    private int   face;            /* Face name */
-    private int   bits;
-    private int   bitoff;
-    private short  extlen;
-    private int   psext;           /* PostScript extension */
-    private int   chartab;         /* Character width tables */
-    private int   res1;
-    private int   kernpairs;       /* Kerning pairs */
-    private int   res2;
-    private int   fontname;        /* Font name */
+    protected short  vers;
+    protected int   h_len;             /* Total length of .pfm file */
+    protected String   copyright;   /* Copyright string [60]*/
+    protected short  type;
+    protected short  points;
+    protected short  verres;
+    protected short  horres;
+    protected short  ascent;
+    protected short  intleading;
+    protected short  extleading;
+    protected byte   italic;
+    protected byte   uline;
+    protected byte   overs;
+    protected short  weight;
+    protected byte   charset;         /* 0=windows, otherwise nomap */
+    protected short  pixwidth;        /* Width for mono fonts */
+    protected short  pixheight;
+    protected byte   kind;            /* Lower bit off in mono */
+    protected short  avgwidth;        /* Mono if avg=max width */
+    protected short  maxwidth;        /* Use to compute bounding box */
+    protected int   firstchar;       /* First char in table */
+    protected int   lastchar;        /* Last char in table */
+    protected byte   defchar;
+    protected byte   brkchar;
+    protected short  widthby;
+    protected int   device;
+    protected int   face;            /* Face name */
+    protected int   bits;
+    protected int   bitoff;
+    protected short  extlen;
+    protected int   psext;           /* PostScript extension */
+    protected int   chartab;         /* Character width tables */
+    protected int   res1;
+    protected int   kernpairs;       /* Kerning pairs */
+    protected int   res2;
+    protected int   fontname;        /* Font name */
 
 /*
  *  Some metrics from the PostScript extension
  */
-    private short  capheight;       /* Cap height */
-    private short  xheight;         /* X height */
-    private short  ascender;        /* Ascender */
-    private short  descender;       /* Descender (positive) */
+    protected short  capheight;       /* Cap height */
+    protected short  xheight;         /* X height */
+    protected short  ascender;        /* Ascender */
+    protected short  descender;       /* Descender (positive) */
 
     
-    private boolean isMono;
+    protected boolean isMono;
 /*
  * Translate table from 1004 to psstd.  1004 is an extension of the
  * Windows translate table used in PM.
@@ -479,24 +495,26 @@ public class Pfm2afm {
  *  Character class.  This is a minor attempt to overcome the problem that
  *  in the pfm file, all unused characters are given the width of space.
  */
+    /* ssteward omit:
     private int WinClass[] = {
-        0, 0, 0, 0, 2, 2, 2, 0, 2, 0, 2, 2, 2, 0, 0, 0,   /* 00 */
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   /* 10 */
-        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,   /* 20 */
-        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,   /* 30 */
-        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,   /* 40 */
-        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,   /* 50 */
-        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,   /* 60 */
-        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2,   /* 70 */
-        0, 0, 2, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0,   /* 80 */
-        0, 3, 3, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 2,   /* 90 */
-        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,   /* a0 */
-        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,   /* b0 */
-        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,   /* c0 */
-        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,   /* d0 */
-        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,   /* e0 */
-        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1   /* f0 */
+        0, 0, 0, 0, 2, 2, 2, 0, 2, 0, 2, 2, 2, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2,
+        0, 0, 2, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0,
+        0, 3, 3, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 2,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 
     };
+*/
     
 /*
  *  Windows chararacter names.  Give a name to the usused locations

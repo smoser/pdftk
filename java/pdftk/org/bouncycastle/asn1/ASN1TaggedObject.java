@@ -84,10 +84,12 @@ public abstract class ASN1TaggedObject
         {
             ASN1Primitive prim = obj.toASN1Primitive();
 
+	    /* ssteward omit: ?
             if (prim instanceof ASN1Set)
             {
                 ASN1Set s = null;
             }
+	    */
 
             this.obj = obj;
         }

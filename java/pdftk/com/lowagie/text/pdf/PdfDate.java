@@ -33,6 +33,22 @@
  * Boston, MA  02110-1301, USA.
  *
  *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Library General Public
+ * License as published by the Free Software Foundation; either
+ * version 2 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Library General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Library General Public
+ * License along with this library; if not, write to the
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA  02110-1301, USA.
+ *
+ *
  * If you didn't download this code from the following link, you should check if
  * you aren't using an obsolete version:
  * http://www.lowagie.com/iText/
@@ -44,6 +60,8 @@ import java.text.SimpleDateFormat;
 import java.util.GregorianCalendar;
 import java.util.Calendar;
 import java.util.SimpleTimeZone;
+
+import gnu.java.locale.*;
 
 /**
  * <CODE>PdfDate</CODE> is the PDF date object.
@@ -63,10 +81,12 @@ import java.util.SimpleTimeZone;
 
 public class PdfDate extends PdfString {
     
+    /* we now have code in pdftk.cc that pulls it in for static (win32) build
     // ssteward; static builds of pdftk (Windows, gcc 3.3.1) would
     // omit this class because of its reference by reflection;
-    // this treatment ensures that ld will include it
-    private static Class c1= java.util.Calendar.class; //gnu.java.locale.Calendar.class;
+    // this treatment ensures that ld will include it; we also init it in pdftk.cc;
+    private static Class c1= java.util.Calendar.class;
+    */
 
     private static final int dateSpace[] = {Calendar.YEAR, 4, 0, Calendar.MONTH, 2, -1, Calendar.DAY_OF_MONTH, 2, 0,
         Calendar.HOUR_OF_DAY, 2, 0, Calendar.MINUTE, 2, 0, Calendar.SECOND, 2, 0};

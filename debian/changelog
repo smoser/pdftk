@@ -1,3 +1,19 @@
+pdftk (2.02-1) unstable; urgency=low
+
+  * New upstream version.
+  * Build with gcj/g++-4.9 instead of -4.8. (Closes: #747091)
+  * debian/copyright:
+    - Use new upstream name (PDFtk Server) and homepage.
+      (Closes: #726596)
+    - Update year.
+  * Adapt patches to new upstream version.
+  * Use "PDFtk" instead of "pdftk" in long description.
+  * Add debug package (pdftk-dbg).
+  * debian/rules: delete all generateds file in override_dh_auto_clean.
+  * Bump Standards-Version to 3.9.5.
+
+ -- Johann Felix Soden <johfel@debian.org>  Thu, 22 May 2014 01:01:16 +0200
+
 pdftk (2.01-1) unstable; urgency=low
 
   * New upstream version

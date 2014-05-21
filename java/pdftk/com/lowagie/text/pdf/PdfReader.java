@@ -34,6 +34,22 @@
  * Boston, MA  02110-1301, USA.
  *
  *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Library General Public
+ * License as published by the Free Software Foundation; either
+ * version 2 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Library General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Library General Public
+ * License along with this library; if not, write to the
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA  02110-1301, USA.
+ *
+ *
  * If you didn't download this code from the following link, you should check if
  * you aren't using an obsolete version:
  * http://www.lowagie.com/iText/
@@ -86,53 +102,53 @@ public class PdfReader implements PdfViewerPreferences {
 
     static final byte endstream[] = PdfEncodings.convertToBytes("endstream", null);
     static final byte endobj[] = PdfEncodings.convertToBytes("endobj", null);
-    protected PRTokeniser tokens;
+    protected PRTokeniser tokens = null;
     // Each xref pair is a position
     // type 0 -> -1, 0
     // type 1 -> offset, 0
     // type 2 -> index, obj num
-    protected int xref[];
-    protected HashMap objStmMark;
-    protected IntHashtable objStmToOffset;
-    protected boolean newXrefType;
-    private ArrayList xrefObj;
-    PdfDictionary rootPages;
-    protected PdfDictionary trailer;
-    protected PdfDictionary catalog;
-    protected PageRefs pageRefs;
+    protected int xref[] = null;
+    protected HashMap objStmMark = null;
+    protected IntHashtable objStmToOffset = null;
+    protected boolean newXrefType = false;
+    private ArrayList xrefObj = null;
+    PdfDictionary rootPages = null;
+    protected PdfDictionary trailer = null;
+    protected PdfDictionary catalog = null;
+    protected PageRefs pageRefs = null;
     protected PRAcroForm acroForm = null;
     protected boolean acroFormParsed = false;
     protected boolean encrypted = false;
     protected boolean rebuilt = false;
-    protected int freeXref;
+    protected int freeXref = 0;
     protected boolean tampered = false;
-    protected int lastXref;
-    protected int eofPos;
-    protected char pdfVersion;
-    protected PdfEncryption decrypt;
+    protected int lastXref = 0;
+    protected int eofPos = 0;
+    protected char pdfVersion = '4';
+    protected PdfEncryption decrypt = null;
     protected byte password[] = null; //added by ujihara for decryption
     protected boolean ownerPasswordUsed= false;
     protected ArrayList strings = new ArrayList();
     protected boolean sharedStreams = true;
     protected boolean consolidateNamedDestinations = false;
     protected boolean remoteToLocalNamedDestinations = false;
-    protected int rValue;
-    protected int pValue;
-    private int objNum;
-    private int objGen;
-    private int fileLength;
-    private boolean hybridXref;
+    protected int rValue = 0;
+    protected int pValue = 0;
+    private int objNum = 0;
+    private int objGen = 0;
+    private int fileLength = 0;
+    private boolean hybridXref = false;
     private int lastXrefPartial = -1;
-    private boolean partial;
+    private boolean partial = false;
 
-    private PRIndirectReference cryptoRef;
+    private PRIndirectReference cryptoRef = null;
 	private PdfViewerPreferencesImp viewerPreferences = new PdfViewerPreferencesImp();
-    private boolean encryptionError;
+    private boolean encryptionError = false;
 
     /**
      * Holds value of property appendable.
      */
-    private boolean appendable;
+    private boolean appendable = false;
 
     protected PdfReader() {
     }
@@ -190,7 +206,8 @@ public class PdfReader implements PdfViewerPreferences {
      */
     public PdfReader(URL url, byte ownerPassword[]) throws IOException {
         password = ownerPassword;
-        tokens = new PRTokeniser(new RandomAccessFileOrArray(url));
+		RandomAccessFileOrArray raf = new RandomAccessFileOrArray(url);
+        tokens = new PRTokeniser(raf);
         readPdf();
     }
 
@@ -203,7 +220,8 @@ public class PdfReader implements PdfViewerPreferences {
      */
     public PdfReader(InputStream is, byte ownerPassword[]) throws IOException {
         password = ownerPassword;
-        tokens = new PRTokeniser(new RandomAccessFileOrArray(is));
+		RandomAccessFileOrArray raf = new RandomAccessFileOrArray(is);
+        tokens = new PRTokeniser(raf);
         readPdf();
     }
 
@@ -236,6 +254,7 @@ public class PdfReader implements PdfViewerPreferences {
     /** Creates an independent duplicate.
      * @param reader the <CODE>PdfReader</CODE> to duplicate
      */
+	/* ssteward: I don't like how it's passing this to other contructors
     public PdfReader(PdfReader reader) {
         this.appendable = reader.appendable;
         this.consolidateNamedDestinations = reader.consolidateNamedDestinations;
@@ -269,16 +288,17 @@ public class PdfReader implements PdfViewerPreferences {
         this.cryptoRef = (PRIndirectReference)duplicatePdfObject(reader.cryptoRef, this);
         this.ownerPasswordUsed = reader.ownerPasswordUsed;
     }
+	*/
 
     /** Gets a new file instance of the original PDF
      * document.
      * @return a new file instance of the original PDF document
      */
-    public RandomAccessFileOrArray getSafeFile() {
+    public RandomAccessFileOrArray getSafeFile() throws IOException {
         return tokens.getSafeFile();
     }
 
-    protected PdfReaderInstance getPdfReaderInstance(PdfWriter writer) {
+    protected PdfReaderInstance getPdfReaderInstance(PdfWriter writer) throws IOException {
         return new PdfReaderInstance(this, writer);
     }
 
@@ -614,7 +634,8 @@ public class PdfReader implements PdfViewerPreferences {
 		// 4.2.0
         byte uValue[] = null;
         byte oValue[] = null;
-        int cryptoMode = 0; // default: error; PdfWriter.STANDARD_ENCRYPTION_40;
+		// default: error; PdfWriter.STANDARD_ENCRYPTION_40;
+        int cryptoMode = PdfWriter.INVALID_ENCRYPTION;
         int lengthValue = 0;
 
 		// 4.2.0
@@ -640,6 +661,7 @@ public class PdfReader implements PdfViewerPreferences {
             switch (rValue) {
             case 2:
             	cryptoMode = PdfWriter.STANDARD_ENCRYPTION_40;
+                lengthValue = 40;
             	break;
             case 3:
                 o = enc.get(PdfName.LENGTH);
@@ -666,15 +688,16 @@ public class PdfReader implements PdfViewerPreferences {
                 PdfObject em = enc.get(PdfName.ENCRYPTMETADATA);
                 if (em != null && em.toString().equals("false"))
                     cryptoMode |= PdfWriter.DO_NOT_ENCRYPT_METADATA;
+                lengthValue = 128;
                 break;
             default:
-				cryptoMode= 0;
+				cryptoMode= PdfWriter.INVALID_ENCRYPTION;
             }
         }
 		else {
 			throw new UnsupportedPdfException("unknown.encryption");
 		}
-		if( cryptoMode== 0 ) {
+		if( cryptoMode== PdfWriter.INVALID_ENCRYPTION ) {
 			throw new UnsupportedPdfException("unknown.encryption.type.r");
 		}
 
@@ -892,7 +915,8 @@ public class PdfReader implements PdfViewerPreferences {
      */
     public PRIndirectReference addPdfObject(PdfObject obj) {
         xrefObj.add(obj);
-        return new PRIndirectReference(this, xrefObj.size() - 1);
+		PRIndirectReference retVal = new PRIndirectReference(this, xrefObj.size() - 1);
+        return retVal;
     }
 
     protected void readPages() throws IOException {
@@ -2042,7 +2066,8 @@ public class PdfReader implements PdfViewerPreferences {
 		//int xref= getFreeXref();
 		//this.xrefObj[ xref ]= obj;
 		xrefObj.add(obj);
-		return new PRIndirectReference(this, xrefObj.size() - 1);
+		PRIndirectReference retVal = new PRIndirectReference(this, xrefObj.size() - 1);
+		return retVal;
 	}
 
     /** Sets the contents of the page.
@@ -3022,7 +3047,8 @@ public class PdfReader implements PdfViewerPreferences {
      * @return a read-only version of <CODE>AcroFields</CODE>
      */
     public AcroFields getAcroFields() {
-        return new AcroFields(this, null);
+		AcroFields retVal = new AcroFields(this, null);
+		return retVal;
     }
 
     /**
@@ -3176,18 +3202,18 @@ public class PdfReader implements PdfViewerPreferences {
     }
 
     static class PageRefs {
-        private PdfReader reader;
+        private PdfReader reader = null;
         /** ArrayList with the indirect references to every page. Element 0 = page 1; 1 = page 2;... Not used for partial reading. */
-        private ArrayList refsn;
+        private ArrayList refsn = null;
         /** The number of pages, updated only in case of partial reading. */
-        private int sizep;
+        private int sizep = 0;
         /** intHashtable that does the same thing as refsn in case of partial reading: major difference: not all the pages are read. */
-        private IntHashtable refsp;
+        private IntHashtable refsp = null;
         /** Page number of the last page that was read (partial reading only) */
         private int lastPageRead = -1;
         /** stack to which pages dictionaries are pushed to keep track of the current page attributes */
-        private ArrayList pageInh;
-        private boolean keepPages;
+        private ArrayList pageInh = null;
+        private boolean keepPages = false;
 
         private PageRefs(PdfReader reader) throws IOException {
             this.reader = reader;

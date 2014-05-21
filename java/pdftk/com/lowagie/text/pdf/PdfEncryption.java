@@ -33,6 +33,22 @@
  * Boston, MA  02110-1301, USA.
  *
  *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Library General Public
+ * License as published by the Free Software Foundation; either
+ * version 2 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Library General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Library General Public
+ * License along with this library; if not, write to the
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA  02110-1301, USA.
+ *
+ *
  * If you didn't download this code from the following link, you should check if
  * you aren't using an obsolete version:
  * http://www.lowagie.com/iText/
@@ -77,19 +93,19 @@ public class PdfEncryption {
 			(byte) 255, (byte) 255 };
 
 	/** The encryption key for a particular object/generation */
-	byte key[];
+	byte key[] = null;
 
 	/** The encryption key length for a particular object/generation */
-	int keySize;
+	int keySize = 0;
 
 	/** The global encryption key */
-	byte mkey[];
+	byte mkey[] = null;
 
 	/** Work area to prepare the object/generation bytes */
 	byte extra[] = new byte[5];
 
 	/** The message digest algorithm MD5 */
-	MessageDigest md5;
+	MessageDigest md5 = null;
 
 	/** The encryption key for the owner */
 	byte ownerKey[] = new byte[32];
@@ -100,25 +116,25 @@ public class PdfEncryption {
 	/** The public key security handler for certificate encryption */
 	// 4.2.0: protected PdfPublicKeySecurityHandler publicKeyHandler = null;
 
-	int permissions;
+	int permissions = 0;
 
-	byte documentID[];
+	byte documentID[] = null;
 
 	static long seq = System.currentTimeMillis();
 
-	private int revision;
+	private int revision = 0;
 
 	private ARCFOUREncryption arcfour = new ARCFOUREncryption();
 
 	/** The generic key length. It may be 40 or 128. */
-	private int keyLength;
+	private int keyLength = 0;
 
-	private boolean encryptMetadata;
+	private boolean encryptMetadata = false;
 	
 	// Indicates if the encryption is only necessary for embedded files.
-	private boolean embeddedFilesOnly;
+	private boolean embeddedFilesOnly = false;
 
-	private int cryptoMode;
+	private int cryptoMode = 0;
 
 	public PdfEncryption() {
 		try {
@@ -321,7 +337,7 @@ public class PdfEncryption {
     }
 
     public static byte[] createDocumentId() {
-        MessageDigest md5;
+        MessageDigest md5 = null;
         try {
             md5 = MessageDigest.getInstance("MD5");
         }

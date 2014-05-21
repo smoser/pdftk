@@ -30,6 +30,22 @@
  * Boston, MA  02110-1301, USA.
  *
  *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Library General Public
+ * License as published by the Free Software Foundation; either
+ * version 2 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Library General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Library General Public
+ * License along with this library; if not, write to the
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA  02110-1301, USA.
+ *
+ *
  * If you didn't download this code from the following link, you should check if
  * you aren't using an obsolete version:
  * http://www.lowagie.com/iText/
@@ -40,18 +56,18 @@ import java.security.SignatureException;
 import java.io.OutputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.EOFException;
-import java.io.RandomAccessFile;
+// ssteward omit: import java.io.EOFException;
+// ssteward omit: import java.io.RandomAccessFile;
 import java.io.File;
 import java.io.InputStream;
 import pdftk.com.lowagie.text.DocumentException;
 import pdftk.com.lowagie.text.ExceptionConverter;
-import pdftk.com.lowagie.text.DocWriter;
+// ssteward omit: import pdftk.com.lowagie.text.DocWriter;
 import pdftk.com.lowagie.text.Rectangle;
 // import pdftk.com.lowagie.text.Image; ssteward: dropped in 1.44
 import java.util.HashMap;
 import java.util.List;
-import java.util.Iterator;
+// ssteward omit: import java.util.Iterator;
 
 /** Applies extra content to the pages of a PDF document.
  * This extra content can be all the objects allowed in PdfContentByte
@@ -66,10 +82,10 @@ public class PdfStamper {
     /**
      * The writer
      */    
-    protected PdfStamperImp stamper;
-    private HashMap moreInfo;
-    private boolean hasSignature;
-    private PdfSignatureAppearance sigApp;
+    protected PdfStamperImp stamper = null;
+    private HashMap moreInfo = null;
+    private boolean hasSignature = false;
+    private PdfSignatureAppearance sigApp = null;
 
     /** Starts the process of adding extra content to an existing PDF
      * document.
@@ -149,7 +165,7 @@ public class PdfStamper {
     public PdfSignatureAppearance getSignatureAppearance() {
         return sigApp;
     }
-
+    /* ssteward omit: 
     private String getNewSigName() {
         AcroFields af = getAcroFields();
         String name = "Signature";
@@ -173,6 +189,8 @@ public class PdfStamper {
         name += step;
         return name;
     }
+    */
+
     /**
      * Closes the document. No more content can be written after the
      * document is closed.
@@ -213,6 +231,7 @@ public class PdfStamper {
         stamper.reader.close();
     }
 
+    /* ssteward omit: 
     private static int indexArray(byte bout[], int position, String search) {
         byte ss[] = PdfEncodings.convertToBytes(search, null);
         while (true) {
@@ -244,6 +263,7 @@ public class PdfStamper {
             ++position;
         }
     }
+    */
 
     /** Gets a <CODE>PdfContentByte</CODE> to write under the page of
      * the original document.
@@ -350,7 +370,7 @@ public class PdfStamper {
      * @param pageNumber the page number. The first page is 1
      * @return the template representing the imported page
      */
-    public PdfImportedPage getImportedPage(PdfReader reader, int pageNumber) {
+    public PdfImportedPage getImportedPage(PdfReader reader, int pageNumber) throws IOException {
         return stamper.getImportedPage(reader, pageNumber);
     }
 

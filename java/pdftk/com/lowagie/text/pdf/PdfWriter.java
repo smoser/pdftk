@@ -34,6 +34,22 @@
  * Boston, MA  02110-1301, USA.
  *
  *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Library General Public
+ * License as published by the Free Software Foundation; either
+ * version 2 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Library General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Library General Public
+ * License along with this library; if not, write to the
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA  02110-1301, USA.
+ *
+ *
  * If you didn't download this code from the following link, you should check if
  * you aren't using an obsolete version:
  * http://www.lowagie.com/iText/
@@ -51,9 +67,9 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.HashSet;
 
-import pdftk.com.lowagie.text.DocListener;
+// ssteward omit: import pdftk.com.lowagie.text.DocListener;
 import pdftk.com.lowagie.text.DocWriter;
-import pdftk.com.lowagie.text.Document;
+// ssteward omit: import pdftk.com.lowagie.text.Document;
 import pdftk.com.lowagie.text.DocumentException;
 import pdftk.com.lowagie.text.ExceptionConverter;
 // import pdftk.com.lowagie.text.Image; // ssteward: dropped in 1.44
@@ -103,14 +119,14 @@ public class PdfWriter extends DocWriter {
         static class PdfCrossReference implements Comparable {
             
             // membervariables
-            private int type;
+            private int type = 0;
             
             /**	Byte offset in the PDF file. */
-            private int offset;
+            private int offset = 0;
             
-            private int refnum;
+            private int refnum = 0;
             /**	generation of the object. */
-            private int generation;
+            private int generation = 0;
             
             // constructors
             /**
@@ -214,11 +230,11 @@ public class PdfWriter extends DocWriter {
         // membervariables
         
         /** array containing the cross-reference table of the normal objects. */
-        private TreeSet xrefs;
-        private int refnum;
+        private TreeSet xrefs = null;
+        private int refnum = 0;
         /** the current byteposition in the body. */
-        private int position;
-        private PdfWriter writer;
+        private int position = 0;
+        private PdfWriter writer = null;
         // constructors
         
         /**
@@ -241,9 +257,9 @@ public class PdfWriter extends DocWriter {
         
         private static final int OBJSINSTREAM = 200;
         
-        private ByteBuffer index;
-        private ByteBuffer streamObjects;
-        private int currentObjNum;
+        private ByteBuffer index = null;
+        private ByteBuffer streamObjects = null;
+        private int currentObjNum = 0;
         private int numObj = 0;
         
         private PdfWriter.PdfBody.PdfCrossReference addToObjStm(PdfObject obj, int nObj) throws IOException {
@@ -702,7 +718,8 @@ public class PdfWriter extends DocWriter {
 
     protected int prevxref = 0;
     
-    protected PdfPages root = new PdfPages(this);
+	// ssteward: use accessor
+    private PdfPages root = null;
     
     /** Dictionary, containing all the images of the PDF document */
     protected PdfDictionary imageDictionary = new PdfDictionary();
@@ -727,10 +744,12 @@ public class PdfWriter extends DocWriter {
     protected int patternNumber = 1;
     
     /** The direct content in this document. */
-    protected PdfContentByte directContent;
+	// ssteward: use accessor
+    private PdfContentByte directContent = null;
     
     /** The direct content under in this document. */
-    protected PdfContentByte directContentUnder;
+	// ssteward: use accessor
+    private PdfContentByte directContentUnder = null;
     
     /** The fonts of this document */
     protected HashMap documentFonts = new HashMap();
@@ -745,9 +764,9 @@ public class PdfWriter extends DocWriter {
     
     protected HashMap documentShadingPatterns = new HashMap();
     
-    protected ColorDetails patternColorspaceRGB;
-    protected ColorDetails patternColorspaceGRAY;
-    protected ColorDetails patternColorspaceCMYK;
+    protected ColorDetails patternColorspaceRGB = null;
+    protected ColorDetails patternColorspaceGRAY = null;
+    protected ColorDetails patternColorspaceCMYK = null;
     protected HashMap documentSpotPatterns = new HashMap();
     
     protected HashMap documentExtGState = new HashMap();
@@ -755,7 +774,7 @@ public class PdfWriter extends DocWriter {
     protected HashMap documentProperties = new HashMap();
     protected HashSet documentOCG = new HashSet();
     protected ArrayList documentOCGorder = new ArrayList();
-    protected PdfOCProperties OCProperties;
+    protected PdfOCProperties OCProperties = null;
     protected PdfArray OCGRadioGroup = new PdfArray();
     
     protected PdfDictionary defaultColorspace = new PdfDictionary();
@@ -781,24 +800,25 @@ public class PdfWriter extends DocWriter {
     // membervariables
     
     /** body of the PDF document */
-    protected PdfBody body;
+    protected PdfBody body = null;
     
     /** the pdfdocument object. */
-    protected PdfDocument pdf;
+	// ssteward: added accessor
+    private PdfDocument pdf = null;
     
     /** The <CODE>PdfPageEvent</CODE> for this document. */
-    private PdfPageEvent pageEvent;
+    private PdfPageEvent pageEvent = null;
     
     protected HashMap importedPages = new HashMap();
     
-    protected PdfReaderInstance currentPdfReaderInstance;
+    protected PdfReaderInstance currentPdfReaderInstance = null;
     
     /** The PdfIndirectReference to the pages. */
     protected ArrayList pageReferences = new ArrayList();
     
     protected int currentPageNumber = 1;
     
-    protected PdfDictionary group;
+    protected PdfDictionary group = null;
     
     /** The default space-char ratio. */    
     public static final float SPACE_CHAR_RATIO_DEFAULT = 2.5f;
@@ -825,7 +845,7 @@ public class PdfWriter extends DocWriter {
     private float spaceCharRatio = SPACE_CHAR_RATIO_DEFAULT;
     
     /** Holds value of property extraCatalog. */
-    private PdfDictionary extraCatalog;
+    private PdfDictionary extraCatalog = null;
 
     // ssteward: for PRStream.toPdf()
     public boolean filterStreams = false;   // apply decode filters to some streams upon output
@@ -842,7 +862,7 @@ public class PdfWriter extends DocWriter {
 
     protected PdfObject fileID = null; // ssteward: allow setting of fileID
 
-    protected PdfStructureTreeRoot structureTreeRoot;
+    protected PdfStructureTreeRoot structureTreeRoot = null;
    
     // constructor
     
@@ -858,12 +878,15 @@ public class PdfWriter extends DocWriter {
      * @param	document	The <CODE>PdfDocument</CODE> that has to be written
      * @param	os			The <CODE>OutputStream</CODE> the writer has to write to.
      */
-    
+    /* ssteward omit:
     protected PdfWriter(PdfDocument document, OutputStream os) {
-        super(document, os);
-        pdf = document;
-        directContent = new PdfContentByte(this);
-        directContentUnder = new PdfContentByte(this);
+        super(os);
+        this.pdf = document;
+    }
+	*/
+	// ssteward:
+    protected PdfWriter(OutputStream os) {
+        super(os);
     }
     
     // get an instance of the PdfWriter
@@ -877,16 +900,16 @@ public class PdfWriter extends DocWriter {
      *
      * @throws	DocumentException on error
      */
-    
+    /* ssteward omit:
     public static PdfWriter getInstance(Document document, OutputStream os)
     throws DocumentException {
         PdfDocument pdf = new PdfDocument();
         document.addDocListener(pdf);
         PdfWriter writer = new PdfWriter(pdf, os);
-        pdf.addWriter(writer);
+        pdf.setWriter(writer);
         return writer;
     }
-    
+    */
     /** Gets an instance of the <CODE>PdfWriter</CODE>.
      *
      * @return a new <CODE>PdfWriter</CODE>
@@ -895,16 +918,17 @@ public class PdfWriter extends DocWriter {
      * @param listener A <CODE>DocListener</CODE> to pass to the PdfDocument.
      * @throws DocumentException on error
      */
-    
+    /* ssteward omit:
     public static PdfWriter getInstance(Document document, OutputStream os, DocListener listener)
     throws DocumentException {
         PdfDocument pdf = new PdfDocument();
         pdf.addDocListener(listener);
         document.addDocListener(pdf);
         PdfWriter writer = new PdfWriter(pdf, os);
-        pdf.addWriter(writer);
+        pdf.setWriter(writer);
         return writer;
     }
+	*/
     
     // methods to write objects to the outputstream
     
@@ -936,7 +960,7 @@ public class PdfWriter extends DocWriter {
             page.put(PdfName.GROUP, group);
             group = null;
         }
-        root.addPage(page);
+        getRoot().addPage(page);
         currentPageNumber++;
         return null;
     }
@@ -1180,9 +1204,9 @@ public class PdfWriter extends DocWriter {
         d.put(PdfName.LISTMODE, PdfName.VISIBLEPAGES);
     }
     
-    protected PdfDictionary getCatalog(PdfIndirectReference rootObj)
+    protected PdfDictionary getCatalog(PdfIndirectReference rootObj) throws DocumentException
     {
-        PdfDictionary catalog = ((PdfDocument)document).getCatalog(rootObj);
+        PdfDictionary catalog = pdf.getCatalog(rootObj); // ssteward
         if (tagged) {
             try {
                 getStructureTreeRoot().buildTree();
@@ -1287,7 +1311,7 @@ public class PdfWriter extends DocWriter {
             try {
                 addSharedObjectsToBody();
                 // add the root to the body
-                PdfIndirectReference rootRef = root.writePageTree();
+                PdfIndirectReference rootRef = getRoot().writePageTree();
                 // make the catalog-object and add it to the body
                 PdfDictionary catalog = getCatalog(rootRef);
                 // if there is XMP data to add: add it
@@ -1368,6 +1392,9 @@ public class PdfWriter extends DocWriter {
             }
             catch(IOException ioe) {
                 throw new ExceptionConverter(ioe);
+            }
+            catch(DocumentException de) {
+                throw new ExceptionConverter(de);
             }
         }
     }
@@ -1504,6 +1531,8 @@ public class PdfWriter extends DocWriter {
     public PdfContentByte getDirectContent() {
         if (!open)
             throw new RuntimeException("The document is not open.");
+		if( directContent== null )
+			directContent = new PdfContentByte(this);
         return directContent;
     }
     
@@ -1516,6 +1545,8 @@ public class PdfWriter extends DocWriter {
     public PdfContentByte getDirectContentUnder() {
         if (!open)
             throw new RuntimeException("The document is not open.");
+		if( directContentUnder== null )
+			directContentUnder = new PdfContentByte(this);
         return directContentUnder;
     }
     
@@ -1524,15 +1555,15 @@ public class PdfWriter extends DocWriter {
      */
     
     void resetContent() {
-        directContent.reset();
-        directContentUnder.reset();
+        getDirectContent().reset();
+        getDirectContentUnder().reset();
     }
     
     /** Gets the AcroForm object.
      * @return the <CODE>PdfAcroForm</CODE>
      */
     
-    public PdfAcroForm getAcroForm() {
+    public PdfAcroForm getAcroForm() throws DocumentException {
         return pdf.getAcroForm();
     }
     
@@ -1541,7 +1572,7 @@ public class PdfWriter extends DocWriter {
      */
     
     public PdfOutline getRootOutline() {
-        return directContent.getRootOutline();
+        return getDirectContent().getRootOutline();
     }
     
     /**
@@ -1711,7 +1742,9 @@ public class PdfWriter extends DocWriter {
      * @return the <CODE>PdfDocument</CODE>
      */
     
-    PdfDocument getPdfDocument() {
+    public PdfDocument getPdfDocument() {
+		if( this.pdf== null )
+			this.pdf = new PdfDocument();
         return pdf;
     }
     
@@ -1834,7 +1867,7 @@ public class PdfWriter extends DocWriter {
      */
     
     public int getPageNumber() {
-        return pdf.getPageNumber();
+        return getPdfDocument().getPageNumber();
     }
     
     /**
@@ -1897,11 +1930,13 @@ public class PdfWriter extends DocWriter {
      */
     
     public void setViewerPreferences(int preferences) {
-        pdf.setViewerPreferences(preferences);
+        getPdfDocument().setViewerPreferences(preferences);
     }
     
     // types of encryption
 
+    /** Type of encryption */
+    public static final int INVALID_ENCRYPTION = -1;
     /** Type of encryption */
     public static final int STANDARD_ENCRYPTION_40 = 0;
     /** Type of encryption */
@@ -1952,7 +1987,7 @@ public class PdfWriter extends DocWriter {
      */
     public static final int ALLOW_DEGRADED_PRINTING = 4;
 
-    protected PdfEncryption crypto;
+    protected PdfEncryption crypto = null;
     PdfEncryption getEncryption() {
         return crypto;
     }
@@ -1974,7 +2009,7 @@ public class PdfWriter extends DocWriter {
     }
 	//
     public void setEncryption(byte userPassword[], byte ownerPassword[], int permissions, int encryptionType) throws DocumentException {
-        if (pdf.isOpen())
+        if (getPdfDocument().isOpen())
             throw new DocumentException("Encryption can only be added before opening the document.");
         crypto = new PdfEncryption();
         crypto.setCryptoMode(encryptionType, 0);
@@ -2078,7 +2113,7 @@ public class PdfWriter extends DocWriter {
      * @param name the name of the destination to jump to
      */
     public void setOpenAction(String name) {
-        pdf.setOpenAction(name);
+        getPdfDocument().setOpenAction(name);
     }
     
     /** Additional-actions defining the actions to be taken in
@@ -2099,7 +2134,7 @@ public class PdfWriter extends DocWriter {
         actionType.equals(DID_PRINT))) {
             throw new PdfException("Invalid additional action type: " + actionType.toString());
         }
-        pdf.addAdditionalAction(actionType, action);
+        getPdfDocument().addAdditionalAction(actionType, action);
     }
     
     /** When the document opens this <CODE>action</CODE> will be
@@ -2107,17 +2142,17 @@ public class PdfWriter extends DocWriter {
      * @param action the action to be invoked
      */
     public void setOpenAction(PdfAction action) {
-        pdf.setOpenAction(action);
+        getPdfDocument().setOpenAction(action);
     }
     
     /** Sets the page labels
      * @param pageLabels the page labels
      */
     public void setPageLabels(PdfPageLabels pageLabels) {
-        pdf.setPageLabels(pageLabels);
+        getPdfDocument().setPageLabels(pageLabels);
     }
     
-    RandomAccessFileOrArray getReaderFile(PdfReader reader) {
+    RandomAccessFileOrArray getReaderFile(PdfReader reader) throws IOException {
         return currentPdfReaderInstance.getReaderFile();
     }
     
@@ -2132,7 +2167,7 @@ public class PdfWriter extends DocWriter {
      * @param pageNumber the page number. The first page is 1
      * @return the template representing the imported page
      */
-    public PdfImportedPage getImportedPage(PdfReader reader, int pageNumber) {
+    public PdfImportedPage getImportedPage(PdfReader reader, int pageNumber) throws IOException {
         PdfReaderInstance inst = (PdfReaderInstance)importedPages.get(reader);
         if (inst == null) {
             inst = reader.getPdfReaderInstance(this);
@@ -2146,7 +2181,7 @@ public class PdfWriter extends DocWriter {
      * @param js The JavaScrip action
      */
     public void addJavaScript(PdfAction js) {
-        pdf.addJavaScript(js);
+        getPdfDocument().addJavaScript(js);
     }
     
     /** Adds a JavaScript action at the document level. When the document
@@ -2174,7 +2209,7 @@ public class PdfWriter extends DocWriter {
      * @param crop the crop box
      */
     public void setCropBoxSize(Rectangle crop) {
-        pdf.setCropBoxSize(crop);
+        getPdfDocument().setCropBoxSize(crop);
     }
     
     /** Gets a reference to a page existing or not. If the page does not exist
@@ -2218,15 +2253,15 @@ public class PdfWriter extends DocWriter {
      * array.
      * @param annot the <CODE>PdfAnnotation</CODE> to be added
      */
-    public void addCalculationOrder(PdfFormField annot) {
-        pdf.addCalculationOrder(annot);
+    public void addCalculationOrder(PdfFormField annot) throws DocumentException {
+        getPdfDocument().addCalculationOrder(annot);
     }
     
     /** Set the signature flags.
      * @param f the flags. This flags are ORed with current ones
      */
-    public void setSigFlags(int f) {
-        pdf.setSigFlags(f);
+    public void setSigFlags(int f) throws DocumentException {
+        getPdfDocument().setSigFlags(f);
     }
     
     /** Adds a <CODE>PdfAnnotation</CODE> or a <CODE>PdfFormField</CODE>
@@ -2235,7 +2270,7 @@ public class PdfWriter extends DocWriter {
      * @param annot the <CODE>PdfAnnotation</CODE> or the <CODE>PdfFormField</CODE> to add
      */
     public void addAnnotation(PdfAnnotation annot) {
-        pdf.addAnnotation(annot);
+        getPdfDocument().addAnnotation(annot);
     }
     
     void addAnnotation(PdfAnnotation annot, int page) {
@@ -2262,7 +2297,7 @@ public class PdfWriter extends DocWriter {
      * @throws DocumentException if all the pages are not present in the array
      */
     public int reorderPages(int order[]) throws DocumentException {
-        return root.reorderPages(order);
+        return getRoot().reorderPages(order);
     }
     
     /** Gets the space/character extra spacing ratio for
@@ -2309,7 +2344,7 @@ public class PdfWriter extends DocWriter {
      * @param seconds   the number of seconds to display the page
      */
     public void setDuration(int seconds) {
-        pdf.setDuration(seconds);
+        getPdfDocument().setDuration(seconds);
     }
     
     /**
@@ -2317,7 +2352,7 @@ public class PdfWriter extends DocWriter {
      * @param transition   the Transition object
      */
     public void setTransition(PdfTransition transition) {
-        pdf.setTransition(transition);
+        getPdfDocument().setTransition(transition);
     }
     
     /** Writes the reader to the document and frees the memory used by it.
@@ -2344,7 +2379,7 @@ public class PdfWriter extends DocWriter {
     public void setPageAction(PdfName actionType, PdfAction action) throws PdfException {
         if (!actionType.equals(PAGE_OPEN) && !actionType.equals(PAGE_CLOSE))
             throw new PdfException("Invalid page additional action type: " + actionType.toString());
-        pdf.setPageAction(actionType, action);
+        getPdfDocument().setPageAction(actionType, action);
     }
     
     /** Gets the current document size. This size only includes
@@ -2363,7 +2398,7 @@ public class PdfWriter extends DocWriter {
      *
      */
     public boolean isStrictImageSequence() {
-        return pdf.isStrictImageSequence();
+        return getPdfDocument().isStrictImageSequence();
     }
     
     /** Sets the image sequence to follow the text in strict order.
@@ -2371,7 +2406,7 @@ public class PdfWriter extends DocWriter {
      *
      */
     public void setStrictImageSequence(boolean strictImageSequence) {
-        pdf.setStrictImageSequence(strictImageSequence);
+        getPdfDocument().setStrictImageSequence(strictImageSequence);
     }
     
     /**
@@ -2379,14 +2414,14 @@ public class PdfWriter extends DocWriter {
      * @param pageEmpty the state
      */
     public void setPageEmpty(boolean pageEmpty) {
-        pdf.setPageEmpty(pageEmpty);
+        getPdfDocument().setPageEmpty(pageEmpty);
     }
 
     /** Gets the info dictionary for changing.
      * @return the info dictionary
      */    
     public PdfDictionary getInfo() {
-        return ((PdfDocument)document).getInfo();
+        return getPdfDocument().getInfo(); // ssteward
     }
     
     /**
@@ -2403,7 +2438,7 @@ public class PdfWriter extends DocWriter {
      * Sets the document in a suitable way to do page reordering.
      */    
      public void setLinearPageMode() {
-        root.setLinearMode(null);
+		 getRoot().setLinearMode(null);
     }
     
     /** Getter for property group.
@@ -2430,7 +2465,7 @@ public class PdfWriter extends DocWriter {
     public void setPDFXConformance(int pdfxConformance) {
         if (this.pdfxConformance == pdfxConformance)
             return;
-        if (pdf.isOpen())
+        if (getPdfDocument().isOpen())
             throw new PdfXConformanceException("PDFX conformance can only be set before opening the document.");
         if (crypto != null)
             throw new PdfXConformanceException("A PDFX conforming document cannot be encrypted.");
@@ -2609,7 +2644,7 @@ public class PdfWriter extends DocWriter {
      * @param size the size
      */    
     public void setBoxSize(String boxName, Rectangle size) {
-		pdf.setBoxSize(boxName, size);
+		getPdfDocument().setBoxSize(boxName, size);
     }
     
     /**
@@ -2694,7 +2729,7 @@ public class PdfWriter extends DocWriter {
      */    
 	/* ssteward: dropped in 1.44
     public void setThumbnail(Image image) throws PdfException, DocumentException {
-        pdf.setThumbnail(image);
+        getPdfDocument().setThumbnail(image);
     }
 	*/
 
@@ -2733,9 +2768,11 @@ public class PdfWriter extends DocWriter {
 	/**
 	 * Creates XMP Metadata based on the metadata in the PdfDocument.
 	 */
+	/* ssteward omit:
 	public void createXmpMetadata() {
-		setXmpMetadata(pdf.createXmpMetadata());
+		setXmpMetadata(getPdfDocument().createXmpMetadata());
 	}
+	*/
     
     /**
      * Releases the memory used by a template by writing it to the output. The template
@@ -2798,4 +2835,11 @@ public class PdfWriter extends DocWriter {
             structureTreeRoot = new PdfStructureTreeRoot(this);
         return structureTreeRoot;
     }
+	
+	public PdfPages getRoot() {
+		if( root== null )
+			root = new PdfPages(this); // ssteward: moved from constructor
+		return root;
+	}
+
 }
