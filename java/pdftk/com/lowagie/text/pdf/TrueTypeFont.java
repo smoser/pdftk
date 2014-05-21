@@ -33,6 +33,22 @@
  * Boston, MA  02110-1301, USA.
  *
  *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Library General Public
+ * License as published by the Free Software Foundation; either
+ * version 2 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Library General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Library General Public
+ * License along with this library; if not, write to the
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA  02110-1301, USA.
+ *
+ *
  * If you didn't download this code from the following link, you should check if
  * you aren't using an obsolete version:
  * http://www.lowagie.com/iText/
@@ -485,8 +501,8 @@ class TrueTypeFont extends BaseFont {
         int startOfStorage = rf.readUnsignedShort();
         for (int k = 0; k < numRecords; ++k) {
             int platformID = rf.readUnsignedShort();
-            int platformEncodingID = rf.readUnsignedShort();
-            int languageID = rf.readUnsignedShort();
+            // ssteward omit: int platformEncodingID = rf.readUnsignedShort();
+            // ssteward omit: int languageID = rf.readUnsignedShort();
             int nameID = rf.readUnsignedShort();
             int length = rf.readUnsignedShort();
             int offset = rf.readUnsignedShort();
@@ -1048,6 +1064,7 @@ class TrueTypeFont extends BaseFont {
         return dic;
     }
     
+    /* ssteward omit
     private byte[] getFullFont() throws IOException {
         RandomAccessFileOrArray rf2 = new RandomAccessFileOrArray(rf);
         rf2.reOpen();
@@ -1056,6 +1073,7 @@ class TrueTypeFont extends BaseFont {
         rf2.close();
         return b;
     }
+    */
     
     /** Outputs to the writer the font dictionaries and streams.
      * @param writer the writer for this document

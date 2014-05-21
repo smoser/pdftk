@@ -22,14 +22,21 @@ override_dh_auto_clean:
 	make -C $(CURDIR)/pdftk -f Makefile.Debian clean
 	rm -rf $(CURDIR)/pdftk/pdftk
 	rm -rf $(CURDIR)/pdftk/*.o
-	find $(CURDIR) -name "*.class" -print0 | xargs --null -t -r rm 
+	find $(CURDIR) -name "*.class" -type f -delete
+	find $(CURDIR)/java -name "*.h" -type f -delete
 	dh_auto_clean
+
+override_dh_strip:
+	dh_strip --dbg-package=pdftk-dbg
 
 
 override_dh_auto_install:
 	install -o root -g root -m 755 -d $(CURDIR)/debian/pdftk/usr/bin
 	install -o root -g root -m 755 $(CURDIR)/pdftk/pdftk $(CURDIR)/debian/pdftk/usr/bin
-	dh_auto_install
+	dh_auto_install --destdir=debian/pdftk
+
+override_dh_installdocs:
+	dh_installdocs --link-doc=pdftk
 
 get-orig-source:
 	cd $(dir $(firstword $(MAKEFILE_LIST))).. && \

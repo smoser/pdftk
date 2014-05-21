@@ -33,6 +33,22 @@
  * Boston, MA  02110-1301, USA.
  *
  *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Library General Public
+ * License as published by the Free Software Foundation; either
+ * version 2 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Library General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Library General Public
+ * License along with this library; if not, write to the
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA  02110-1301, USA.
+ *
+ *
  * If you didn't download this code from the following link, you should check if
  * you aren't using an obsolete version:
  * http://www.lowagie.com/iText/
@@ -94,7 +110,7 @@ public abstract class DocWriter implements DocListener {
     protected Rectangle pageSize;
 
 /** This is the document that has to be written. */
-    protected Document document;
+    // ssteward omit: protected Document document;
 
 /** The outputstream of this writer. */
     protected OutputStreamCounter os;
@@ -122,8 +138,8 @@ public abstract class DocWriter implements DocListener {
  * @param os  The <CODE>OutputStream</CODE> the writer has to write to.
  */
 
-    protected DocWriter(Document document, OutputStream os)  {
-        this.document = document;
+    protected DocWriter( /* ssteward omit: Document document,*/ OutputStream os)  {
+        // ssteward omit: this.document = document;
         this.os = new OutputStreamCounter(new BufferedOutputStream(os));
     }
 

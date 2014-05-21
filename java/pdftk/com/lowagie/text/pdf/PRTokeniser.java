@@ -34,6 +34,22 @@
  * Boston, MA  02110-1301, USA.
  *
  *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Library General Public
+ * License as published by the Free Software Foundation; either
+ * version 2 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Library General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Library General Public
+ * License along with this library; if not, write to the
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA  02110-1301, USA.
+ *
+ *
  * If you didn't download this code from the following link, you should check if
  * you aren't using an obsolete version:
  * http://www.lowagie.com/iText/
@@ -91,12 +107,12 @@ public class PRTokeniser {
     static final String EMPTY = "";
 
     
-    protected RandomAccessFileOrArray file;
-    protected int type;
-    protected String stringValue;
-    protected int reference;
-    protected int generation;
-    protected boolean hexString;
+    protected RandomAccessFileOrArray file = null;
+    protected int type = 0;
+    protected String stringValue = "";
+    protected int reference = 0;
+    protected int generation = 0;
+    protected boolean hexString = false;
        
     public PRTokeniser(String filename) throws IOException {
         file = new RandomAccessFileOrArray(filename);
@@ -130,7 +146,7 @@ public class PRTokeniser {
         return file.read();
     }
     
-    public RandomAccessFileOrArray getSafeFile() {
+    public RandomAccessFileOrArray getSafeFile() throws IOException {
         return new RandomAccessFileOrArray(file);
     }
     
@@ -178,7 +194,7 @@ public class PRTokeniser {
         return generation;
     }
     
-    public void backOnePosition(int ch) {
+    public void backOnePosition(int ch) throws IOException {
         if (ch != -1)
             file.pushBack((byte)ch);
     }

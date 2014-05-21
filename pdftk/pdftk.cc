@@ -1,7 +1,7 @@
 /* -*- Mode: C++; tab-width: 2; c-basic-offset: 2 -*- */
 /*
-	pdftk, the PDF Toolkit
-	Copyright (c) 2003-2013 Sid Steward
+	PDFtk, the PDF Toolkit
+	Copyright (c) 2003-2013 Steward and Lee, LLC
 
 
 	This program is free software; you can redistribute it and/or modify
@@ -46,6 +46,7 @@
 #include <unistd.h> // for access()
 
 #include <gnu/gcj/convert/Input_UTF8.h>
+#include <gnu/gcj/convert/Input_8859_1.h>
 #include <gnu/gcj/convert/Input_ASCII.h>
 
 #include <java/lang/System.h>
@@ -60,6 +61,25 @@
 #include <java/util/ArrayList.h>
 #include <java/util/Iterator.h>
 #include <java/util/HashMap.h>
+
+#include <java/util/Locale.h>
+#include <java/util/TimeZone.h>
+#include <java/util/Calendar.h>
+#include <java/util/GregorianCalendar.h>
+
+#ifdef WIN32 // as far as I know win32 is the only static build of pdftk
+// besides, only older versions of libgcj use these classes
+#include <gnu/java/locale/Calendar.h>
+#include <gnu/java/locale/LocaleInformation.h>
+//
+#include <gnu/java/locale/Calendar_de.h>
+#include <gnu/java/locale/Calendar_en.h>
+#include <gnu/java/locale/Calendar_nl.h>
+//
+#include <gnu/java/locale/LocaleInformation_de.h>
+#include <gnu/java/locale/LocaleInformation_en.h>
+#include <gnu/java/locale/LocaleInformation_nl.h>
+#endif
 
 #include "pdftk/com/lowagie/text/Document.h"
 #include "pdftk/com/lowagie/text/Rectangle.h"
@@ -111,6 +131,7 @@ namespace itext {
 #include "pdftk.h"
 #include "attachments.h"
 #include "report.h"
+#include "passwords.h"
 
 // store java::PdfReader* here to 
 // prevent unwanted garbage collection
@@ -163,7 +184,8 @@ void
 copy_argv_as_utf8( string& ss, char** argv, int ii )
 {
 #ifdef WIN32
-	ss= argv[ii]; // this works with our new, WIN32-specific wide argv
+	ss= argv[ii]; // this works with our new, WIN32-specific wide argv preprocessing
+
 	/*
 	// Windows-only logic; convert wide-char unicode to UTF-8
 	// zero-based index, just as you'd use for argv
@@ -209,21 +231,38 @@ TK_Session::add_reader( InputPdf* input_pdf_p,
 													 input_pdf_p->m_filename );
 		}
 		if( input_pdf_p->m_password.empty() ) {
-			reader=
-				new itext::PdfReader( JvNewStringUTF( input_pdf_p->m_filename.c_str() ) );
+			reader= new itext::PdfReader( JvNewStringUTF( input_pdf_p->m_filename.c_str() ) );
 		}
 		else {
 			if( input_pdf_p->m_password== "PROMPT" ) {
 				prompt_for_password( "open", "the input PDF:\n   "+ input_pdf_p->m_filename, input_pdf_p->m_password );
 			}
-			jbyteArray password= JvNewByteArray( input_pdf_p->m_password.size() );
-			memcpy( (char*)(elements(password)), 
-							input_pdf_p->m_password.c_str(),
-							input_pdf_p->m_password.size() );
 
-			reader= 
-				new itext::PdfReader( JvNewStringUTF( input_pdf_p->m_filename.c_str() ),
-															password );
+			int size= utf8_password_to_pdfdoc( 0, input_pdf_p->m_password.c_str(), input_pdf_p->m_password.size(),
+																				 false ); // allow user to enter greatest selection of chars
+			if( 0<= size ) {
+				jbyteArray password= JvNewByteArray( size );
+				utf8_password_to_pdfdoc( elements(password), input_pdf_p->m_password.c_str(), input_pdf_p->m_password.size(),
+																 false ); // allow user to enter greatest selection of chars
+
+				/* old impl
+					 memcpy( (char*)(elements( password )), 
+					 input_pdf_p->m_password.c_str(),
+					 input_pdf_p->m_password.size() );
+				*/
+
+				reader= new itext::PdfReader( JvNewStringUTF( input_pdf_p->m_filename.c_str() ), password );
+				if( reader== 0 ) {
+					cerr << "Error: Unexpected null from open_reader()" << endl;
+					return false; // <--- return
+				}
+			}
+			else { // bad password
+				cerr << "Error: Password used to decrypt input PDF:" << endl;
+				cerr << "   " << input_pdf_p->m_filename << endl;
+				cerr << "   includes invalid characters." << endl;
+				return false; // <--- return
+			}
 		}
 		
 		if( !keep_artifacts_b ) {
@@ -541,6 +580,9 @@ TK_Session::is_keyword( char* ss, int* keyword_len_p )
 	}
 	else if( strcmp( ss_copy, "drop_xfa" )== 0 ) {
 		return drop_xfa_k;
+	}
+	else if( strcmp( ss_copy, "drop_xmp" )== 0 ) {
+		return drop_xmp_k;
 	}
 	else if( strcmp( ss_copy, "keep_first_id" )== 0 ) {
 		return keep_first_id_k;
@@ -894,6 +936,9 @@ TK_Session::handle_some_output_options( TK_Session::keyword kw, ArgState* arg_st
 	case drop_xfa_k:
 		m_output_drop_xfa_b= true;
 		break;
+	case drop_xmp_k:
+		m_output_drop_xmp_b= true;
+		break;
 	case keep_first_id_k:
 		m_output_keep_first_id_b= true;
 		break;
@@ -930,13 +975,13 @@ TK_Session::handle_some_output_options( TK_Session::keyword kw, ArgState* arg_st
 	return true;
 }
 
-TK_Session::TK_Session( int argc, 
-												char** argv ) :
+TK_Session::TK_Session( int argc, char** argv ) :
  	m_valid_b( false ),
  	m_authorized_b( true ),
  	m_input_pdf_readers_opened_b( false ),
  	m_verbose_reporting_b( false ),
  	m_ask_about_warnings_b( ASK_ABOUT_WARNINGS ), // set default at compile-time
+
  	m_input_pdf(),
  	m_input_pdf_index(),
  	m_input_attach_file_filename(),
@@ -944,8 +989,10 @@ TK_Session::TK_Session( int argc,
  	m_update_info_filename(),
 	m_update_info_utf8_b( false ),
  	m_update_xmp_filename(),
+
  	m_operation( none_k ),
  	m_page_seq(),
+
  	m_form_data_filename(),
  	m_background_filename(),
  	m_stamp_filename(),
@@ -961,6 +1008,7 @@ TK_Session::TK_Session( int argc,
  	m_output_flatten_b( false ),
  	m_output_need_appearances_b( false ),
  	m_output_drop_xfa_b( false ),
+ 	m_output_drop_xmp_b( false ),
  	m_output_keep_first_id_b( false ),
  	m_output_keep_final_id_b( false ),
 	m_cat_full_pdfs_b( true ),
@@ -1534,6 +1582,9 @@ TK_Session::TK_Session( int argc,
 					if( page_num_beg== 0 && page_num_end== 0 ) { // ref the entire document
 						page_num_beg= 1;
 						page_num_end= m_input_pdf[range_pdf_index].m_num_pages;
+
+						// test that it's a /full/ pdf
+						m_cat_full_pdfs_b= m_cat_full_pdfs_b && ( !even_pages_b && !odd_pages_b );
 					}
 					else if( page_num_beg== 0 || page_num_end== 0 ) { // error
 						cerr << "Error: Input page numbers include 0 (zero)" << endl;
@@ -1604,7 +1655,6 @@ TK_Session::TK_Session( int argc,
 						reverse( temp_page_seq.begin(), temp_page_seq.end() );
 					}
 
-					//m_page_seq.insert( m_page_seq.end(), temp_page_seq.begin(), temp_page_seq.end() );
 					m_page_seq.push_back( temp_page_seq );
 
 				}
@@ -1821,21 +1871,25 @@ TK_Session::TK_Session( int argc,
 
 			if( ( m_operation== cat_k ||
 						m_operation== shuffle_k ) )
-				if( m_page_seq.empty() ) {
-					// combining pages, but no sequences given; merge all input PDFs in order
-					for( InputPdfIndex ii= 0; ii< m_input_pdf.size(); ++ii ) {
-						InputPdf& input_pdf= m_input_pdf[ii];
+				{
+					if( m_page_seq.empty() ) {
+						// combining pages, but no sequences given; merge all input PDFs in order
+						for( InputPdfIndex ii= 0; ii< m_input_pdf.size(); ++ii ) {
+							InputPdf& input_pdf= m_input_pdf[ii];
 
-						vector< PageRef > temp_page_seq;
-						for( PageNumber jj= 1; jj<= input_pdf.m_num_pages; ++jj ) {
-							temp_page_seq.push_back( PageRef( ii, jj ) ); // DF rotate
-							m_input_pdf[ii].m_readers.back().first.insert( jj ); // create association
+							vector< PageRef > temp_page_seq;
+							for( PageNumber jj= 1; jj<= input_pdf.m_num_pages; ++jj ) {
+								temp_page_seq.push_back( PageRef( ii, jj ) ); // DF rotate
+								m_input_pdf[ii].m_readers.back().first.insert( jj ); // create association
+							}
+							m_page_seq.push_back( temp_page_seq );
 						}
-						m_page_seq.push_back( temp_page_seq );
 					}
-				}
-				else { // page ranges or docs (e.g. A B A) were given
-					m_cat_full_pdfs_b= false; // TODO: handle cat A B A case for bookmarks
+					/* no longer necessary -- are upstream testing is smarter
+					else { // page ranges or docs (e.g. A B A) were given
+						m_cat_full_pdfs_b= false; // TODO: handle cat A B A case for bookmarks
+					}
+					*/
 				}
 
 			if( m_output_filename.empty() ) {
@@ -1901,7 +1955,6 @@ TK_Session::TK_Session( int argc,
 				copy_argv_as_utf8( argv_ss, argv, ii );
 				if( argv_ss== "PROMPT" || argv_ss!= m_output_user_pw ) {
 					m_output_owner_pw= argv_ss;
-
 				}
 				else { // error: identical user and owner password
 					// are interpreted by Acrobat (per the spec.) that
@@ -2281,8 +2334,7 @@ TK_Session::create_output_page( itext::PdfCopy* writer_p, PageRef page_ref, int 
 
 		// take the first, associated reader and then disassociate
 		itext::PdfReader* input_reader_p= 0;
-		vector< pair< set<jint>, itext::PdfReader* > >::iterator mt=
-			page_pdf.m_readers.begin();
+		vector< pair< set<jint>, itext::PdfReader* > >::iterator mt= page_pdf.m_readers.begin();
 		for( ; mt!= page_pdf.m_readers.end(); ++mt ) {
 			set<jint>::iterator nt= mt->first.find( page_ref.m_page_num );
 			if( nt!= mt->first.end() ) { // assoc. found
@@ -2308,7 +2360,14 @@ TK_Session::create_output_page( itext::PdfCopy* writer_p, PageRef page_ref, int 
 			//
 			itext::PdfImportedPage* page_p= 
 				writer_p->getImportedPage( input_reader_p, page_ref.m_page_num );
-			writer_p->addPage( page_p );
+			if( page_p ) {
+				writer_p->addPage( page_p );
+			}
+			else { // error
+				cerr << "Internal Error: getImportedPage() failed for: ";
+				cerr << page_ref.m_page_num << " in file: " << page_pdf.m_filename << endl;
+				ret_val= 2;
+			}
 		}
 		else { // error
 			cerr << "Internal Error: no reader found for page: ";
@@ -2325,24 +2384,25 @@ TK_Session::create_output_page( itext::PdfCopy* writer_p, PageRef page_ref, int 
 }
 
 static jchar GetPdfVersionChar( itext::PdfName* version_p ) {
-	jchar version_cc= itext::PdfWriter::VERSION_1_2; // default
+	jchar version_cc= itext::PdfWriter::VERSION_1_4; // default
 
-	if( version_p->equals( itext::PdfName::VERSION_1_4 ) )
-		version_cc= itext::PdfWriter::VERSION_1_4;
-	else if( version_p->equals( itext::PdfName::VERSION_1_5 ) )
-		version_cc= itext::PdfWriter::VERSION_1_5;
-	else if( version_p->equals( itext::PdfName::VERSION_1_6 ) )
-		version_cc= itext::PdfWriter::VERSION_1_6;
-	else if( version_p->equals( itext::PdfName::VERSION_1_7 ) )
-		version_cc= itext::PdfWriter::VERSION_1_7;
-	else if( version_p->equals( itext::PdfName::VERSION_1_0 ) )
-		version_cc= itext::PdfWriter::VERSION_1_0;
-	else if( version_p->equals( itext::PdfName::VERSION_1_1 ) )
-		version_cc= itext::PdfWriter::VERSION_1_1;
-	else if( version_p->equals( itext::PdfName::VERSION_1_2 ) )
-		version_cc= itext::PdfWriter::VERSION_1_2;
-	else if( version_p->equals( itext::PdfName::VERSION_1_3 ) )
-		version_cc= itext::PdfWriter::VERSION_1_3;
+	if( version_p )
+		if( version_p->equals( itext::PdfName::VERSION_1_4 ) )
+			version_cc= itext::PdfWriter::VERSION_1_4;
+		else if( version_p->equals( itext::PdfName::VERSION_1_5 ) )
+			version_cc= itext::PdfWriter::VERSION_1_5;
+		else if( version_p->equals( itext::PdfName::VERSION_1_6 ) )
+			version_cc= itext::PdfWriter::VERSION_1_6;
+		else if( version_p->equals( itext::PdfName::VERSION_1_7 ) )
+			version_cc= itext::PdfWriter::VERSION_1_7;
+		else if( version_p->equals( itext::PdfName::VERSION_1_3 ) )
+			version_cc= itext::PdfWriter::VERSION_1_3;
+		else if( version_p->equals( itext::PdfName::VERSION_1_2 ) )
+			version_cc= itext::PdfWriter::VERSION_1_2;
+		else if( version_p->equals( itext::PdfName::VERSION_1_1 ) )
+			version_cc= itext::PdfWriter::VERSION_1_1;
+		else if( version_p->equals( itext::PdfName::VERSION_1_0 ) )
+			version_cc= itext::PdfWriter::VERSION_1_0;
 
 	return version_cc;
 }
@@ -2375,8 +2435,7 @@ TK_Session::create_output()
 		}
 
 		string creator= "pdftk "+ string(PDFTK_VER)+ " - www.pdftk.com";
-		java::String* jv_creator_p= 
-			JvNewStringUTF( creator.c_str() );
+		java::String* jv_creator_p= JvNewStringUTF( creator.c_str() );
 
 		if( m_output_owner_pw== "PROMPT" ) {
 			prompt_for_password( "owner", "the output PDF", m_output_owner_pw );
@@ -2385,14 +2444,46 @@ TK_Session::create_output()
 			prompt_for_password( "user", "the output PDF", m_output_user_pw );
 		}
 
-		jbyteArray output_owner_pw_p= JvNewByteArray( m_output_owner_pw.size() ); {
-			jbyte* pw_p= elements(output_owner_pw_p);
-			memcpy( pw_p, m_output_owner_pw.c_str(), m_output_owner_pw.size() ); 
+		jbyteArray output_owner_pw_p= JvNewByteArray( 0 );
+		if( m_output_owner_pw.size() ) {
+			int size= utf8_password_to_pdfdoc( 0, m_output_owner_pw.c_str(), m_output_owner_pw.size(), true );
+			if( 0<= size ) {
+				output_owner_pw_p= JvNewByteArray( size );
+				utf8_password_to_pdfdoc( elements(output_owner_pw_p), m_output_owner_pw.c_str(), m_output_owner_pw.size(), true );
+
+				// old impl
+				//jbyte* pw_p= elements( output_owner_pw_p );
+				//memcpy( pw_p, m_output_owner_pw.c_str(), m_output_owner_pw.size() ); 
+			}
+			else { // error
+				cerr << "Error: Owner password used to encrypt output PDF includes" << endl;
+				cerr << "   invalid characters." << endl;
+				cerr << "   No output created." << endl;
+				ret_val= 1;
+			}
 		}
-		jbyteArray output_user_pw_p= JvNewByteArray( m_output_user_pw.size() ); {
-			jbyte* pw_p= elements(output_user_pw_p);
-			memcpy( pw_p, m_output_user_pw.c_str(), m_output_user_pw.size() ); 
+
+		jbyteArray output_user_pw_p= JvNewByteArray( 0 );
+		if( m_output_user_pw.size() ) {
+			int size= utf8_password_to_pdfdoc( 0, m_output_user_pw.c_str(), m_output_user_pw.size(), true );
+			if( 0<= size ) {
+				output_user_pw_p= JvNewByteArray( size );
+				utf8_password_to_pdfdoc( elements(output_user_pw_p), m_output_user_pw.c_str(), m_output_user_pw.size(), true );
+
+				// old impl
+				//jbyte* pw_p= elements( output_user_pw_p );
+				//memcpy( pw_p, m_output_user_pw.c_str(), m_output_user_pw.size() ); 
+			}
+			else { // error
+				cerr << "Error: User password used to encrypt output PDF includes" << endl;
+				cerr << "   invalid characters." << endl;
+				cerr << "   No output created." << endl;
+				ret_val= 1;
+			}
 		}
+
+		if( ret_val )
+			return ret_val; // <--- exit
 
 		try {
 			switch( m_operation ) {
@@ -2618,6 +2709,8 @@ TK_Session::create_output()
 					// but then, it would be nice to allow the user to specify
 					// a label -- using the PDF filename is unattractive;
 					if( m_cat_full_pdfs_b ) { // add bookmark info
+						// cerr << "cat full pdfs!" << endl; // debug
+
 						itext::PdfDictionary* output_outlines_p= 
 							new itext::PdfDictionary( itext::PdfName::OUTLINES );
 						itext::PdfIndirectReference* output_outlines_ref_p= 
@@ -2632,9 +2725,16 @@ TK_Session::create_output()
 						itext::PdfDictionary* prev_p= 0;
 						itext::PdfIndirectReference* prev_ref_p= 0;
 						*/
-						for( vector< InputPdf >::const_iterator it= m_input_pdf.begin();
-								 it!= m_input_pdf.end(); ++it )
+						// iterate over page ranges; each full PDF has one page seq in m_page_seq;
+						// using m_page_seq instead of m_input_pdf, so the doc order is right
+						for( vector< vector< PageRef > >::const_iterator jt= m_page_seq.begin();
+								 jt!= m_page_seq.end(); ++jt )
 							{
+								itext::PdfReader* reader_p=
+									m_input_pdf[ jt->begin()->m_input_pdf_index ].m_readers.begin()->second;
+								int reader_page_count= 
+									m_input_pdf[ jt->begin()->m_input_pdf_index ].m_num_pages;
+						
 								/* used for adding doc bookmarks
 								itext::PdfDictionary* item_p= new itext::PdfDictionary();
 								itext::PdfIndirectReference* item_ref_p= writer_p->getPdfIndirectReference();
@@ -2663,32 +2763,44 @@ TK_Session::create_output()
 
 								// pdf bookmarks -> children
 								{ 
-									itext::PdfReader* reader_p= ((*it).m_readers.begin())->second;
 									itext::PdfDictionary* catalog_p= reader_p->getCatalog();
 									itext::PdfDictionary* outlines_p= (itext::PdfDictionary*)
 										reader_p->getPdfObject( catalog_p->get( itext::PdfName::OUTLINES ) );
+									if( outlines_p && outlines_p->isDictionary() ) {
 
-									if( outlines_p ) {
-										vector<PdfBookmark> bookmark_data;
-										int rr= ReadOutlines( bookmark_data, outlines_p, -1, reader_p, true );
-										if( rr== 0 && !bookmark_data.empty() ) {
+										itext::PdfDictionary* top_outline_p= (itext::PdfDictionary*)
+											reader_p->getPdfObject( outlines_p->get( itext::PdfName::FIRST ) );
+										if( top_outline_p && top_outline_p->isDictionary() ) {
 
-											// passed in by reference, so must use variable:
-											vector<PdfBookmark>::const_iterator vit= bookmark_data.begin();
-											BuildBookmarks( writer_p,
-																			vit, bookmark_data.end(),
-																			//item_p, item_ref_p, // used for adding doc bookmarks
-																			output_outlines_p, output_outlines_ref_p,
-																			after_child_p, after_child_ref_p,
-																			after_child_p, after_child_ref_p,
-																			0, num_bookmarks_total, 
-																			page_count- 1, // page offset is 0-based
-																			0,
-																			true );
+											vector<PdfBookmark> bookmark_data;
+											int rr= ReadOutlines( bookmark_data, top_outline_p, 0, reader_p, true );
+											if( rr== 0 && !bookmark_data.empty() ) {
+
+												// passed in by reference, so must use variable:
+												vector<PdfBookmark>::const_iterator vit= bookmark_data.begin();
+												BuildBookmarks( writer_p,
+																				vit, bookmark_data.end(),
+																				//item_p, item_ref_p, // used for adding doc bookmarks
+																				output_outlines_p, output_outlines_ref_p,
+																				after_child_p, after_child_ref_p,
+																				after_child_p, after_child_ref_p,
+																				0, num_bookmarks_total, 
+																				page_count- 1, // page offset is 0-based
+																				0,
+																				true );
+											}
+											/*
+											else if( rr!= 0 )
+											cerr << "ReadOutlines error" << endl; // debug
+											else
+											cerr << "empty bookmark data" << endl; // debug
+											*/
 										}
 									}
-									//else
-									//cerr << "no outlines" << endl; // debug
+									/*
+									else
+										cerr << "no outlines" << endl; // debug
+									*/
 								}
 
 								/* used for adding doc bookmarks
@@ -2700,7 +2812,7 @@ TK_Session::create_output()
 								prev_ref_p= item_ref_p;
 								*/
 
-								page_count+= (*it).m_num_pages;
+								page_count+= reader_page_count;
 
 							}
 						/* used for adding doc bookmarks
@@ -3119,16 +3231,17 @@ TK_Session::create_output()
 				}
 				if( !m_form_data_filename.empty() ) { // we have form data to process
 					if( m_form_data_filename== "-" ) { // form data on stdin
-						JArray<jbyte>* in_arr= itext::RandomAccessFileOrArray::InputStreamToArray( java::System::in );
+						//JArray<jbyte>* in_arr= itext::RandomAccessFileOrArray::InputStreamToArray( java::System::in );
 						
 						// first try fdf
 						try {
-							fdf_reader_p= new itext::FdfReader( in_arr );
+							fdf_reader_p= new itext::FdfReader( java::System::in );
 						}
 						catch( java::io::IOException* ioe_p ) { // file open error
+
 							// maybe it's xfdf?
 							try {
-								xfdf_reader_p= new itext::XfdfReader( in_arr );
+								xfdf_reader_p= new itext::XfdfReader( java::System::in );
 							}
 							catch( java::io::IOException* ioe_p ) { // file open error
 								cerr << "Error: Failed read form data on stdin." << endl;
@@ -3212,9 +3325,7 @@ TK_Session::create_output()
 				}
 
 				//
-				java::OutputStream* ofs_p= 
-					get_output_stream( m_output_filename,
-														 m_ask_about_warnings_b );
+				java::OutputStream* ofs_p= get_output_stream( m_output_filename, m_ask_about_warnings_b );
 				if( !ofs_p ) { // file open error
 					cerr << "Error: unable to open file for output: " << m_output_filename << endl;
 					ret_val= 1;
@@ -3222,8 +3333,7 @@ TK_Session::create_output()
 				}
 
 				//
-				itext::PdfReader* input_reader_p= 
-					m_input_pdf.begin()->m_readers.front().second;
+				itext::PdfReader* input_reader_p= m_input_pdf.begin()->m_readers.front().second;
 
 				// drop the xfa?
 				if( m_output_drop_xfa_b ) {
@@ -3236,6 +3346,15 @@ TK_Session::create_output()
 
 							acro_form_p->remove( itext::PdfName::XFA );
 						}
+					}
+				}
+
+				// drop the xmp?
+				if( m_output_drop_xmp_b ) {
+					itext::PdfDictionary* catalog_p= input_reader_p->catalog;
+					if( catalog_p && catalog_p->isDictionary() ) {
+							
+						catalog_p->remove( itext::PdfName::METADATA );
 					}
 				}
 
@@ -3475,10 +3594,10 @@ TK_Session::create_output()
 															writer_p );
 				}
 
+				// performed in add_reader(), but this eliminates objects after e.g. drop_xfa, drop_xmp
+				input_reader_p->removeUnusedObjects();
+
 				// done; write output
-				/// seems like a bad time for this:
-				///input_reader_p->removeUnusedObjects();
-				/// besides, it should be done in add_reader() if desired
 				writer_p->close();
 			}
 			break;
@@ -3584,7 +3703,7 @@ TK_Session::create_output()
 		}
 		catch( java::lang::Throwable* t_p )
 			{
-				cerr << "Unhandled Java Exception:" << endl;
+				cerr << "Unhandled Java Exception in create_output():" << endl;
 				t_p->printStackTrace();
 				ret_val= 2;
 			}
@@ -3596,25 +3715,13 @@ TK_Session::create_output()
 	return ret_val;
 }
 
-#ifdef WIN32 // input is wide
-#include "mingw-unicode.c"
-int _tmain( int argc, _TCHAR *argvw[] )
-#else // input is UTF-8
+#ifdef WIN32 // input is wide, so we perform input processing
+#include "win32_utf8_include.cc"
+int win32_utf8_main( int argc, char *argv[] )
+#else // input is already UTF-8
 int main( int argc, char *argv[] )
 #endif
 {
-
-#ifdef WIN32
-	// convert wide char input to UTF-8
-	char** argv= (char**)malloc( argc* sizeof( char* ) );
-	for( int ii= 0; ii< argc; ++ii ) {
-		int len= WideCharToMultiByte( CP_UTF8, 0, argvw[ii], -1, NULL, 0, NULL, NULL );
-		argv[ii]= (char*)malloc( (len+ 1)* sizeof( char ) );
-		WideCharToMultiByte( CP_UTF8, 0, argvw[ii], -1, argv[ii], len, NULL, NULL );
-		argv[ii][len]= 0; // add term null just in case
-	}
-#endif
-
 	bool help_b= false;
 	bool version_b= false;
 	bool synopsis_b= ( argc== 1 );
@@ -3624,8 +3731,7 @@ int main( int argc, char *argv[] )
 	// "I was moving our Zope/plone server from an Apple Xserve (OS X Tiger) to a Linux system (redhat-something), and I could not get pdftk to work. the commands worked fine ourside of the Zope environ, but whatever I did, the pdftk jobs just hung there. 
 	// "The clue came from the Zope mailing list, where someone pointed out that the OS module in some versions of python turns off all signals before calling external commands. And the problem in pdftk, as determined from strace, was related to multiple threads trying to communicate via signals in the java-libraries. So - a sigsetmask(0); early in main() in pdftk.cc solves the problem ... "
 	//
-	// this code doesn't work on Windows, where there are no signal masks -- so is it necessary?  See:
-	// http://www.suacommunity.com/dictionary/signals.php
+	// this code doesn't work on Windows, where there are no signal masks
 	//
 #ifdef UNBLOCK_SIGNALS
 	sigset_t sigmask;
@@ -3641,8 +3747,13 @@ Description: Setting environment LANG=C to circumvent libgcj10 exception with lo
 Author: Johann Felix Soden <johfel@gmx.de>
 Bug-Debian: http://bugs.debian.org/560594
 	*/
-	static char my_lang[]="LANG=C";
-	putenv(my_lang);
+#ifdef WIN32
+	static char my_lang[]= "LANG=C";
+	_putenv( my_lang );
+#else
+	static char my_lang[]= "LANG=C";
+	putenv( my_lang );
+#endif
 
 	for( int ii= 1; ii< argc; ++ii ) {
 		version_b=
@@ -3668,48 +3779,83 @@ Bug-Debian: http://bugs.debian.org/560594
 		try {
 			JvCreateJavaVM(NULL);
 			JvAttachCurrentThread(NULL, NULL);
-
+			
 			////
 			// http://gcc.gnu.org/onlinedocs/gcj/Class-Initialization.html
-			// this is probably overkill:
+			// this is probably overkill
+			// some of these are here to ensure they're pulled into a static build,
+			// particularly Calendar* and LocaleInformation*
 
 			JvInitClass(&java::System::class$);
+			JvInitClass(&java::io::IOException::class$);
+			JvInitClass(&java::lang::Throwable::class$);
 			JvInitClass(&java::String::class$);
 			JvInitClass(&java::HashMap::class$);
 			JvInitClass(&java::Vector::class$);
+			JvInitClass(&java::OutputStream::class$);
 			JvInitClass(&java::FileOutputStream::class$);
+			JvInitClass(&java::Set::class$);
+			JvInitClass(&java::Iterator::class$);
 			JvInitClass(&java::util::ArrayList::class$);
 			JvInitClass(&java::util::Iterator::class$);
 
+			JvInitClass(&java::util::Locale::class$);
+			JvInitClass(&java::util::TimeZone::class$);
+			JvInitClass(&java::util::Calendar::class$);
+			JvInitClass(&java::util::GregorianCalendar::class$);
+
+#ifdef WIN32 // as far as I know win32 is the only static build of pdftk
+			JvInitClass(&gnu::java::locale::Calendar::class$);
+			JvInitClass(&gnu::java::locale::LocaleInformation::class$);
+			// resources -- necessary to pull into static build
+			JvInitClass(&gnu::java::locale::Calendar_de::class$);
+			JvInitClass(&gnu::java::locale::Calendar_en::class$);
+			JvInitClass(&gnu::java::locale::Calendar_nl::class$);
+			// only _en automatically pulled into static build -- must include others
+			JvInitClass(&gnu::java::locale::LocaleInformation_de::class$);
+			JvInitClass(&gnu::java::locale::LocaleInformation_en::class$);
+			JvInitClass(&gnu::java::locale::LocaleInformation_nl::class$);
+			/* not necessary -- automatically pulled into static build along with
+				 _en_*, _de_* and _nl_*
+			JvInitClass(&gnu::java::locale::LocaleInformation_en_US::class$);
+			*/
+#endif
+			// fixes an error triggered by xfdf form filling
+			// for SimpleXMLParser.java
+			JvInitClass(&gnu::gcj::convert::Input_UTF8::class$);
+			JvInitClass(&gnu::gcj::convert::Input_8859_1::class$);
+			JvInitClass(&gnu::gcj::convert::Input_ASCII::class$);
+
+			JvInitClass(&itext::Document::class$);
+			JvInitClass(&itext::Rectangle::class$);
+
+			JvInitClass(&itext::PdfObject::class$);
+			JvInitClass(&itext::PdfIndirectReference::class$);
 			JvInitClass(&itext::PdfName::class$);
+			JvInitClass(&itext::PdfBoolean::class$);
+			JvInitClass(&itext::PdfNumber::class$);
+			JvInitClass(&itext::PdfArray::class$);
+			JvInitClass(&itext::PdfString::class$);
+			JvInitClass(&itext::PdfDictionary::class$);
+			JvInitClass(&itext::PdfStream::class$);
 			JvInitClass(&itext::RandomAccessFileOrArray::class$);
-			JvInitClass(&itext::PdfAnnotation::class$);
+			JvInitClass(&itext::PdfContentByte::class$);
+
 			JvInitClass(&itext::PdfNameTree::class$);
+			JvInitClass(&itext::PdfOutline::class$);
+			JvInitClass(&itext::PdfDestination::class$);
+			JvInitClass(&itext::PdfAnnotation::class$);
 			JvInitClass(&itext::PdfFileSpecification::class$);
+			JvInitClass(&itext::AcroFields::class$);
 
 			JvInitClass(&itext::PdfReader::class$);
 			JvInitClass(&itext::PdfWriter::class$);
-			JvInitClass(&itext::PdfNumber::class$);
-			JvInitClass(&itext::Document::class$);
 			JvInitClass(&itext::PdfCopy::class$);
-			JvInitClass(&itext::PdfDictionary::class$);
 			JvInitClass(&itext::FdfReader::class$);
 			JvInitClass(&itext::FdfWriter::class$);
 			JvInitClass(&itext::XfdfReader::class$);
 			JvInitClass(&itext::PdfStamperImp::class$);
-			JvInitClass(&itext::PdfArray::class$);
-			JvInitClass(&itext::Rectangle::class$);
-			JvInitClass(&itext::PdfString::class$);
-			JvInitClass(&itext::PdfDestination::class$);
-			JvInitClass(&itext::PdfStream::class$);
-
-			JvInitClass(&itext::PdfObject::class$);
-			JvInitClass(&itext::PdfOutline::class$);
-			JvInitClass(&itext::PdfBoolean::class$);
-
-			// fixes an error triggered by xfdf form filling
-			JvInitClass(&gnu::gcj::convert::Input_UTF8::class$);
-			JvInitClass(&gnu::gcj::convert::Input_ASCII::class$);
+			JvInitClass(&itext::PdfImportedPage::class$);
 
 			TK_Session tk_session( argc, argv );
 
@@ -3741,7 +3887,7 @@ Bug-Debian: http://bugs.debian.org/560594
 			ret_val= 1;
 		}
 		catch( java::lang::Throwable* t_p ) {
-				cerr << "Unhandled Java Exception:" << endl;
+				cerr << "Unhandled Java Exception in main():" << endl;
 				t_p->printStackTrace();
 				ret_val= 2;
 		}
@@ -3750,21 +3896,11 @@ Bug-Debian: http://bugs.debian.org/560594
 			JvDetachCurrentThread();
 		}
 		catch( java::lang::Throwable* t_p ) {
-				cerr << "Unhandled Java Exception:" << endl;
+				cerr << "Unhandled Java Exception running JvDetachCurrentThread():" << endl;
 				t_p->printStackTrace();
 				ret_val= 2;
 		}
 	}
-
-#ifdef WIN32
-	// release memory
-	for( int ii= 0; ii< argc; ++ii ) {
-		free( argv[ii] );
-		argv[ii]= 0;
-	}
-	free( argv );
-	argv= 0;
-#endif
 
 	return ret_val;
 }
@@ -3773,7 +3909,7 @@ static void
 describe_header() {
 	cout << endl;
 	cout << "pdftk " << PDFTK_VER << " a Handy Tool for Manipulating PDF Documents" << endl;
-	cout << "Copyright (C) 2003-13, Sid Steward - Please Visit: www.pdftk.com" << endl;
+	cout << "Copyright (c) 2003-13 Steward and Lee, LLC - Please Visit: www.pdftk.com" << endl;
 	cout << "This is free software; see the source code for copying conditions. There is" << endl;
 	cout << "NO warranty, not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE." << endl;
 }
@@ -3792,7 +3928,7 @@ describe_synopsis() {
 	    [ user_pw <user password | PROMPT> ]\n\
 	    [ flatten ] [ need_appearances ]\n\
 	    [ compress | uncompress ]\n\
-	    [ keep_first_id | keep_final_id ] [ drop_xfa ]\n\
+	    [ keep_first_id | keep_final_id ] [ drop_xfa ] [ drop_xmp ]\n\
 	    [ verbose ] [ dont_ask | do_ask ]\n\
        Where:\n\
 	    <operation> may be empty, or:\n\
@@ -3891,8 +4027,10 @@ OPTIONS\n\
 \n\
 	  cat [<page ranges>]\n\
 		 Assembles (catenates) pages from input PDFs to create a new\n\
-		 PDF.  Page order in the new PDF is specified by the order of\n\
-		 the given page ranges.  Page ranges are described like this:\n\
+		 PDF. Use cat to merge PDF pages or to split PDF pages from\n\
+		 documents. You can also use it to rotate PDF pages. Page\n\
+		 order in the new PDF is specified by the order of the given\n\
+		 page ranges. Page ranges are described like this:\n\
 \n\
 		 <input PDF handle>[<begin page number>[-<end page num-\n\
 		 ber>[<qualifier>]]][<page rotation>]\n\
@@ -3902,6 +4040,11 @@ OPTIONS\n\
 		 ences to pages in the PDF file.  The qualifier can be even or\n\
 		 odd, and the page rotation can be north, south, east, west,\n\
 		 left, right, or down.\n\
+\n\
+		 If a PDF handle is given but no pages are specified, then the\n\
+		 entire PDF is used. If no pages are specified for any of the\n\
+		 input PDFs, then the input PDFs' bookmarks are also merged\n\
+		 and included in the output.\n\
 \n\
 		 If the handle is omitted from the page range, then the pages\n\
 		 are taken from the first input PDF.\n\
@@ -4066,11 +4209,12 @@ OPTIONS\n\
 		 the input PDF.\n\
 \n\
 	  dump_data\n\
-		 Reads a single input PDF file and reports various statistics,\n\
-		 metadata, bookmarks (a/k/a outlines), and page labels to the\n\
-		 given output filename or (if no output is given) to stdout.\n\
-		 Non-ASCII characters are encoded as XML numerical entities.\n\
-		 Does not create a new PDF.\n\
+		 Reads a single input PDF file and reports its metadata, book-\n\
+		 marks (a/k/a outlines), page metrics (media, rotation and\n\
+		 labels), data embedded by STAMPtk (see STAMPtk's embed\n\
+		 option) and other data to the given output filename or (if no\n\
+		 output is given) to stdout.  Non-ASCII characters are encoded\n\
+		 as XML numerical entities.  Does not create a new PDF.\n\
 \n\
 	  dump_data_utf8\n\
 		 Same as dump_data excepct that the output is encoded as\n\
@@ -4097,9 +4241,15 @@ OPTIONS\n\
 		 Changes the bookmarks and metadata in a single PDF's Info\n\
 		 dictionary to match the input data file. The input data file\n\
 		 uses the same syntax as the output from dump_data. Non-ASCII\n\
-		 characters should be encoded as XML numerical entities. This\n\
-		 does not change the metadata stored in the PDF's XMP stream,\n\
-		 if it has one. For example:\n\
+		 characters should be encoded as XML numerical entities.\n\
+\n\
+		 This operation does not change the metadata stored in the\n\
+		 PDF's XMP stream, if it has one. (For this reason you should\n\
+		 include a ModDate entry in your updated info with a current\n\
+		 date/timestamp, format: D:YYYYMMDDHHmmSS, e.g. D:201307241346\n\
+		 -- omitted data after YYYY revert to default values.)\n\
+\n\
+		 For example:\n\
 \n\
 		 pdftk in.pdf update_info in.info output out.pdf\n\
 \n\
@@ -4224,6 +4374,23 @@ OPTIONS\n\
 	      PDF.  When assembling a PDF from multiple inputs using pdftk,\n\
 	      any XFA data in the input is automatically omitted.\n\
 \n\
+       [drop_xmp]\n\
+	      Many PDFs store document metadata using both an Info dictionary\n\
+	      (old school) and an XMP stream (new school).  Pdftk's\n\
+	      update_info operation can update the Info dictionary, but not\n\
+	      the XMP stream.  The proper remedy for this is to include a\n\
+	      ModDate entry in your updated info with a current date/time-\n\
+	      stamp. The date/timestamp format is: D:YYYYMMDDHHmmSS, e.g.\n\
+	      D:201307241346 -- omitted data after YYYY revert to default val-\n\
+	      ues. This newer ModDate should cue PDF viewers that the Info\n\
+	      metadata is more current than the XMP data.\n\
+\n\
+	      Alternatively, you might prefer to remove the XMP stream from\n\
+	      the PDF altogether -- that's what this option does.  Note that\n\
+	      objects inside the PDF might have their own, separate XMP meta-\n\
+	      data streams, and that drop_xmp does not remove those.  It only\n\
+	      removes the PDF's document-level XMP stream.\n\
+\n\
        [verbose]\n\
 	      By default, pdftk runs quietly. Append verbose to the end and it\n\
 	      will speak up.\n\
@@ -4310,5 +4477,6 @@ NOTES\n\
 AUTHOR\n\
        Sid Steward (sid.steward at pdflabs dot com) maintains pdftk.  Please\n\
        email him with questions or bug reports.  Include pdftk in the subject\n\
-       line to ensure successful delivery.  Thank you.\n";
+       line to ensure successful delivery.  Thank you.";
+
 }

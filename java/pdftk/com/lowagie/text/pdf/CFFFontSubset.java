@@ -33,6 +33,22 @@
  * Boston, MA  02110-1301, USA.
  *
  *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Library General Public
+ * License as published by the Free Software Foundation; either
+ * version 2 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Library General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Library General Public
+ * License along with this library; if not, write to the
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA  02110-1301, USA.
+ *
+ *
  * If you didn't download this code from the following link, you should check if
  * you aren't using an obsolete version:
  * http://www.lowagie.com/iText/
@@ -82,11 +98,11 @@ public class CFFFontSubset extends CFFFont {
 	 * A HashMap containing the glyphs used in the text after being converted
 	 * to glyph number by the CMap 
 	 */
-	HashMap GlyphsUsed;
+	HashMap GlyphsUsed = null;
 	/**
 	 * The GlyphsUsed keys as an ArrayList
 	 */
-	ArrayList glyphsInList;
+	ArrayList glyphsInList = null;
 	/**
 	 * A HashMap for keeping the FDArrays being used by the font
 	 */
@@ -94,11 +110,11 @@ public class CFFFontSubset extends CFFFont {
 	/**
 	 * A HashMaps array for keeping the subroutines used in each FontDict
 	 */
-	HashMap[] hSubrsUsed;
+	HashMap[] hSubrsUsed = null;
 	/**
 	 * The SubroutinesUsed HashMaps as ArrayLists
 	 */
-	ArrayList[] lSubrsUsed;
+	ArrayList[] lSubrsUsed = null;
 	/**
 	 * A HashMap for keeping the Global subroutines used in the font
 	 */
@@ -118,19 +134,19 @@ public class CFFFontSubset extends CFFFont {
 	/**
 	 * An array of the new Indexs for the local Subr. One index for each FontDict
 	 */
-	byte[][] NewLSubrsIndex;
+	byte[][] NewLSubrsIndex = null;
 	/**
 	 * The new subroutines index for a non-cid font
 	 */
-	byte[] NewSubrsIndexNonCID;
+	byte[] NewSubrsIndexNonCID = null;
 	/**
 	 * The new global subroutines index of the font
 	 */
-	byte[] NewGSubrsIndex;
+	byte[] NewGSubrsIndex = null;
 	/**
 	 * The new CharString of the font
 	 */
-	byte[] NewCharStringsIndex;
+	byte[] NewCharStringsIndex = null;
 	
 	/**
 	 * The bias for the global subroutines
@@ -140,12 +156,12 @@ public class CFFFontSubset extends CFFFont {
 	/**
 	 * The linked list for generating the new font stream
 	 */
-	LinkedList OutputList;
+	LinkedList OutputList = null;
 	
 	/**
 	 * Number of arguments to the stem operators in a subroutine calculated recursivly
 	 */
-	int NumOfHints=0;
+	int NumOfHints = 0;
 
 	
 	/**	 
@@ -227,10 +243,11 @@ public class CFFFontSubset extends CFFFont {
      */
     int CountRange(int NumofGlyphs,int Type){
     	int num=0;
-    	int i=1,Sid,nLeft;
+    	// ssteward: int i=1,Sid,nLeft;
+    	int i=1,nLeft;
     	while (i<NumofGlyphs){
     		num++;
-    		Sid = getCard16();
+    		// ssteward omit: Sid = getCard16();
     		if (Type==1)
     			nLeft = getCard8();
     		else
@@ -1198,10 +1215,10 @@ public class CFFFontSubset extends CFFFont {
 	protected void CopyHeader()
 	{
 		seek(0);
-        int major = getCard8();
-        int minor = getCard8();
+        // ssteward omit: int major = getCard8();
+        // ssteward omit: int minor = getCard8();
         int hdrSize = getCard8();
-        int offSize = getCard8();
+        // ssteward omit: int offSize = getCard8();
         nextIndexOffset = hdrSize;
         OutputList.addLast(new RangeItem(buf,0,hdrSize));
 	}

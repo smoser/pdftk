@@ -1,7 +1,7 @@
 /* -*- Mode: C++; tab-width: 2; c-basic-offset: 2 -*- */
 /*
-	pdftk, the PDF Toolkit
-	Copyright (c) 2003-2013 Sid Steward
+	PDFtk, the PDF Toolkit
+	Copyright (c) 2003-2013 Steward and Lee, LLC
 
 
 	This program is free software; you can redistribute it and/or modify
@@ -38,7 +38,6 @@ class TK_Session {
 public:
 
   typedef unsigned long PageNumber;
-
 	typedef enum { NORTH= 0, EAST= 90, SOUTH= 180, WEST= 270 } PageRotate; // DF rotation
 	typedef bool PageRotateAbsolute; // DF absolute / relative rotation
 
@@ -144,6 +143,7 @@ public:
 		flatten_k,
 		need_appearances_k,
 		drop_xfa_k,
+		drop_xmp_k,
 		keep_first_id_k,
 		keep_final_id_k,
 
@@ -194,6 +194,7 @@ public:
 	bool m_output_flatten_b;
 	bool m_output_need_appearances_b;
 	bool m_output_drop_xfa_b;
+	bool m_output_drop_xmp_b;
 	bool m_output_keep_first_id_b;
 	bool m_output_keep_final_id_b;
 	bool m_cat_full_pdfs_b; // we are merging entire docs, not select pages

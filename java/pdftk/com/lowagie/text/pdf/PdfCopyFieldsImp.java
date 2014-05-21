@@ -32,6 +32,22 @@
  * Boston, MA  02110-1301, USA.
  *
  *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Library General Public
+ * License as published by the Free Software Foundation; either
+ * version 2 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Library General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Library General Public
+ * License along with this library; if not, write to the
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA  02110-1301, USA.
+ *
+ *
  * If you didn't download this code from the following link, you should check if
  * you aren't using an obsolete version:
  * http://www.lowagie.com/iText/
@@ -67,27 +83,28 @@ class PdfCopyFieldsImp extends PdfWriter {
     ArrayList pageRefs = new ArrayList();
     ArrayList pageDics = new ArrayList();
     PdfDictionary resources = new PdfDictionary();
-    PdfDictionary form;
-    protected List newBookmarks;
+    PdfDictionary form = null;
+    protected List newBookmarks = null;
     boolean closing = false;
-    Document nd;
-    private HashMap tabOrder;
+    Document nd = null;
+    private HashMap tabOrder = null;
     private ArrayList calculationOrder = new ArrayList();
-    private ArrayList calculationOrderRefs;
+    private ArrayList calculationOrderRefs = null;
     
     PdfCopyFieldsImp(OutputStream os) throws DocumentException, IOException {
         this(os, '\0');
     }
     
     PdfCopyFieldsImp(OutputStream os, char pdfVersion) throws DocumentException, IOException {
-        super(new PdfDocument(), os);
-        pdf.addWriter(this);
+        super(/* ssteward omit: new PdfDocument(), */os);
+        getPdfDocument().setWriter(this); // ssteward: okay
         if (pdfVersion != 0)
             super.setPdfVersion(pdfVersion);
         nd = new Document();
-        nd.addDocListener(pdf);
+        nd.addDocListener(getPdfDocument());
     }
     
+    /* ssteward omit until PdfReader(reader) reviewed
     void addDocument(PdfReader reader, List pagesToKeep) throws DocumentException {
         if (!readers2intrefs.containsKey(reader) && reader.isTampered())
             throw new DocumentException("The document was reused.");
@@ -124,7 +141,8 @@ class PdfCopyFieldsImp extends PdfWriter {
         fields.add(reader.getAcroFields());
         updateCalculationOrder(reader);
     }
-    
+    */
+    /* ssteward omit:
     private static String getCOName(PdfReader reader, PRIndirectReference ref) {
         String name = "";
         while (ref != null) {
@@ -142,7 +160,9 @@ class PdfCopyFieldsImp extends PdfWriter {
             name = name.substring(0, name.length() - 1);
         return name;
     }
+    */
     
+    /* ssteward omit:
     private void updateCalculationOrder(PdfReader reader) {
         PdfDictionary catalog = reader.getCatalog();
         PdfDictionary acro = (PdfDictionary)PdfReader.getPdfObject(catalog.get(PdfName.ACROFORM));
@@ -166,6 +186,7 @@ class PdfCopyFieldsImp extends PdfWriter {
             calculationOrder.add(name);
         }
     }
+    */
     
     void propagate(PdfObject obj, PdfIndirectReference refo, boolean restricted) throws IOException {
         if (obj == null)
@@ -365,7 +386,7 @@ class PdfCopyFieldsImp extends PdfWriter {
                 for (int page = 1; page <= reader.getNumberOfPages(); ++page) {
                     PdfDictionary dic = reader.getPageN(page);
                     PdfIndirectReference pageRef = getNewReference(reader.getPageOrigRef(page));
-                    PdfIndirectReference parent = root.addPageRef(pageRef);
+                    PdfIndirectReference parent = getRoot().addPageRef(pageRef);
                     dic.put(PdfName.PARENT, parent);
                     propagate(dic, pageRef, false);
                 }
@@ -392,7 +413,7 @@ class PdfCopyFieldsImp extends PdfWriter {
                 }
             }
         }
-        pdf.close();
+        getPdfDocument().close();
     }
     
     void addPageOffsetToField(HashMap fd, int pageOffset) {
@@ -512,9 +533,9 @@ class PdfCopyFieldsImp extends PdfWriter {
         return (PdfIndirectReference)pageRefs.get(page - 1);
     }
     
-    protected PdfDictionary getCatalog(PdfIndirectReference rootObj) {
+    protected PdfDictionary getCatalog(PdfIndirectReference rootObj) throws DocumentException {
         try {
-            PdfDictionary cat = ((PdfDocument)document).getCatalog(rootObj);
+            PdfDictionary cat = this.getPdfDocument().getCatalog(rootObj); // ssteward
             if (form != null) {
                 PdfIndirectReference ref = addToBody(form).getIndirectReference();
                 cat.put(PdfName.ACROFORM, ref);

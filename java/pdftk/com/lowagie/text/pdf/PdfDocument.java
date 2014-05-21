@@ -33,6 +33,22 @@
  * Boston, MA  02110-1301, USA.
  *
  *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Library General Public
+ * License as published by the Free Software Foundation; either
+ * version 2 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Library General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Library General Public
+ * License along with this library; if not, write to the
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA  02110-1301, USA.
+ *
+ *
  * If you didn't download this code from the following link, you should check if
  * you aren't using an obsolete version:
  * http://www.lowagie.com/iText/
@@ -48,12 +64,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.ListIterator;
+// ssteward omit: import java.util.ListIterator;
 import java.util.TreeMap;
 
 import pdftk.com.lowagie.text.Anchor;
 import pdftk.com.lowagie.text.Annotation;
-import pdftk.com.lowagie.text.BadElementException;
+// ssteward omit: import pdftk.com.lowagie.text.BadElementException;
 // import pdftk.com.lowagie.text.Cell; ssteward: dropped in 1.44
 import pdftk.com.lowagie.text.Chunk;
 import pdftk.com.lowagie.text.DocListener;
@@ -75,7 +91,7 @@ import pdftk.com.lowagie.text.Rectangle;
 import pdftk.com.lowagie.text.StringCompare;
 // import pdftk.com.lowagie.text.Table; ssteward: dropped in 1.44
 // import pdftk.com.lowagie.text.Watermark; ssteward: dropped in 1.44
-import pdftk.com.lowagie.text.xml.xmp.XmpWriter;
+// ssteward omit: import pdftk.com.lowagie.text.xml.xmp.XmpWriter;
 
 /**
  * <CODE>PdfDocument</CODE> is the class that is used by <CODE>PdfWriter</CODE>
@@ -224,7 +240,7 @@ class PdfDocument extends Document implements DocListener {
     
     static class PdfCatalog extends PdfDictionary {
         
-        PdfWriter writer;
+        PdfWriter writer = null;
         // constructors
         
         /**
@@ -338,13 +354,13 @@ class PdfDocument extends Document implements DocListener {
     }
     
     // membervariables
-    private PdfIndirectReference thumb;
+    private PdfIndirectReference thumb = null;
     
     /** The characters to be applied the hanging ponctuation. */
     static final String hangingPunctuation = ".,;:'";
     
     /** The <CODE>PdfWriter</CODE>. */
-    private PdfWriter writer;
+    private PdfWriter writer = null;
     
     /** some meta information about the Document. */
     private PdfInfo info = new PdfInfo();
@@ -375,10 +391,10 @@ class PdfDocument extends Document implements DocListener {
     // Vertical lines
     
     /** This is the PdfContentByte object, containing the text. */
-    private PdfContentByte text;
+    private PdfContentByte text = null;
     
     /** This is the PdfContentByte object, containing the borders and other Graphics. */
-    private PdfContentByte graphics;
+    private PdfContentByte graphics = null;
     
     /** The lines that are written until now. */
     private ArrayList lines = new ArrayList();
@@ -398,7 +414,7 @@ class PdfDocument extends Document implements DocListener {
     /** This checks if the page is empty. */
     private boolean pageEmpty = true;
     
-    private int textEmptySize;
+    private int textEmptySize = 0;
     // resources
     
     /** This is the size of the next page. */
@@ -412,7 +428,7 @@ class PdfDocument extends Document implements DocListener {
     protected HashMap boxSize = new HashMap();
     
     /** This are the page resources of the current Page. */
-    protected PageResources pageResources;
+    protected PageResources pageResources = null;
     
     // images
     
@@ -431,19 +447,20 @@ class PdfDocument extends Document implements DocListener {
     // annotations and outlines
     
     /** This is the array containing the references to the annotations. */
-    private ArrayList annotations;
+    private ArrayList annotations = null;
     
     /** This is an array containg references to some delayed annotations. */
     private ArrayList delayedAnnotations = new ArrayList();
     
     /** This is the AcroForm object. */
-    PdfAcroForm acroForm;
+    // ssteward: read via accessor, which will initialize as needed
+    private PdfAcroForm acroForm = null;
     
     /** This is the root outline of the document. */
-    private PdfOutline rootOutline;
+    private PdfOutline rootOutline = null;
     
     /** This is the current <CODE>PdfOutline</CODE> in the hierarchy of outlines. */
-    private PdfOutline currentOutline;
+    private PdfOutline currentOutline = null;
     
     /** The current active <CODE>PdfAction</CODE> when processing an <CODE>Anchor</CODE>. */
     private PdfAction currentAction = null;
@@ -459,10 +476,10 @@ class PdfDocument extends Document implements DocListener {
     /** these are the viewerpreferences of the document */
     private int viewerPreferences = 0;
     
-    private String openActionName;
-    private PdfAction openActionAction;
-    private PdfDictionary additionalActions;
-    private PdfPageLabels pageLabels;
+    private String openActionName = null;
+    private PdfAction openActionAction = null;
+    private PdfDictionary additionalActions = null;
+    private PdfPageLabels pageLabels = null;
     
     //add by Jin-Hsia Yang
     private boolean isNewpage = false;
@@ -471,22 +488,22 @@ class PdfDocument extends Document implements DocListener {
     //end add by Jin-Hsia Yang
     
     /** margin in x direction starting from the left. Will be valid in the next page */
-    protected float nextMarginLeft;
+    protected float nextMarginLeft = 0.0f;
     
     /** margin in x direction starting from the right. Will be valid in the next page */
-    protected float nextMarginRight;
+    protected float nextMarginRight = 0.0f;
     
     /** margin in y direction starting from the top. Will be valid in the next page */
-    protected float nextMarginTop;
+    protected float nextMarginTop = 0.0f;
     
     /** margin in y direction starting from the bottom. Will be valid in the next page */
-    protected float nextMarginBottom;
+    protected float nextMarginBottom = 0.0f;
     
 /** The duration of the page */
-    protected int duration=-1; // negative values will indicate no duration
+    protected int duration = -1; // negative values will indicate no duration
     
 /** The page transition */
-    protected PdfTransition transition=null; 
+    protected PdfTransition transition = null; 
     
     protected PdfDictionary pageAA = null;
     
@@ -496,7 +513,7 @@ class PdfDocument extends Document implements DocListener {
     /** Holds the type of the last element, that has been added to the document. */
     private int lastElementType = -1;    
     
-    protected int markPoint;
+    protected int markPoint = 0;
        
     // constructors
     
@@ -505,7 +522,7 @@ class PdfDocument extends Document implements DocListener {
      * @throws DocumentException on error
      */
     
-    public PdfDocument() throws DocumentException {
+    public PdfDocument() /* ssteward omit: throws DocumentException*/ {
         super();
         addProducer();
         addCreationDate();
@@ -520,14 +537,12 @@ class PdfDocument extends Document implements DocListener {
      *                     what is added to this document to an outputstream.
      * @throws DocumentException on error
      */
-    
-    public void addWriter(PdfWriter writer) throws DocumentException {
-        if (this.writer == null) {
-            this.writer = writer;
-            acroForm = new PdfAcroForm(writer);
-            return;
-        }
-        throw new DocumentException("You can only add a writer to a PdfDocument once.");
+    // ssteward: changed from addWriter(), rearranged
+    public void setWriter(PdfWriter writer) throws DocumentException {
+	if( this.writer!= null ) {
+	    throw new DocumentException("You can only add a writer to a PdfDocument once.");
+	}
+	this.writer= writer;
     }
     
     /**
@@ -667,7 +682,7 @@ class PdfDocument extends Document implements DocListener {
         return true;
     }
     
-    protected PdfArray rotateAnnotations() {
+    protected PdfArray rotateAnnotations() throws DocumentException {
         PdfArray array = new PdfArray();
         int rotation = pageSize.getRotation() % 360;
         int currentPage = writer.getCurrentPageNumber();
@@ -682,11 +697,11 @@ class PdfDocument extends Document implements DocListener {
                 if (!dic.isUsed()) {
                     HashMap templates = dic.getTemplates();
                     if (templates != null)
-                        acroForm.addFieldTemplates(templates);
+                        getAcroForm().addFieldTemplates(templates);
                 }
                 PdfFormField field = (PdfFormField)dic;
                 if (field.getParent() == null)
-                    acroForm.addDocumentField(field.getIndirectReference());
+                    getAcroForm().addDocumentField(field.getIndirectReference());
             }
             if (dic.isAnnotation()) {
                 array.add(dic.getIndirectReference());
@@ -2187,7 +2202,7 @@ class PdfDocument extends Document implements DocListener {
      * @return <CODE>PdfCatalog</CODE>
      */
     
-    PdfCatalog getCatalog(PdfIndirectReference pages) {
+    PdfCatalog getCatalog(PdfIndirectReference pages) throws DocumentException {
         PdfCatalog catalog;
         if (rootOutline.getKids().size() > 0) {
             catalog = new PdfCatalog(pages, rootOutline.indirectReference(), writer);
@@ -2209,7 +2224,7 @@ class PdfDocument extends Document implements DocListener {
             catalog.setPageLabels(pageLabels);
         catalog.addNames(localDestinations, documentJavaScript, writer);
         // ssteward: debug; catalog.setViewerPreferences(viewerPreferences);
-        if (acroForm.isValid()) {
+        if (getAcroForm().isValid()) {
             try {
                 catalog.setAcroForm(writer.addToBody(acroForm).getIndirectReference());
             }
@@ -2341,8 +2356,14 @@ class PdfDocument extends Document implements DocListener {
      * Gets the AcroForm object.
      * @return the PdfAcroform object of the PdfDocument
      */
-    
-    public PdfAcroForm getAcroForm() {
+    public PdfAcroForm getAcroForm() throws DocumentException {
+	if( acroForm== null ) {
+	    if( writer!= null )
+		acroForm= new PdfAcroForm( writer );
+	    else
+		throw new DocumentException
+		    ("Accessing PdfAcroForm before initializing writer.");
+	}
         return acroForm;
     }
     
@@ -2818,12 +2839,12 @@ class PdfDocument extends Document implements DocListener {
             boxSize.put(boxName, new PdfRectangle(size));
     }
     
-    void addCalculationOrder(PdfFormField formField) {
-        acroForm.addCalculationOrder(formField);
+    void addCalculationOrder(PdfFormField formField) throws DocumentException {
+        getAcroForm().addCalculationOrder(formField);
     }
     
-    void setSigFlags(int f) {
-        acroForm.setSigFlags(f);
+    void setSigFlags(int f) throws DocumentException {
+        getAcroForm().setSigFlags(f);
     }
     
     void addFormFieldRaw(PdfFormField field) {
@@ -2965,6 +2986,7 @@ class PdfDocument extends Document implements DocListener {
     /**
      * @return an XmpMetadata byte array
      */
+    /* ssteward omit:
     public byte[] createXmpMetadata() {
     	ByteArrayOutputStream baos = new ByteArrayOutputStream();
     	try {
@@ -2976,6 +2998,7 @@ class PdfDocument extends Document implements DocListener {
     	}
     	return baos.toByteArray();
     }
+    */
     
     int getMarkPoint() {
         return markPoint;

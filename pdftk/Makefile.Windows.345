@@ -1,6 +1,6 @@
 # -*- Mode: Makefile -*-
-# Makefile.Debian
-# Copyright (c) 2004-2013 Sid Steward
+#
+# Copyright (c) 2004-2013 Steward and Lee, LLC
 # This is part of pdftk.
 #
 # Visit: www.pdftk.com for pdftk information and articles
@@ -21,7 +21,7 @@
 export USE_LIBGCJ_SUPPLEMENT= 1
 
 # tools
-# need direct path to libgcj for gcjh (starting in gcj 4.1.2 per Aurélien GÉRÔME)
+# need direct path to libgcj for gcjh (starting in gcj 4.1.2 per AurÃ©lien GÃRÃME)
 TOOLPATH= /c/mingw-3.4.5/bin/
 export VERSUFF=
 export CPP= $(TOOLPATH)cpp$(VERSUFF)
@@ -30,12 +30,12 @@ export GCJ= $(TOOLPATH)gcj$(VERSUFF)
 export GCJH= $(TOOLPATH)gcjh$(VERSUFF)
 export GJAR= $(TOOLPATH)jar$(VERSUFF)
 
-ifdef USE_LIBGCJ_SUPPLEMENT
+#ifdef USE_LIBGCJ_SUPPLEMENT
 # using supplemented libgcj-3.4.5.jar; see ../java/ for supplement source
-export LIBGCJ= /c/mingw-3.4.5/share/java/libgcj-3.4.5-supp-1.jar
-else
+#export LIBGCJ= /c/mingw-3.4.5/share/java/libgcj-3.4.5-supp-1.jar
+#else
 export LIBGCJ= /c/mingw-3.4.5/share/java/libgcj-3.4.5.jar
-endif
+#endif
 
 export AR= ar
 export RM= rm

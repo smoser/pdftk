@@ -1,6 +1,6 @@
 # -*- Mode: Makefile -*-
 # Makefile.Redhat
-# Copyright 2004, 2010 Sid Steward
+# Copyright (c) 2004, 2010 Steward and Lee, LLC
 # This is part of pdftk.
 # Thanks to LuxSci.com for testing this Makefile
 #

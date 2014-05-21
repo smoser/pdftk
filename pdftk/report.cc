@@ -1,7 +1,7 @@
 /* -*- Mode: C++; tab-width: 2; c-basic-offset: 2 -*- */
 /*
-	pdftk, the PDF Toolkit
-	Copyright (c) 2003-2013 Sid Steward
+	PDFtk, the PDF Toolkit
+	Copyright (c) 2003-2013 Steward and Lee, LLC
 
 
 	This program is free software; you can redistribute it and/or modify
@@ -390,7 +390,7 @@ GetPageNumber( itext::PdfDictionary* dict_p,
 int
 ReadOutlines( vector<PdfBookmark>& bookmark_data,
 							itext::PdfDictionary* outline_p,
-							int level, // pass in -1 to trim off Outlines dict
+							int level, // top caller passes in zero
 							itext::PdfReader* reader_p,							
 							bool utf8_b )
 {
@@ -1239,7 +1239,7 @@ ReportOnPdf( ostream& ofs,
 		}
 	}
 
-	{ // page metrics, rotation
+	{ // page metrics, rotation, stamptkData
 		for( jint ii= 1; ii<= numPages; ++ii ) {
 			itext::PdfDictionary* page_p= reader_p->getPageN( ii );
 
@@ -1273,6 +1273,13 @@ ReportOnPdf( ostream& ofs,
 							<< (float)(page_crop_p->right()) << " "
 							<< (float)(page_crop_p->top()) << endl;
 				} 
+
+			itext::PdfString* stamptkData_p= page_p->getAsString( itext::PdfName::STAMPTKDATA );
+			if( stamptkData_p ) {
+				ofs << "PageMediaStamptkData: ";
+				OutputPdfString( ofs, stamptkData_p, utf8_b );
+				ofs << endl;
+			}
 
 			reader_p->releasePage( ii );
 		}

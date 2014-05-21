@@ -2,6 +2,22 @@
 <body>
 <ul>
 
+  <li><p>2.02 - July 24, 2013</p>
+  <ul>
+    <li><p>Added <tt>drop_xmp</tt> output option for removing the document XMP metadata stream from a PDF.</p></li>
+    <li><p>Added <tt>dump_data</tt> output of custom page data embedded by STAMPtk tool.  See the <tt>embed</tt> option in STAMPtk for more information.</p></li>
+    <li><p>Improved PDF bookmark merging logic so it can handle more input cases.</p></li>
+    <li><p>Fixed a password bug where some 'upper-ASCII' characters weren't being mapped to the correct code points.</p></li>
+    <li><p>Fixed a 40-bit decryption bug introduced in version 2.00.</p></li>
+    <li><p>Fixed a bug in the bookmark merging logic that caused bookmarks to be omitted from the merged PDF.</p></li>
+    <li><p>Added a test to ensure that encryption passwords use permitted characters only. (Decryption attempts still allow a larger set of input characters.)</p></li>
+    <li><p>Rewrote the wide-to-utf8 code for Windows to make it more rigorous.</p></li>
+    <li><p>Organized our calls of JvInitClass() in main().</p></li>
+    <li><p>Added descriptions to some exception reports.</p></li>
+    <li><p>Reviewed some code from pdftk.cc, PdfReader.java, PdfWriter.java and friends.</p></li>
+  </ul>
+  </li>
+  
   <li><p>2.01 - June 5, 2013</p>
   <ul>
     <li><p>Fixed an <tt>uncompress</tt> bug introduced in 2.00 that corrupted some image streams.</p></li>

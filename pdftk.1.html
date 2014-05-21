@@ -1,5 +1,5 @@
 <!-- Creator     : groff version 1.21 -->
-<!-- CreationDate: Fri May 24 21:17:22 2013 -->
+<!-- CreationDate: Wed Jul 24 14:22:25 2013 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -61,7 +61,7 @@ PROMPT&gt;</i> ] <br>
 [ <b>flatten</b> ] [ <b>need_appearances</b> ] <br>
 [ <b>compress</b> | <b>uncompress</b> ] <br>
 [ <b>keep_first_id</b> | <b>keep_final_id</b> ] [
-<b>drop_xfa</b> ] <br>
+<b>drop_xfa</b> ] [ <b>drop_xmp</b> ] <br>
 [ <b>verbose</b> ] [ <b>dont_ask</b> | <b>do_ask</b> ] <br>
 Where: <i><br>
 &lt;operation&gt;</i> may be empty, or: <br>
@@ -450,10 +450,11 @@ PDF.</p>
 
 <p style="margin-left:26%;">Reads a single input PDF file
 and reports its metadata, bookmarks (a/k/a outlines), page
-metrics (media, rotation and labels) and other data to the
-given output filename or (if no output is given) to stdout.
-Non-ASCII characters are encoded as XML numerical entities.
-Does not create a new PDF.</p>
+metrics (media, rotation and labels), data embedded by
+STAMPtk (see STAMPtk&rsquo;s <b>embed</b> option) and other
+data to the given output filename or (if no output is given)
+to stdout. Non-ASCII characters are encoded as XML numerical
+entities. Does not create a new PDF.</p>
 
 <p style="margin-left:15%;"><b>dump_data_utf8</b></p>
 
@@ -490,9 +491,18 @@ filename | - | PROMPT&gt;</b></p>
 metadata in a single PDF&rsquo;s Info dictionary to match
 the input data file. The input data file uses the same
 syntax as the output from <b>dump_data</b>. Non-ASCII
-characters should be encoded as XML numerical entities. This
+characters should be encoded as XML numerical entities.</p>
+
+<p style="margin-left:26%; margin-top: 1em">This operation
 does not change the metadata stored in the PDF&rsquo;s XMP
-stream, if it has one. For example:</p>
+stream, if it has one. (For this reason you should include a
+<b>ModDate</b> entry in your updated info with a current
+date/timestamp, format: <b>D:YYYYMMDDHHmmSS</b>, e.g.
+D:201307241346 -- omitted data after YYYY revert to default
+values.)</p>
+
+<p style="margin-left:26%; margin-top: 1em">For
+example:</p>
 
 <p style="margin-left:26%; margin-top: 1em">pdftk in.pdf
 update_info in.info output out.pdf</p>
@@ -666,6 +676,28 @@ the XFA data from the output PDF form.</p>
 only useful when running pdftk on a single input PDF. When
 assembling a PDF from multiple inputs using pdftk, any XFA
 data in the input is automatically omitted.</p>
+
+<p style="margin-left:11%;"><b>[drop_xmp]</b></p>
+
+<p style="margin-left:22%;">Many PDFs store document
+metadata using both an Info dictionary (old school) and an
+XMP stream (new school). Pdftk&rsquo;s <b>update_info</b>
+operation can update the Info dictionary, but not the XMP
+stream. The proper remedy for this is to include a
+<b>ModDate</b> entry in your updated info with a current
+date/timestamp. The date/timestamp format is:
+<b>D:YYYYMMDDHHmmSS</b>, e.g. D:201307241346 -- omitted data
+after YYYY revert to default values. This newer ModDate
+should cue PDF viewers that the Info metadata is more
+current than the XMP data.</p>
+
+<p style="margin-left:22%; margin-top: 1em">Alternatively,
+you might prefer to remove the XMP stream from the PDF
+altogether -- that&rsquo;s what this option does. Note that
+objects inside the PDF might have their own, separate XMP
+metadata streams, and that <b>drop_xmp</b> does not remove
+those. It only removes the PDF&rsquo;s document-level XMP
+stream.</p>
 
 <p style="margin-left:11%;"><b>[verbose]</b></p>
 

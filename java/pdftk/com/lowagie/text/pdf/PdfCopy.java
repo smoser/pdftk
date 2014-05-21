@@ -38,6 +38,22 @@
  * Boston, MA  02110-1301, USA.
  *
  *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Library General Public
+ * License as published by the Free Software Foundation; either
+ * version 2 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Library General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Library General Public
+ * License along with this library; if not, write to the
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA  02110-1301, USA.
+ *
+ *
  * If you didn't download this code from the following link, you should check if
  * you aren't using an obsolete version:
  * http://www.lowagie.com/iText/
@@ -46,10 +62,10 @@ package pdftk.com.lowagie.text.pdf;
 
 import java.util.HashMap;
 import java.util.ArrayList;
-import java.util.List;
+// ssteward omit: import java.util.List;
 import java.util.Iterator;
 import java.io.*;
-import pdftk.com.lowagie.text.ExceptionConverter;
+// ssteward omit: import pdftk.com.lowagie.text.ExceptionConverter;
 import pdftk.com.lowagie.text.Document;
 import pdftk.com.lowagie.text.DocumentException;
 
@@ -67,8 +83,8 @@ public class PdfCopy extends PdfWriter {
      * renumbered by iText.
      */
     static class IndirectReferences {
-        PdfIndirectReference theRef;
-        boolean hasCopied;
+        PdfIndirectReference theRef = null;
+        boolean hasCopied = false;
         IndirectReferences(PdfIndirectReference ref) {
             theRef = ref;
             hasCopied = false;
@@ -77,39 +93,39 @@ public class PdfCopy extends PdfWriter {
         boolean getCopied() { return hasCopied; }
         PdfIndirectReference getRef() { return theRef; }
     };
-    protected HashMap indirects;
-    protected HashMap indirectMap;
+    protected HashMap indirects = null;
+    protected HashMap indirectMap = null;
     protected int currentObjectNum = 1;
-    protected PdfReader reader;
+    protected PdfReader reader = null;
 	// ssteward: why does PdfCopy have an acroForm, when PdfDocument already has one
-    //protected PdfIndirectReference acroForm;
-    protected PdfIndirectReference topPageParent;
+    //protected PdfIndirectReference acroForm = null;
+    protected PdfIndirectReference topPageParent = null;
     protected ArrayList pageNumbersToRefs = new ArrayList();
-    //protected List newBookmarks; // ssteward: pdftk 1.46
-	protected PdfIndirectReference m_new_bookmarks; // ssteward: pdftk 1.46
-	protected PdfIndirectReference m_new_extensions; // ssteward: pdftk 1.46
+    //protected List newBookmarks = null; // ssteward: pdftk 1.46
+	protected PdfIndirectReference m_new_bookmarks = null; // ssteward: pdftk 1.46
+	protected PdfIndirectReference m_new_extensions = null; // ssteward: pdftk 1.46
     
 	// ssteward: pdftk 1.10; to ensure unique form field names, as pages are added
-	protected HashSet fullFormFieldNames; // all full field names; track to prevent collision
-	protected HashSet topFormFieldNames; // across all readers; track to prevent collision
+	protected HashSet fullFormFieldNames = null; // all full field names; track to prevent collision
+	protected HashSet topFormFieldNames = null; // across all readers; track to prevent collision
 	protected class TopFormFieldData {
-		HashMap newNamesRefs; // map new top parent field names to refs
-		HashMap newNamesKids; // map new top parent field names to kids PdfArray
-		HashSet allNames; // ~all~ names, new and not-new
+		HashMap newNamesRefs = null; // map new top parent field names to refs
+		HashMap newNamesKids = null; // map new top parent field names to kids PdfArray
+		HashSet allNames = null; // ~all~ names, new and not-new
 		public TopFormFieldData() {
 			newNamesRefs= new HashMap();
 			newNamesKids= new HashMap();
 			allNames= new HashSet();
 		}
 	};
-	protected HashMap topFormFieldReadersData; // I wish this was C++, where I could templates
+	protected HashMap topFormFieldReadersData = null;
 
     /**
      * A key to allow us to hash indirect references
      */
     protected static class RefKey {
-        int num;
-        int gen;
+        int num = 0;
+        int gen = 0;
         RefKey(int num, int gen) {
             this.num = num;
             this.gen = gen;
@@ -140,9 +156,9 @@ public class PdfCopy extends PdfWriter {
      * @param os outputstream
      */
     public PdfCopy(Document document, OutputStream os) throws DocumentException {
-        super(new PdfDocument(), os);
-        document.addDocListener(pdf);
-        pdf.addWriter(this);
+        super(/* ssteward omit: new PdfDocument(),*/ os);
+        document.addDocListener(getPdfDocument());
+        getPdfDocument().setWriter(this); // ssteward: okay
         indirectMap = new HashMap();
 
 		// ssteward: pdftk 1.10
@@ -153,7 +169,7 @@ public class PdfCopy extends PdfWriter {
     public void open() {
         super.open();
         topPageParent = getPdfIndirectReference();
-        root.setLinearMode(topPageParent);
+        getRoot().setLinearMode(topPageParent);
     }
 
     /**
@@ -162,7 +178,7 @@ public class PdfCopy extends PdfWriter {
      * @param pageNumber which page to get
      * @return the page
      */
-    public PdfImportedPage getImportedPage(PdfReader reader, int pageNumber) {
+    public PdfImportedPage getImportedPage(PdfReader reader, int pageNumber) throws IOException {
         if (currentPdfReaderInstance != null) {
             if (currentPdfReaderInstance.getReader() != reader) {
                 try {
@@ -224,7 +240,7 @@ public class PdfCopy extends PdfWriter {
 		//
 		// simplify this by not recursing into /any/ type==page via indirect ref?
 
-		PdfObject in_obj= (PdfObject)reader.getPdfObject( in );
+		PdfObject in_obj= (PdfObject)PdfReader.getPdfObject( in );
 		if( in_obj!= null && in_obj.isDictionary() ) {
 			PdfDictionary in_dict= (PdfDictionary)in_obj;
 
@@ -382,14 +398,14 @@ public class PdfCopy extends PdfWriter {
      * @param iPage an imported page
      * @throws IOException, BadPdfFormatException
      */
-    public void addPage(PdfImportedPage iPage) throws IOException, BadPdfFormatException {
+    public void addPage(PdfImportedPage iPage) throws IOException, BadPdfFormatException, DocumentException {
         int pageNum = setFromIPage(iPage); // sets this.reader
         
         PdfDictionary thePage = reader.getPageN(pageNum);
         PRIndirectReference origRef = reader.getPageOrigRef(pageNum);
         reader.releasePage(pageNum);
         RefKey key = new RefKey(origRef);
-        PdfIndirectReference pageRef;
+        PdfIndirectReference pageRef = null;
         IndirectReferences iRef = (IndirectReferences)indirects.get(key);
         // if we already have an iref for the page (we got here by another link)
         if (iRef != null) {
@@ -419,7 +435,7 @@ public class PdfCopy extends PdfWriter {
 			// changes to the PdfReader will be copied, below, into the PdfWriter;
 			//
 			{
-				PdfArray annots= (PdfArray)reader.getPdfObject(thePage.get(PdfName.ANNOTS));
+				PdfArray annots= (PdfArray)PdfReader.getPdfObject(thePage.get(PdfName.ANNOTS));
 				if( annots!= null && annots.isArray() ) {
 					ArrayList annots_arr= annots.getArrayList();
 					for( int ii= 0; ii< annots_arr.size(); ++ii ) {
@@ -428,9 +444,9 @@ public class PdfCopy extends PdfWriter {
 						if( annot_obj!= null && annot_obj.isIndirect() ) {
 							PdfIndirectReference annot_ref= (PdfIndirectReference)annot_obj;
 							if( annot_ref!= null ) {
-								PdfDictionary annot= (PdfDictionary)reader.getPdfObject(annot_ref);
+								PdfDictionary annot= (PdfDictionary)PdfReader.getPdfObject(annot_ref);
 								if( annot!= null && annot.isDictionary() ) {
-									PdfName subtype= (PdfName)reader.getPdfObject(annot.get(PdfName.SUBTYPE));
+									PdfName subtype= (PdfName)PdfReader.getPdfObject(annot.get(PdfName.SUBTYPE));
 									if( subtype!= null && subtype.isName() && subtype.equals(PdfName.WIDGET) ) {
 										// we have a form field
 
@@ -439,7 +455,7 @@ public class PdfCopy extends PdfWriter {
 										String full_name= ""; // construct a full name from partial names using '.', e.g.: foo.bar.
 										String top_name= "";
 										boolean is_unicode_b= false; // if names are unicode, they must all be unicode
-										PdfString tt= (PdfString)reader.getPdfObject(annot.get(PdfName.T));
+										PdfString tt= (PdfString)PdfReader.getPdfObject(annot.get(PdfName.T));
 										if( tt!= null && tt.isString() ) {
 											top_name= tt.toString();
 											is_unicode_b= ( is_unicode_b || PdfString.isUnicode( tt.getBytes() ) );
@@ -452,10 +468,10 @@ public class PdfCopy extends PdfWriter {
 										while( parent_ref!= null && parent_ref.isIndirect() )
 											{
 												annot_ref= parent_ref;
-												annot= (PdfDictionary)reader.getPdfObject(annot_ref);
+												annot= (PdfDictionary)PdfReader.getPdfObject(annot_ref);
 												parent_ref= (PdfIndirectReference)annot.get(PdfName.PARENT);
 
-												tt= (PdfString)reader.getPdfObject(annot.get(PdfName.T));
+												tt= (PdfString)PdfReader.getPdfObject(annot.get(PdfName.T));
 												if( tt!= null && tt.isString() ) {
 													if( top_name.length()!= 0 ) {
 														full_name+= top_name;
@@ -559,7 +575,7 @@ public class PdfCopy extends PdfWriter {
 			//
 			// dig down to annot, and then dig up to topmost Parent
 			{
-				PdfArray annots= (PdfArray)reader.getPdfObject(thePage.get(PdfName.ANNOTS));
+				PdfArray annots= (PdfArray)PdfReader.getPdfObject(thePage.get(PdfName.ANNOTS));
 				if( annots!= null && annots.isArray() ) {
 					ArrayList annots_arr= annots.getArrayList();
 					for( int ii= 0; ii< annots_arr.size(); ++ii ) {
@@ -568,9 +584,9 @@ public class PdfCopy extends PdfWriter {
 						if( annot_obj!= null && annot_obj.isIndirect() ) {
 							PdfIndirectReference annot_ref= (PdfIndirectReference)annots_arr.get(ii);
 							if( annot_ref!= null ) {
-								PdfDictionary annot= (PdfDictionary)reader.getPdfObject(annot_ref);
+								PdfDictionary annot= (PdfDictionary)PdfReader.getPdfObject(annot_ref);
 								if( annot!= null && annot.isDictionary() ) {
-									PdfName subtype= (PdfName)reader.getPdfObject(annot.get(PdfName.SUBTYPE));
+									PdfName subtype= (PdfName)PdfReader.getPdfObject(annot.get(PdfName.SUBTYPE));
 									if( subtype!= null && subtype.isName() && subtype.equals(PdfName.WIDGET) ) {
 										// we have a form field
 
@@ -579,7 +595,7 @@ public class PdfCopy extends PdfWriter {
 											(PdfIndirectReference)annot.get(PdfName.PARENT);
 										while( parent_ref!= null && parent_ref.isIndirect() ) {
 											annot_ref= parent_ref;
-											annot= (PdfDictionary)reader.getPdfObject(annot_ref);
+											annot= (PdfDictionary)PdfReader.getPdfObject(annot_ref);
 											parent_ref= (PdfIndirectReference)annot.get(PdfName.PARENT);
 										}
 								
@@ -602,12 +618,12 @@ public class PdfCopy extends PdfWriter {
 			//
 			PdfDictionary catalog= reader.getCatalog();
 			if( catalog!= null && catalog.isDictionary() ) {
-				PdfDictionary acroForm= (PdfDictionary)reader.getPdfObject(catalog.get(PdfName.ACROFORM));
+				PdfDictionary acroForm= (PdfDictionary)PdfReader.getPdfObject(catalog.get(PdfName.ACROFORM));
 				if( acroForm!= null && acroForm.isDictionary() ) {
-					PdfDictionary dr= (PdfDictionary)reader.getPdfObject(acroForm.get(PdfName.DR));
+					PdfDictionary dr= (PdfDictionary)PdfReader.getPdfObject(acroForm.get(PdfName.DR));
 					if( dr!= null && dr.isDictionary() ) {
 						PdfDictionary acroForm_target= this.getAcroForm();
-						PdfDictionary dr_target= (PdfDictionary)reader.getPdfObject(acroForm_target.get(PdfName.DR));
+						PdfDictionary dr_target= (PdfDictionary)PdfReader.getPdfObject(acroForm_target.get(PdfName.DR));
 						if( dr_target== null ) {
 							PdfDictionary dr_copy= copyDictionary( dr );
 							acroForm_target.put( PdfName.DR, dr_copy );
@@ -629,7 +645,7 @@ public class PdfCopy extends PdfWriter {
             newPage.put(PdfName.PARENT, topPageParent);
             addToBody(newPage, pageRef);
         }
-        root.addPage(pageRef);
+        getRoot().addPage(pageRef);
         pageNumbersToRefs.add(pageRef);
     }
     
@@ -677,9 +693,9 @@ public class PdfCopy extends PdfWriter {
      * the getCatalog method is part of PdfWriter.
      * we wrap this so that we can extend it
      */
-    protected PdfDictionary getCatalog( PdfIndirectReference rootObj ) {
+    protected PdfDictionary getCatalog( PdfIndirectReference rootObj ) throws DocumentException {
         //try {
-            PdfDictionary catalog= ((PdfDocument)document).getCatalog( rootObj );
+		PdfDictionary catalog= getPdfDocument().getCatalog( rootObj ); // ssteward
 
 			// ssteward: this just overwrites the ACROFORM entry added by
 			// PdfDocument.getCatalog(); dropped, because we use PdfDocument.acroForm, above;
@@ -745,7 +761,7 @@ public class PdfCopy extends PdfWriter {
     public void close() {
         if (open) {
             PdfReaderInstance ri = currentPdfReaderInstance;
-            pdf.close();
+            getPdfDocument().close();
             super.close();
             if (ri != null) {
                 try {

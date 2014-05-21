@@ -2,7 +2,7 @@
 .\" First parameter, NAME, should be all caps
 .\" Second parameter, SECTION, should be 1-8, maybe w/ subsection
 .\" other parameters are allowed: see man(7), man(1)
-.TH PDFTK 1 "May 22, 2013"
+.TH PDFTK 1 "July 24, 2013"
 .\" Please adjust this date whenever revising the manpage.
 .\"
 .\" Some roff macros, for reference:
@@ -39,7 +39,7 @@ pdftk \- A handy tool for manipulating PDF
 .br
      [ \fBcompress\fR | \fBuncompress\fR ]
 .br
-     [ \fBkeep_first_id\fR | \fBkeep_final_id\fR ] [ \fBdrop_xfa\fR ]
+     [ \fBkeep_first_id\fR | \fBkeep_final_id\fR ] [ \fBdrop_xfa\fR ] [ \fBdrop_xmp\fR ]
 .br
      [ \fBverbose\fR ] [ \fBdont_ask\fR | \fBdo_ask\fR ]
 .br
@@ -287,7 +287,7 @@ This behaves just like the \fBbackground\fR operation except it overlays the sta
 Same as the \fBstamp\fR operation, but applies each page of the background PDF to the corresponding page of the input PDF.  If the input PDF has more pages than the stamp PDF, then the final stamp page is repeated across these remaining pages in the input PDF.
 .TP
 .B dump_data
-Reads a single input PDF file and reports its metadata, bookmarks (a/k/a outlines), page metrics (media, rotation and labels) and other data to the given output filename or (if no output is given) to stdout.  Non-ASCII characters are encoded as XML numerical entities.  Does not create a new PDF.
+Reads a single input PDF file and reports its metadata, bookmarks (a/k/a outlines), page metrics (media, rotation and labels), data embedded by STAMPtk (see STAMPtk's \fBembed\fR option) and other data to the given output filename or (if no output is given) to stdout.  Non-ASCII characters are encoded as XML numerical entities.  Does not create a new PDF.
 .TP
 .B dump_data_utf8
 Same as \fBdump_data\fR excepct that the output is encoded as UTF-8.
@@ -310,8 +310,15 @@ as XML numerical entities. Does not create a new PDF.
 Changes the bookmarks and metadata in a single PDF's Info dictionary to match
 the input data file. The input data file uses the same syntax as the
 output from \fBdump_data\fR. Non-ASCII characters should be encoded as XML
-numerical entities. This does not change the metadata stored
-in the PDF's XMP stream, if it has one. For example:
+numerical entities.
+
+This operation does not change the metadata stored
+in the PDF's XMP stream, if it has one. (For this reason you should include
+a \fBModDate\fR entry in your updated info with a current date/timestamp, format:
+\fBD:YYYYMMDDHHmmSS\fR, e.g. D:201307241346 -- omitted data after YYYY revert 
+to default values.)
+
+For example:
 
 pdftk in.pdf update_info in.info output out.pdf
 .TP
@@ -412,6 +419,11 @@ When combining pages from multiple PDFs, use one of these options to copy the do
 If your input PDF is a form created using Acrobat 7 or Adobe Designer, then it probably has XFA data.  Filling such a form using pdftk yields a PDF with data that fails to display in Acrobat 7 (and 6?).  The workaround solution is to remove the form's XFA data, either before you fill the form using pdftk or at the time you fill the form. Using this option causes pdftk to omit the XFA data from the output PDF form.
 
 This option is only useful when running pdftk on a single input PDF.  When assembling a PDF from multiple inputs using pdftk, any XFA data in the input is automatically omitted.
+.TP
+.B [drop_xmp]
+Many PDFs store document metadata using both an Info dictionary (old school) and an XMP stream (new school).  Pdftk's \fBupdate_info\fR operation can update the Info dictionary, but not the XMP stream.  The proper remedy for this is to include a \%\fBModDate\fR entry in your updated info with a current date/timestamp. The date/timestamp format is: \fBD:YYYYMMDDHHmmSS\fR, e.g. D:201307241346 -- omitted data after YYYY revert to default values. This newer ModDate should cue PDF viewers that the Info metadata is more current than the XMP data.
+
+Alternatively, you might prefer to remove the XMP stream from the PDF altogether -- that's what this option does.  Note that objects inside the PDF might have their own, separate XMP metadata streams, and that \fBdrop_xmp\fR does not remove those.  It only removes the PDF's document-level XMP stream.
 .TP
 .B [verbose]
 By default, pdftk runs quietly. Append \fBverbose\fR to the end and it 

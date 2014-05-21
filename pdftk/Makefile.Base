@@ -1,6 +1,6 @@
 # -*- Mode: Makefile -*-
 # Makefile.Base
-# Copyright (c) 2003-2013 Sid Steward, Updated by Andre Gompel
+# Copyright (c) 2003-2013 Steward and Lee, LLC, Updated by Andre Gompel
 # This is part of pdftk
 #
 # Visit: www.pdftk.com for pdftk information and articles
@@ -26,7 +26,7 @@ endif
 # this must already be set according to your platform Makefile;
 # we're just appending to it, here
 #
-CPPFLAGS+= -DPDFTK_VER=\"2.01\"
+CPPFLAGS+= -DPDFTK_VER=\"2.02\"
 
 all : javalib pdftk
 
@@ -39,11 +39,14 @@ attachments.o : attachments.cc attachments.h pdftk.h $(JAVALIB)
 report.o : report.cc report.h pdftk.h $(JAVALIB)
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -I$(JAVALIBPATH) report.cc -c
 
-pdftk.o : pdftk.cc pdftk.h attachments.h report.h $(JAVALIB)
+passwords.o : passwords.cc passwords.h pdftk.h $(JAVALIB)
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -I$(JAVALIBPATH) passwords.cc -c
+
+pdftk.o : pdftk.cc pdftk.h attachments.h report.h passwords.h $(JAVALIB)
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -I$(JAVALIBPATH) pdftk.cc -c
 
-pdftk : pdftk.o attachments.o report.o $(JAVALIB) $(LIBGCJ_SUPPLEMENT_FULL_O)
-	$(CXX) $(CXXFLAGS) attachments.o report.o pdftk.o $(JAVALIB) $(LIBGCJ_SUPPLEMENT_FULL_O) $(LDLIBS) -o pdftk
+pdftk : pdftk.o attachments.o report.o passwords.o $(JAVALIB) $(LIBGCJ_SUPPLEMENT_FULL_O)
+	$(CXX) $(CXXFLAGS) attachments.o report.o passwords.o pdftk.o $(JAVALIB) $(LIBGCJ_SUPPLEMENT_FULL_O) $(LDLIBS) -o pdftk
 
 install:
 	/usr/bin/install pdftk /usr/local/bin 

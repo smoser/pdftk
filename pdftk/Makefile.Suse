@@ -1,6 +1,6 @@
 # -*- Mode: Makefile -*-
-# Makefile.Redhat
-# Copyright 2004, 2010 Sid Steward
+# Makefile.Suse
+# Copyright (c) 2004, 2010 Steward and Lee, LLC
 # This is part of pdftk.
 # Thanks to Edistar for adapting this Makefile for SuSE SLES 11 sp1
 #

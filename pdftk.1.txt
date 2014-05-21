@@ -16,7 +16,7 @@ SYNOPSIS
 	    [ user_pw <user password | PROMPT> ]
 	    [ flatten ] [ need_appearances ]
 	    [ compress | uncompress ]
-	    [ keep_first_id | keep_final_id ] [ drop_xfa ]
+	    [ keep_first_id | keep_final_id ] [ drop_xfa ] [ drop_xmp ]
 	    [ verbose ] [ dont_ask | do_ask ]
        Where:
 	    <operation> may be empty, or:
@@ -108,7 +108,7 @@ OPTIONS
 		 PDF. Use cat to merge PDF pages or to split PDF pages from
 		 documents. You can also use it to rotate PDF pages. Page
 		 order in the new PDF is specified by the order of the given
-		 page ranges.  Page ranges are described like this:
+		 page ranges. Page ranges are described like this:
 
 		 <input PDF handle>[<begin page number>[-<end page num-
 		 ber>[<qualifier>]]][<page rotation>]
@@ -289,7 +289,8 @@ OPTIONS
 	  dump_data
 		 Reads a single input PDF file and reports its metadata, book-
 		 marks (a/k/a outlines), page metrics (media, rotation and
-		 labels) and other data to the given output filename or (if no
+		 labels), data embedded by STAMPtk (see STAMPtk's embed
+		 option) and other data to the given output filename or (if no
 		 output is given) to stdout.  Non-ASCII characters are encoded
 		 as XML numerical entities.  Does not create a new PDF.
 
@@ -318,9 +319,15 @@ OPTIONS
 		 Changes the bookmarks and metadata in a single PDF's Info
 		 dictionary to match the input data file. The input data file
 		 uses the same syntax as the output from dump_data. Non-ASCII
-		 characters should be encoded as XML numerical entities. This
-		 does not change the metadata stored in the PDF's XMP stream,
-		 if it has one. For example:
+		 characters should be encoded as XML numerical entities.
+
+		 This operation does not change the metadata stored in the
+		 PDF's XMP stream, if it has one. (For this reason you should
+		 include a ModDate entry in your updated info with a current
+		 date/timestamp, format: D:YYYYMMDDHHmmSS, e.g. D:201307241346
+		 -- omitted data after YYYY revert to default values.)
+
+		 For example:
 
 		 pdftk in.pdf update_info in.info output out.pdf
 
@@ -445,6 +452,23 @@ OPTIONS
 	      PDF.  When assembling a PDF from multiple inputs using pdftk,
 	      any XFA data in the input is automatically omitted.
 
+       [drop_xmp]
+	      Many PDFs store document metadata using both an Info dictionary
+	      (old school) and an XMP stream (new school).  Pdftk's
+	      update_info operation can update the Info dictionary, but not
+	      the XMP stream.  The proper remedy for this is to include a
+	      ModDate entry in your updated info with a current date/time-
+	      stamp. The date/timestamp format is: D:YYYYMMDDHHmmSS, e.g.
+	      D:201307241346 -- omitted data after YYYY revert to default val-
+	      ues. This newer ModDate should cue PDF viewers that the Info
+	      metadata is more current than the XMP data.
+
+	      Alternatively, you might prefer to remove the XMP stream from
+	      the PDF altogether -- that's what this option does.  Note that
+	      objects inside the PDF might have their own, separate XMP meta-
+	      data streams, and that drop_xmp does not remove those.  It only
+	      removes the PDF's document-level XMP stream.
+
        [verbose]
 	      By default, pdftk runs quietly. Append verbose to the end and it
 	      will speak up.
@@ -535,4 +559,4 @@ AUTHOR
 
 
 
-				 May 22, 2013			      PDFTK(1)
+				 July 24, 2013			      PDFTK(1)

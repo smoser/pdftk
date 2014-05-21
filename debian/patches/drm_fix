@@ -4,7 +4,7 @@ Bug-Debian: http://bugs.debian.org/531529
 
 --- a/pdftk/pdftk.cc
 +++ b/pdftk/pdftk.cc
-@@ -242,7 +242,15 @@
+@@ -281,7 +281,15 @@
  		// store in this java object so the gc can trace it
  		g_dont_collect_p->addElement( reader );
  
@@ -21,7 +21,7 @@ Bug-Debian: http://bugs.debian.org/531529
  		if( !input_pdf_p->m_authorized_b ) {
  			open_success_b= false;
  		}
-@@ -272,9 +280,8 @@
+@@ -311,9 +319,8 @@
  		cerr << "The password you supplied for the input PDF:" << endl;
  		cerr << "   " << input_pdf_p->m_filename << endl;
  		cerr << "   did not work.  This PDF is encrypted, and you must supply the" << endl;
@@ -33,7 +33,7 @@ Bug-Debian: http://bugs.debian.org/531529
  
  		prompt_for_password( "open", "the input PDF:\n   "+ input_pdf_p->m_filename, input_pdf_p->m_password );
  		if( !input_pdf_p->m_password.empty() ) { // reset flags try again
-@@ -288,7 +295,7 @@
+@@ -327,7 +334,7 @@
  		cerr << "Error: Failed to open PDF file: " << endl;
  		cerr << "   " << input_pdf_p->m_filename << endl;
  		if( !input_pdf_p->m_authorized_b ) {
@@ -42,7 +42,7 @@ Bug-Debian: http://bugs.debian.org/531529
  		}
  	}
  
-@@ -665,7 +672,7 @@
+@@ -707,7 +714,7 @@
  				}
  
  				if( !it->m_authorized_b ) {

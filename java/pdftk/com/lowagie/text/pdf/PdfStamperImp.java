@@ -31,6 +31,22 @@
  * Boston, MA  02110-1301, USA.
  *
  *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Library General Public
+ * License as published by the Free Software Foundation; either
+ * version 2 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Library General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Library General Public
+ * License along with this library; if not, write to the
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA  02110-1301, USA.
+ *
+ *
  * If you didn't download this code from the following link, you should check if
  * you aren't using an obsolete version:
  * http://www.lowagie.com/iText/
@@ -53,30 +69,30 @@ import pdftk.com.lowagie.text.ExceptionConverter;
 class PdfStamperImp extends PdfWriter {
     HashMap readers2intrefs = new HashMap();
     HashMap readers2file = new HashMap();
-    RandomAccessFileOrArray file;
-    PdfReader reader;
+    RandomAccessFileOrArray file = null;
+    PdfReader reader = null;
     IntHashtable myXref = new IntHashtable();
     /** Integer(page number) -> PageStamp */
     HashMap pagesToContent = new HashMap();
     boolean closed = false;
     /** Holds value of property rotateContents. */
     private boolean rotateContents = true;
-    protected AcroFields acroFields;
+    protected AcroFields acroFields = null;
     protected boolean flat = false;
     protected boolean flatFreeText = false;
     protected int namePtr[] = {0};
-    protected boolean namedAsNames;
-    protected List newBookmarks;
+    protected boolean namedAsNames = false;
+    protected List newBookmarks = null;
     protected HashSet partialFlattening = new HashSet();
     protected boolean useVp = false;
     protected int vp = 0;
     protected HashMap fieldTemplates = new HashMap();
     protected boolean fieldsAdded = false;
     protected int sigFlags = 0;
-    protected boolean append;
-    protected IntHashtable marked;
-    protected int initialXrefSize;
-    protected PdfAction openAction;
+    protected boolean append = false;
+    protected IntHashtable marked = null;
+    protected int initialXrefSize = 0;
+    protected PdfAction openAction = null;
     
     /** Creates new PdfStamperImp.
      * @param reader the read PDF
@@ -88,16 +104,20 @@ class PdfStamperImp extends PdfWriter {
      * @throws IOException
      */
     PdfStamperImp(PdfReader reader, OutputStream os, char pdfVersion, boolean append) throws DocumentException, IOException {
-        super(new PdfDocument(), os);
-        if (reader.isTampered())
-            throw new DocumentException("The original document was reused. Read it again from file.");
-        reader.setTampered(true);
+        super(/* ssteward omit: new PdfDocument(),*/ os);
+
         this.reader = reader;
+        if (reader.isTampered())
+            throw new DocumentException
+				("The original document was reused. Read it again from file.");
+        reader.setTampered(true);
         file = reader.getSafeFile();
+
         this.append = append;
         if (append) {
             if (reader.isRebuilt())
-                throw new DocumentException("Append mode requires a document without errors even if recovery was possible.");
+                throw new DocumentException
+					("Append mode requires a document without errors even if recovery was possible.");
             if (reader.isEncrypted())
                 crypto = new PdfEncryption(reader.getDecrypt());
             HEADER = getISOBytes("\n");
@@ -116,8 +136,10 @@ class PdfStamperImp extends PdfWriter {
             else
                 super.setPdfVersion(pdfVersion);
         }
+
         super.open();
-        pdf.addWriter(this);
+        getPdfDocument().setWriter(this); // ssteward: okay
+
         if (append) {
             body.setRefnum(reader.getXrefSize());
             marked = new IntHashtable();
@@ -387,17 +409,19 @@ class PdfStamperImp extends PdfWriter {
             return currentPdfReaderInstance.getNewObjectNumber(number, generation);
     }
     
-    RandomAccessFileOrArray getReaderFile(PdfReader reader) {
+    RandomAccessFileOrArray getReaderFile(PdfReader reader) throws IOException {
+		// ssteward: reorg
+		RandomAccessFileOrArray retVal = null;
         if (readers2intrefs.containsKey(reader)) {
-            RandomAccessFileOrArray raf = (RandomAccessFileOrArray)readers2file.get(reader);
-            if (raf != null)
-                return raf;
-            return reader.getSafeFile();
+            retVal = (RandomAccessFileOrArray)readers2file.get(reader);
+            if (retVal == null)
+				retVal = reader.getSafeFile();
         }
-        if (currentPdfReaderInstance == null)
-            return file;
+        else if (currentPdfReaderInstance == null)
+			retVal = file;
         else
-            return currentPdfReaderInstance.getReaderFile();
+            retVal = currentPdfReaderInstance.getReaderFile();
+		return retVal;
     }
     
     /**
@@ -1126,7 +1150,7 @@ class PdfStamperImp extends PdfWriter {
     }
     
     void setJavaScript() throws IOException {
-        ArrayList djs = pdf.getDocumentJavaScript();
+        ArrayList djs = getPdfDocument().getDocumentJavaScript();
         if (djs.size() == 0)
             return;
         PdfDictionary catalog = reader.getCatalog();
