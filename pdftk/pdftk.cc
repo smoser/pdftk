@@ -281,7 +281,15 @@ TK_Session::add_reader( InputPdf* input_pdf_p,
 		// store in this java object so the gc can trace it
 		g_dont_collect_p->addElement( reader );
 
-		input_pdf_p->m_authorized_b= ( !reader->encrypted || reader->ownerPasswordUsed );
+		input_pdf_p->m_authorized_b= true; // instead of:  ( !reader->encrypted || reader->ownerPasswordUsed );
+		if ( open_success_b && reader->encrypted && !reader->ownerPasswordUsed )
+		{
+			cerr << "WARNING: The creator of the input PDF:" << endl;
+			cerr << "   " << input_pdf_p->m_filename << endl;
+			cerr << "   has set an owner password (which is not required to handle this PDF)." << endl;
+			cerr << "   You did not supply this password. Please respect any copyright." << endl;
+ 		}
+
 		if( !input_pdf_p->m_authorized_b ) {
 			open_success_b= false;
 		}
@@ -311,9 +319,8 @@ TK_Session::add_reader( InputPdf* input_pdf_p,
 		cerr << "The password you supplied for the input PDF:" << endl;
 		cerr << "   " << input_pdf_p->m_filename << endl;
 		cerr << "   did not work.  This PDF is encrypted, and you must supply the" << endl;
-		cerr << "   owner password to open it.  If it has no owner password, then" << endl;
-		cerr << "   enter the user password, instead.  To quit, enter a blank password" << endl;
-		cerr << "   at the next prompt." << endl;
+		cerr << "   owner or the user password to open it. To quit, enter a blank" << endl;
+		cerr << "   password at the next prompt." << endl;
 
 		prompt_for_password( "open", "the input PDF:\n   "+ input_pdf_p->m_filename, input_pdf_p->m_password );
 		if( !input_pdf_p->m_password.empty() ) { // reset flags try again
@@ -327,7 +334,7 @@ TK_Session::add_reader( InputPdf* input_pdf_p,
 		cerr << "Error: Failed to open PDF file: " << endl;
 		cerr << "   " << input_pdf_p->m_filename << endl;
 		if( !input_pdf_p->m_authorized_b ) {
-			cerr << "   OWNER PASSWORD REQUIRED, but not given (or incorrect)" << endl;
+			cerr << "   OWNER OR USER PASSWORD REQUIRED, but not given (or incorrect)" << endl;
 		}
 	}
 
@@ -707,7 +714,7 @@ TK_Session::dump_session_data() const
 				}
 
 				if( !it->m_authorized_b ) {
-					cout << ", OWNER PASSWORD REQUIRED, but not given (or incorrect)";
+					cout << ", OWNER OR USER PASSWORD REQUIRED, but not given (or incorrect)";
 				}
 
 				cout << endl;
