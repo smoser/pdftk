@@ -1,4 +1,4 @@
 version=3
-http://www.pdflabs.com/docs/pdftk-version-history/ \
-http://www.pdflabs.com/tools/pdftk-the-pdf-toolkit/pdftk-(.*)-src\.zip \
+https://www.pdflabs.com/docs/pdftk-version-history/ \
+https://www.pdflabs.com/tools/pdftk-the-pdf-toolkit/pdftk-(.*)-src\.zip \
 debian

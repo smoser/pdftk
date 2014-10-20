@@ -637,6 +637,10 @@ TK_Session::is_keyword( char* ss, int* keyword_len_p )
     *keyword_len_p= 4; // note: fixed size
 		return rot_upside_down_k;
 	}
+	else if( strncmp( ss_copy, "~", 1 )== 0 && strstr( ss_copy, ".pdf" )== NULL ) {
+		*keyword_len_p= 1;
+		return tilde_k;
+	}
 	
   return none_k;
 }
@@ -1380,12 +1384,13 @@ TK_Session::TK_Session( int argc, char** argv ) :
 				arg_state= output_filename_e; // advance state
       }
 			else if( arg_keyword== none_k || 
-							 arg_keyword== end_k )
+							 arg_keyword== end_k || arg_keyword== tilde_k )
 				{ // treat argv[ii] like a page sequence
 
 					bool even_pages_b= false;
 					bool odd_pages_b= false;
 					int jj= 0;
+					set<jint> excluded_pages;
 
 					InputPdfIndex range_pdf_index= 0; { // defaults to first input document
 						string handle;
@@ -1411,9 +1416,13 @@ TK_Session::TK_Session( int argc, char** argv ) :
 						}
 					}
 
+
+					char* tilde_loc= strchr( argv[ii]+ jj, '~' );
 					char* hyphen_loc= strchr( argv[ii]+ jj, '-' );
-					if( hyphen_loc )
+					if( hyphen_loc && (!tilde_loc || hyphen_loc<tilde_loc) )
 						*hyphen_loc= 0;
+					else
+						hyphen_loc=NULL;
 
 					// DF declare rotate vars
 					PageRotate page_rotate= NORTH;
@@ -1566,6 +1575,53 @@ TK_Session::TK_Session( int argc, char** argv ) :
 							page_rotate= TK_Session::SOUTH; // rotate +180
 							page_rotate_absolute= false;
 						}
+						else if ( arg_keyword== tilde_k) {
+							// exclude range
+							int initial_jj= jj;
+							jj++;
+							int range_start= 0;
+							int range_end= 0;
+
+							arg_keyword= is_keyword( argv[ii]+ jj, &keyword_len );
+							bool end_found= (arg_keyword== end_k);
+							if( end_found ) {
+								range_start=m_input_pdf[range_pdf_index].m_num_pages;
+								jj+= keyword_len;
+							}
+							for( ; argv[ii][jj] && isdigit( argv[ii][jj] ) && !end_found; ++jj ) {
+								range_start= range_start* 10+ argv[ii][jj]- '0';
+							}
+							if( argv[ii][jj]=='-' )
+							{
+								if( range_start==0 )
+									range_start=1;
+								jj++;
+								arg_keyword= is_keyword( argv[ii]+ jj, &keyword_len );
+								end_found= (arg_keyword== end_k);
+								if( end_found ) {
+									range_end=0;
+									jj+= keyword_len;
+								}
+								for( ; argv[ii][jj] && isdigit( argv[ii][jj] ) && !end_found; ++jj ) {
+									range_end= range_end* 10+ argv[ii][jj]- '0';
+								}
+								if( range_end== 0 )
+								{
+									range_end=m_input_pdf[range_pdf_index].m_num_pages;
+								}
+							} else // no range given (single page excluded)
+								range_end=range_start;
+							if( (range_start==0 && range_end==0) || range_end < range_start )
+							{
+								cerr << "Error: Unexpected/invalid range in input after '~'." << endl;
+								fail_b= true;
+								break;
+							} else {
+								for( int kk=range_start; kk<=range_end; ++kk )
+									excluded_pages.insert(kk);
+							}
+							keyword_len=0;
+						}
 						else { // error
 							string argv_ss;
 							copy_argv_as_utf8( argv_ss, argv, ii );
@@ -1591,7 +1647,7 @@ TK_Session::TK_Session( int argc, char** argv ) :
 						page_num_end= m_input_pdf[range_pdf_index].m_num_pages;
 
 						// test that it's a /full/ pdf
-						m_cat_full_pdfs_b= m_cat_full_pdfs_b && ( !even_pages_b && !odd_pages_b );
+						m_cat_full_pdfs_b= m_cat_full_pdfs_b && ( !even_pages_b && !odd_pages_b ) && excluded_pages.empty();
 					}
 					else if( page_num_beg== 0 || page_num_end== 0 ) { // error
 						cerr << "Error: Input page numbers include 0 (zero)" << endl;
@@ -1613,7 +1669,8 @@ TK_Session::TK_Session( int argc, char** argv ) :
 
 					for( PageNumber kk= page_num_beg; kk<= page_num_end; ++kk ) {
 						if( (!even_pages_b || !(kk % 2)) &&
-								(!odd_pages_b || (kk % 2)) )
+								(!odd_pages_b || (kk % 2)) &&
+								excluded_pages.find(kk)==excluded_pages.end() )
 							{
 								if( kk<= m_input_pdf[range_pdf_index].m_num_pages ) {
 

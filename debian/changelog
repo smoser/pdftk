@@ -1,3 +1,12 @@
+pdftk (2.02-2) unstable; urgency=medium
+
+  * Implement 'inverted page ranges with "~"'. (Closes: #758761)
+  * debian/copyright: Fix paths.
+  * debian/watch: Fix URL, use https instead of http.
+  * Bump Standards-Version to 3.9.6.
+
+ -- Johann Felix Soden <johfel@debian.org>  Mon, 20 Oct 2014 23:42:29 +0200
+
 pdftk (2.02-1) unstable; urgency=low
 
   * New upstream version.
