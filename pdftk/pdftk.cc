@@ -3760,6 +3760,10 @@ Bug-Debian: http://bugs.debian.org/560594
 #else
 	static char my_lang[]= "LANG=C";
 	putenv( my_lang );
+	static char my_lc_messages[]="LC_MESSAGES=C";
+	putenv(my_lc_messages);
+	static char my_lc_all[]="LC_ALL=C";
+	putenv(my_lc_all);
 #endif
 
 	for( int ii= 1; ii< argc; ++ii ) {
