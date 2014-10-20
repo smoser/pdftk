@@ -2,3 +2,4 @@ customise_build_parameters
 drm_fix
 overwrite_more_lc_environ_variables
 fix_hyphen_pdftk.1_man
+feature_inverted_page_range

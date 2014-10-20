@@ -20,7 +20,7 @@ License: GPL-2+
  On Debian systems, the complete text of the GNU General Public License
  version 2 can be found in /usr/share/common-licenses/GPL-2 file.
 
-Files: java/com/*
+Files: java/pdftk/com/*
 Copyright: 1999-2005, Bruno Lowagie
            2002, Jeremy Bowman <bowmanjm@attbi.com>.
            2002, Josselin PUJO
@@ -47,7 +47,7 @@ License: LGPL-2+ or MPL-1.1
  version 2 can be found in /usr/share/common-licenses/LGPL-2.
 
 
-Files: java/com/lowagie/text/pdf/TIFFLZWDecoder.java
+Files: java/pdftk/com/lowagie/text/pdf/TIFFLZWDecoder.java
 Copyright: The Apache Software Foundation
 License: Apache-2.0
  Licensed to the Apache Software Foundation (ASF) under one or more
@@ -69,6 +69,7 @@ License: Apache-2.0
  version 2 can be found in /usr/share/common-licenses/Apache-2.0 file.
 
 Files: java/java/*
+       java/gnu/*
 Copyright: 1999-2003, Free Software Foundation, Inc.
 License: GPL-2+ with link exception
  GNU Classpath is free software; you can redistribute it and/or modify
@@ -102,8 +103,8 @@ License: GPL-2+ with link exception
  version 2 can be found in /usr/share/common-licenses/GPL-2 file.
 
 
-Files: java/com/lowagie/text/pdf/fonts/*.afm
-       java/com/lowagie/text/pdf/fonts/License-Adobe.txt
+Files: java/pdftk/com/lowagie/text/pdf/fonts/*.afm
+       java/pdftk/com/lowagie/text/pdf/fonts/License-Adobe.txt
 Copyright: 1985-1997, Adobe Systems Incorporated
 License: other
  This file and the 14 PostScript(R) AFM files it accompanies may be
