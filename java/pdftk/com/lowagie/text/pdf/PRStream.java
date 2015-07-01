@@ -261,6 +261,23 @@ public class PRStream extends PdfStream {
     // ssteward
     // do we know how to apply all of the stream filters?
     public boolean filtersAreKnown() {
+
+	// ssteward
+	//
+	// this is a workaround for occasionally buggy decoding of FlateDecode streams that
+	// utilize a predictor (see Debian bug 787030); the bug might be in
+	// PdfReader.decodePredictor(), where the predictor is applied; 
+	// this workaround isn't a complete cop-out: pdftk's "uncompress" and "compress"
+	// features were intended only to help with filtering PDF page streams, which
+	// don't typically use predictors;
+	//
+	// this workaround also neuters a bug report by pdftk user Keith Hatton; he
+	// experienced a pdftk crash when trying to uncompress a PDF; the culprit
+	// was an image stream with an LZWDecode filter and DecodeParms of EarlyChange 0;
+	//
+	if( this.contains( PdfName.DECODEPARMS ) )
+	    return false;
+
 	boolean retVal= true;
 
 	PdfObject filter = PdfReader.getPdfObjectRelease(get(PdfName.FILTER));
