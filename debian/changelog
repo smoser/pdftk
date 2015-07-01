@@ -1,3 +1,11 @@
+pdftk (2.02-3) unstable; urgency=medium
+
+  * Fix bug that corrupts images in PDF files on (de)compressing.
+    (Closes: #787030)
+  * debian/copyright: Use different shortcuts for "other" licenses.
+
+ -- Johann Felix Soden <johfel@debian.org>  Thu, 02 Jul 2015 00:50:30 +0200
+
 pdftk (2.02-2) unstable; urgency=medium
 
   * Implement 'inverted page ranges with "~"'. (Closes: #758761)

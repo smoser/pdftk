@@ -106,7 +106,7 @@ License: GPL-2+ with link exception
 Files: java/pdftk/com/lowagie/text/pdf/fonts/*.afm
        java/pdftk/com/lowagie/text/pdf/fonts/License-Adobe.txt
 Copyright: 1985-1997, Adobe Systems Incorporated
-License: other
+License: other1
  This file and the 14 PostScript(R) AFM files it accompanies may be
  used, copied, and distributed for any purpose and without charge, with
  or without modification, provided that all copyright notices are
@@ -118,7 +118,7 @@ License: other
 
 Files: java/pdftk/org/bouncycastle/*
 Copyright: 2000-2008, The Legion Of The Bouncy Castle (http://www.bouncycastle.org)
-License: other
+License: other2
  The Bouncy Castle License
  Permission is hereby granted, free of charge, to any person obtaining a copy of this software
  and associated documentation files (the "Software"), to deal in the Software without restriction,
