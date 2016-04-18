@@ -1,3 +1,13 @@
+pdftk (2.02-4) unstable; urgency=medium
+
+  * Use again default gcj/g++ compiler. (Closes: #797841, #818778)
+  * debian/watch: Disable misleading PGP detection.
+  * debian/control: Use https:// links for Vcs-* and Homepage fields.
+  * debian/copyright: Update year.
+  * Bump Standards-Version to 3.9.7.
+
+ -- Johann Felix Soden <johfel@debian.org>  Mon, 18 Apr 2016 22:45:59 +0200
+
 pdftk (2.02-3) unstable; urgency=medium
 
   * Fix bug that corrupts images in PDF files on (de)compressing.
