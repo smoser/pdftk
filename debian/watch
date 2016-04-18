@@ -1,4 +1,4 @@
-version=3
-https://www.pdflabs.com/docs/pdftk-version-history/ \
+version=4
+opts="pgpmode=none" https://www.pdflabs.com/docs/pdftk-version-history/ \
 https://www.pdflabs.com/tools/pdftk-the-pdf-toolkit/pdftk-(.*)-src\.zip \
 debian
