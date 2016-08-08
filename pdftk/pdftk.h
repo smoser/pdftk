@@ -159,7 +159,10 @@ public:
 		rot_west_k,
 		rot_left_k,
 		rot_right_k,
-		rot_upside_down_k
+		rot_upside_down_k,
+
+		// tilde for range exclusion
+		tilde_k
   };
   static keyword is_keyword( char* ss, int* keyword_len_p );
 

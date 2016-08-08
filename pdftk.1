@@ -168,6 +168,8 @@ The \fBeven\fR qualifier causes pdftk to use only the even-numbered PDF pages, s
 
 The \fBodd\fR qualifier works similarly to the \fBeven\fR.
 
+From a valid page range, another pages can be subtracted using \fB~\fR.
+
 The page rotation setting can cause pdftk to rotate pages and documents.  Each option sets the page rotation as follows (in degrees): \fBnorth\fR: 0, \fBeast\fR: 90, \fBsouth\fR: 180, \fBwest\fR: 270, \fBleft\fR: \-90, \fBright\fR: +90, \fBdown\fR: +180. \fBleft\fR, \fBright\fR, and \fBdown\fR make relative adjustments to a page's rotation.
 
 If no arguments are passed to cat, then pdftk combines all input PDFs in the
@@ -194,6 +196,10 @@ order they were given to create the output.
 \fB5\-25oddwest\fR \- take odd pages in range, rotate 90 degrees
 .br
 \fB6\-1\fR \- reverse pages in range from input PDF
+.br
+\fB1\-20~5-6\fR \- equal to \fB1-4 7-20\fR or \fB1-20~5~6\fR
+.br
+\fB~5\fR \- all pages except page 5. Depending on your shell, you need to quote this because of the ~ at the beginning.
 
 .B Page Range Examples Using Handles:
 .br
