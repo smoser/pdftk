@@ -1,3 +1,9 @@
+pdftk (2.02-4build1) yakkety; urgency=medium
+
+  * No-change rebuild using gcj 6.
+
+ -- Matthias Klose <doko@ubuntu.com>  Mon, 08 Aug 2016 13:24:30 +0200
+
 pdftk (2.02-4) unstable; urgency=medium
 
   * Use again default gcj/g++ compiler. (Closes: #797841, #818778)
