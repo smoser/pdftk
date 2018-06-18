@@ -1,0 +1,25 @@
+name: pdftk
+version: '2.02-4'
+summary: command-line tool for working with PDFs
+description: |
+  More info at https://www.pdflabs.com/tools/pdftk-server/
+  command-line tool for working with PDFs. It is commonly used for
+  client-side scripting or server-side processing of PDFs.
+  This is simply created from 16.04 version of pdftk.
+grade: devel
+confinement: devmode
+
+parts:
+  archives:
+    plugin: nil
+    stage-packages:
+      - libc6
+      - libdb5.3
+      - libgcc1
+      - libgcj16
+      - libstdc++6
+      - pdftk
+
+apps:
+  pdftk:
+    command: usr/bin/pdftk
