@@ -19,6 +19,11 @@ parts:
       - libgcj16
       - libstdc++6
       - pdftk
+    stage:
+      - usr/share/man/man1/pdftk.1.gz
+      - usr/bin/pdftk
+      - usr/lib/*linux-gnu/*
+      - lib/*
 
 apps:
   pdftk:
