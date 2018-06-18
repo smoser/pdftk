@@ -7,7 +7,7 @@ description: |
   client-side scripting or server-side processing of PDFs.
   This is simply created from 16.04 version of pdftk.
 grade: devel
-confinement: classic
+confinement: strict
 
 parts:
   archives:
