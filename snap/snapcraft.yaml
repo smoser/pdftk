@@ -1,10 +1,10 @@
 name: pdftk-smoser
 version: '2.02-4'
-summary: command-line tool for working with PDFs
+summary: command-line tool for working with PDF files
 description: |
   More info at https://www.pdflabs.com/tools/pdftk-server/
-  command-line tool for working with PDFs. It is commonly used for
-  client-side scripting or server-side processing of PDFs.
+  command-line tool for working with PDF files. It is commonly used for
+  client-side scripting or server-side processing of PDF files.
   This is simply created from 16.04 version of pdftk.
 grade: devel
 confinement: strict
