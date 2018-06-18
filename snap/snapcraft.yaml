@@ -28,3 +28,4 @@ parts:
 apps:
   pdftk:
     command: usr/bin/pdftk
+  plugs: [home]
