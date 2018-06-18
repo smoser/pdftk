@@ -6,7 +6,7 @@ description: |
   command-line tool for working with PDF files. It is commonly used for
   client-side scripting or server-side processing of PDF files.
   This is simply created from 16.04 version of pdftk.
-grade: devel
+grade: stable
 confinement: strict
 
 parts:
