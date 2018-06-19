@@ -2,10 +2,13 @@ name: pdftk-smoser
 version: '2.02-4'
 summary: command-line tool for working with PDF files
 description: |
-  More info at https://www.pdflabs.com/tools/pdftk-server/
-  command-line tool for working with PDF files. It is commonly used for
-  client-side scripting or server-side processing of PDF files.
-  This is simply created from 16.04 version of pdftk.
+  pdftk is a command-line tool for working with PDF files. It is commonly
+  used for client-side scripting or server-side processing of PDF files.
+
+  This snap is an unmodified Ubuntu 16.04 binary package that is
+  re-packaged as a snap.
+
+  More info at https://www.pdflabs.com/tools/pdftk-server/ .
 grade: stable
 confinement: strict
 
