@@ -31,4 +31,4 @@ parts:
 apps:
   pdftk:
     command: usr/bin/pdftk
-    plugs: [home]
+    plugs: [home, removable-media]
